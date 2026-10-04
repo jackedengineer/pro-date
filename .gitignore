@@ -3,6 +3,7 @@
 
 # Package managers and dependencies
 node_modules/
+.pnpm-cache/
 .pnpm-store/
 .npm-cache/
 

@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "pro-dat",
+    "slug": "pro-dat",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "prodat",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.prodat.mobile",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.prodat.mobile"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

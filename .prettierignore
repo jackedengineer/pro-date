@@ -1,5 +1,6 @@
 .expo/
 .npm-cache/
+.pnpm-cache/
 .pnpm-store/
 build/
 coverage/
