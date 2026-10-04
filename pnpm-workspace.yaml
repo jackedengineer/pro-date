@@ -10,5 +10,7 @@ engineStrict: true
 strictDepBuilds: true
 
 allowBuilds:
+  browser-tabs-lock: false
+  core-js: false
   esbuild: true
   unrs-resolver@1.12.2: true

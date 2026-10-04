@@ -15,6 +15,8 @@ import { Screen } from '../../components/screen';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 interface PhoneEntryScreenProps {
+  errorMessage?: string | null;
+  isSubmitting?: boolean;
   onBack: () => void;
   onContinue: (phoneNumber: string) => void;
 }
@@ -29,12 +31,17 @@ function toIndianE164(value: string): string | null {
   return phoneNumber.number;
 }
 
-export function PhoneEntryScreen({ onBack, onContinue }: PhoneEntryScreenProps) {
+export function PhoneEntryScreen({
+  errorMessage = null,
+  isSubmitting = false,
+  onBack,
+  onContinue,
+}: PhoneEntryScreenProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const e164PhoneNumber = useMemo(() => toIndianE164(phoneNumber), [phoneNumber]);
 
   const continueWithPhoneNumber = () => {
-    if (e164PhoneNumber !== null) {
+    if (e164PhoneNumber !== null && !isSubmitting) {
       onContinue(e164PhoneNumber);
     }
   };
@@ -74,6 +81,7 @@ export function PhoneEntryScreen({ onBack, onContinue }: PhoneEntryScreenProps) 
                 accessibilityLabel="Phone number"
                 autoComplete="tel"
                 autoFocus
+                editable={!isSubmitting}
                 keyboardType="phone-pad"
                 maxLength={16}
                 onChangeText={setPhoneNumber}
@@ -86,14 +94,20 @@ export function PhoneEntryScreen({ onBack, onContinue }: PhoneEntryScreenProps) 
                 value={phoneNumber}
               />
             </View>
+            {errorMessage === null ? null : (
+              <View accessible accessibilityRole="alert" style={styles.errorMessage}>
+                <AppText style={styles.errorText}>{errorMessage}</AppText>
+              </View>
+            )}
             <AppText variant="caption">Standard messaging rates may apply.</AppText>
           </View>
         </View>
 
         <View style={styles.footer}>
           <AppButton
-            disabled={e164PhoneNumber === null}
-            label="Continue"
+            accessibilityLabel={isSubmitting ? 'Sending code' : 'Continue'}
+            disabled={e164PhoneNumber === null || isSubmitting}
+            label={isSubmitting ? 'Sending code…' : 'Continue'}
             onPress={continueWithPhoneNumber}
           />
         </View>
@@ -134,6 +148,14 @@ const styles = StyleSheet.create({
   fieldGroup: {
     gap: spacing.sm,
     marginTop: spacing.lg,
+  },
+  errorMessage: {
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radii.sm,
+    padding: spacing.md,
+  },
+  errorText: {
+    color: colors.danger,
   },
   footer: {
     marginTop: 'auto',

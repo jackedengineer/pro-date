@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: phone verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, and Expo SDK 57 onboarding shell are implemented and verified. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
+> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, Expo SDK 57 onboarding shell, and Clerk-backed phone-OTP client flow are implemented. Live SMS verification requires the local Clerk setup below and remains pending physical-device verification. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
 
 ## Product preview
 
@@ -264,6 +264,40 @@ The API defaults to `http://localhost:3000`; its liveness and readiness endpoint
 
 Database migration and seed commands will be introduced with the PostGIS slice; they are intentionally not advertised before they exist.
 
+## Configure Clerk phone OTP
+
+ProDate uses a custom Clerk flow so the interface remains fully native to the product while session tokens are encrypted through Expo SecureStore. The flow works in Expo Go and uses Clerk's privacy-preserving `signUpIfMissing` transfer: a phone number is verified before the client learns whether it belongs to an existing or new account.
+
+1. Create a development application in the [Clerk Dashboard](https://dashboard.clerk.com/).
+2. Under **Native applications**, enable the Native API. Clerk notes that this public native pathway bypasses browser CAPTCHA challenges, so production abuse controls and rate limits must be reviewed before release.
+3. Under **User & authentication**:
+   - Disable email authentication.
+   - Enable both sign-up and sign-in with phone.
+   - Enable phone verification at sign-up.
+   - Disable password authentication.
+   - Keep the development instance in open-access mode for the combined sign-in-or-sign-up flow.
+4. Copy the mobile environment template:
+
+   ```bash
+   cp apps/mobile/.env.example apps/mobile/.env
+   ```
+
+5. Copy the Clerk **Publishable Key** from **API keys** into `apps/mobile/.env`:
+
+   ```dotenv
+   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+   ```
+
+6. Stop and restart Metro after changing the environment file:
+
+   ```bash
+   pnpm dev:mobile
+   ```
+
+The publishable key is intentionally available to the Expo bundle. Clerk secret keys are backend-only and must never be placed in `EXPO_PUBLIC_*`, the mobile app, or Git. Without a valid publishable key, ProDate remains runnable and shows a configuration message instead of using mock authentication.
+
+Implementation references: [Clerk Expo quickstart](https://clerk.com/docs/expo/getting-started/quickstart), [Clerk phone OTP custom flow](https://clerk.com/docs/guides/development/custom-flows/authentication/email-sms-otp), [Clerk sign-in-or-up flow](https://clerk.com/docs/guides/development/custom-flows/authentication/sign-in-or-up), and [Expo SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/).
+
 ## Physical iPhone: Expo Go first run
 
 [Expo Go 57 is available on the iOS App Store](https://expo.dev/changelog/expo-go-57-login). The initial device workflow is:
@@ -332,9 +366,9 @@ EAS Update is reserved for JavaScript and asset changes compatible with the inst
 
 CI and coverage badges will be added only after real workflows produce those results.
 
-Current foundation evidence:
+Current implementation evidence:
 
-- 29 automated tests pass across shared contracts, API integration behavior, bootstrap logic, and mobile component behavior.
+- 49 automated tests pass across shared contracts, API integration behavior, bootstrap logic, authentication rules, resend timing, and mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -367,25 +401,26 @@ Git push
 
 Last architecture verification: **4 October 2026**
 
-| Milestone                              | Status                    |
-| -------------------------------------- | ------------------------- |
-| Product boundary and V0 journey        | Approved                  |
-| Capability map                         | Approved                  |
-| Core architecture and provider choices | Approved baseline         |
-| Expo SDK/App Store compatibility       | Verified for SDK 57       |
-| Exact dependency manifest              | Verified and locked       |
-| Installed dependency lock              | Implemented               |
-| Shared API contracts                   | Implemented and tested    |
-| Express health/startup foundation      | Implemented and tested    |
-| Mobile shell specification             | Approved                  |
-| Repository scaffold                    | Implemented               |
-| Expo welcome and phone-entry shell     | Implemented and tested    |
-| Expo Doctor / iOS Hermes export        | Verified                  |
-| First physical-device run              | Awaiting device test      |
-| Live Clerk phone OTP                   | Next implementation slice |
-| V0 vertical slice                      | Not started               |
+| Milestone                              | Status                  |
+| -------------------------------------- | ----------------------- |
+| Product boundary and V0 journey        | Approved                |
+| Capability map                         | Approved                |
+| Core architecture and provider choices | Approved baseline       |
+| Expo SDK/App Store compatibility       | Verified for SDK 57     |
+| Exact dependency manifest              | Verified and locked     |
+| Installed dependency lock              | Implemented             |
+| Shared API contracts                   | Implemented and tested  |
+| Express health/startup foundation      | Implemented and tested  |
+| Mobile shell specification             | Approved                |
+| Repository scaffold                    | Implemented             |
+| Expo welcome and phone-entry shell     | Implemented and tested  |
+| Expo Doctor / iOS Hermes export        | Verified                |
+| First physical-device run              | Verified                |
+| Clerk phone OTP client flow            | Implemented and tested  |
+| Live Clerk SMS verification            | Awaiting provider setup |
+| V0 vertical slice                      | Not started             |
 
-The next milestone is to run the shell in Expo Go on the physical iPhone, capture the first verified screenshots, and then implement the Clerk phone-OTP slice without mixing placeholder authentication into the production path.
+The next milestone is to configure the Clerk development instance, complete the live OTP flow on the physical iPhone, and capture verified authentication screenshots. Internal user synchronization plus the Neon/PostGIS and Drizzle foundation follow that provider checkpoint.
 
 ## Legal and intellectual-property note
 

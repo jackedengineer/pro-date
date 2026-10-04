@@ -15,6 +15,7 @@ import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 interface OtpVerificationScreenProps {
   errorMessage: string | null;
+  isResending?: boolean;
   isSubmitting: boolean;
   onBack: () => void;
   onResend: () => void;
@@ -29,6 +30,7 @@ function maskIndianPhoneNumber(phoneNumber: string): string {
 
 export function OtpVerificationScreen({
   errorMessage,
+  isResending = false,
   isSubmitting,
   onBack,
   onResend,
@@ -37,9 +39,14 @@ export function OtpVerificationScreen({
   resendSecondsRemaining,
 }: OtpVerificationScreenProps) {
   const [code, setCode] = useState('');
-  const canSubmit = code.length === 6 && !isSubmitting;
-  const canResend = resendSecondsRemaining === 0 && !isSubmitting;
-  const resendLabel = canResend ? 'Send a new code' : `Resend in ${resendSecondsRemaining} seconds`;
+  const isBusy = isSubmitting || isResending;
+  const canSubmit = code.length === 6 && !isBusy;
+  const canResend = resendSecondsRemaining === 0 && !isBusy;
+  const resendLabel = isResending
+    ? 'Sending a new code'
+    : canResend
+      ? 'Send a new code'
+      : `Resend in ${resendSecondsRemaining} seconds`;
 
   const submitCode = () => {
     if (canSubmit) {
@@ -110,7 +117,11 @@ export function OtpVerificationScreen({
               ]}
             >
               <AppText style={[styles.resendText, !canResend && styles.resendTextDisabled]}>
-                {canResend ? 'Send a new code' : `Resend in ${resendSecondsRemaining}s`}
+                {isResending
+                  ? 'Sending…'
+                  : canResend
+                    ? 'Send a new code'
+                    : `Resend in ${resendSecondsRemaining}s`}
               </AppText>
             </Pressable>
           </View>
