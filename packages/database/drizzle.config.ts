@@ -1,0 +1,10 @@
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  dialect: 'postgresql',
+  extensionsFilters: ['postgis'],
+  out: './drizzle',
+  schema: './src/schema.ts',
+  strict: true,
+  verbose: true,
+});
