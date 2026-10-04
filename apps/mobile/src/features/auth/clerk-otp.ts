@@ -73,6 +73,23 @@ function getClerkErrorCode(error: unknown): string | null {
   return typeof code === 'string' ? code : null;
 }
 
+export function getSafeAuthErrorDiagnostic(error: unknown): {
+  code: string;
+  name: string;
+  status: number | null;
+} {
+  const code = getClerkErrorCode(error) ?? 'unclassified';
+
+  if (!isUnknownRecord(error)) {
+    return { code, name: 'UnknownError', status: null };
+  }
+
+  const name = typeof error['name'] === 'string' ? error['name'] : 'UnknownError';
+  const status = typeof error['status'] === 'number' ? error['status'] : null;
+
+  return { code, name, status };
+}
+
 export function getSafeAuthErrorMessage(
   error: unknown,
   action: AuthAction,
@@ -84,6 +101,15 @@ export function getSafeAuthErrorMessage(
       return 'That code is not correct. Try again.';
     case 'verification_expired':
       return 'That code has expired. Send a new one.';
+    case 'verification_failed':
+      return 'Too many failed attempts. Send a new code and try again.';
+    case 'verification_code_too_many_attempts':
+      return 'Too many failed attempts. Wait a moment, then send a new code.';
+    case 'verification_code_not_sent':
+    case 'verification_not_sent':
+      return 'That code was not issued. Send a new code and try again.';
+    case 'verification_code_too_many_requests':
+      return 'Too many code requests. Wait a moment and try again.';
     case 'form_phone_number_invalid':
       return 'Enter a valid mobile number and try again.';
     case 'form_email_address_invalid':

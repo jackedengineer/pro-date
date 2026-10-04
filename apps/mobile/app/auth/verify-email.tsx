@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { isClerkConfigured } from '../../src/config/public-env';
 import { isValidEmailAddress, maskEmailAddress } from '../../src/features/auth/auth-identifiers';
 import {
+  getSafeAuthErrorDiagnostic,
   getSafeAuthErrorMessage,
   resendEmailCode,
   verifyEmailCode,
@@ -52,6 +53,14 @@ function ConfiguredVerifyEmailRoute() {
     }
 
     if ('error' in result) {
+      if (__DEV__) {
+        console.info('[auth] Clerk email OTP verification failed', {
+          ...getSafeAuthErrorDiagnostic(result.error),
+          signInStatus: signIn.status,
+          signUpStatus: signUp.status,
+        });
+      }
+
       setErrorMessage(getSafeAuthErrorMessage(result.error, 'verify', 'email'));
     } else if (result.kind === 'missing_requirements') {
       setErrorMessage(

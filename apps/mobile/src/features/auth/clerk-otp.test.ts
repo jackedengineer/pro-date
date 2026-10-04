@@ -1,4 +1,5 @@
 import {
+  getSafeAuthErrorDiagnostic,
   getSafeAuthErrorMessage,
   isIndianE164PhoneNumber,
   requestEmailCode,
@@ -291,6 +292,22 @@ describe('getSafeAuthErrorMessage', () => {
     expect(
       getSafeAuthErrorMessage(clerkError('dev_monthly_email_limit_exceeded'), 'request', 'email'),
     ).toBe('The development email limit has been reached. Use a Clerk test email instead.');
+    expect(getSafeAuthErrorMessage(clerkError('verification_failed'), 'verify', 'email')).toBe(
+      'Too many failed attempts. Send a new code and try again.',
+    );
+    expect(
+      getSafeAuthErrorMessage(clerkError('verification_code_too_many_attempts'), 'verify', 'email'),
+    ).toBe('Too many failed attempts. Wait a moment, then send a new code.');
+    expect(
+      getSafeAuthErrorMessage(clerkError('verification_code_not_sent'), 'verify', 'email'),
+    ).toBe('That code was not issued. Send a new code and try again.');
+    expect(
+      getSafeAuthErrorMessage(
+        clerkError('verification_code_too_many_requests'),
+        'request',
+        'email',
+      ),
+    ).toBe('Too many code requests. Wait a moment and try again.');
   });
 
   it('uses action-specific fallback copy for unknown errors', () => {
@@ -300,5 +317,36 @@ describe('getSafeAuthErrorMessage', () => {
     expect(getSafeAuthErrorMessage(new Error('private provider detail'), 'verify')).toBe(
       'We couldn’t verify that code. Try again.',
     );
+  });
+});
+
+describe('getSafeAuthErrorDiagnostic', () => {
+  it('returns only non-sensitive provider metadata for development diagnostics', () => {
+    expect(
+      getSafeAuthErrorDiagnostic({
+        errors: [
+          {
+            code: 'verification_failed',
+            longMessage: 'private provider detail',
+            message: 'private provider detail',
+          },
+        ],
+        message: 'private response detail',
+        name: 'ClerkAPIResponseError',
+        status: 400,
+      }),
+    ).toEqual({
+      code: 'verification_failed',
+      name: 'ClerkAPIResponseError',
+      status: 400,
+    });
+  });
+
+  it('uses neutral placeholders when an error has no safe provider metadata', () => {
+    expect(getSafeAuthErrorDiagnostic(new Error('private provider detail'))).toEqual({
+      code: 'unclassified',
+      name: 'Error',
+      status: null,
+    });
   });
 });
