@@ -12,12 +12,14 @@
   "scripts": {
     "db:check": "drizzle-kit check",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --project tsconfig.json"
   },
   "dependencies": {
+    "@pro-date/contracts": "workspace:*",
     "drizzle-orm": "0.45.3",
     "pg": "8.23.1"
   },

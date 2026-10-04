@@ -1,19 +1,23 @@
-import { apiErrorResponseSchema, healthResponseSchema } from '@pro-date/contracts';
+import {
+  apiErrorResponseSchema,
+  currentUserResponseSchema,
+  healthResponseSchema,
+} from '@pro-date/contracts';
 import pino from 'pino';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { createApiApp } from '../src/app.js';
+import { createApiApp, type ApiAppOptions } from '../src/app.js';
 
 const requestId = '59a2c4a6-110e-470e-bcab-c762c18dec45';
 const timestamp = '2026-10-04T11:00:00.000Z';
 
-function createTestApp(readinessCheck?: () => Promise<Record<string, 'up' | 'down'>>) {
+function createTestApp(options: ApiAppOptions = {}) {
   return createApiApp({
     clock: () => new Date(timestamp),
     logger: pino({ level: 'silent' }),
-    ...(readinessCheck === undefined ? {} : { readinessCheck }),
     requestId: () => requestId,
+    ...options,
   });
 }
 
@@ -44,11 +48,12 @@ describe('API application', () => {
 
   it('returns a safe unavailable response when readiness fails', async () => {
     const response = await request(
-      createTestApp(() =>
-        Promise.reject<Record<string, 'up' | 'down'>>(
-          new Error('postgres://admin:secret@example.test'),
-        ),
-      ),
+      createTestApp({
+        readinessCheck: () =>
+          Promise.reject<Record<string, 'up' | 'down'>>(
+            new Error('postgres://admin:secret@example.test'),
+          ),
+      }),
     )
       .get('/health/ready')
       .expect(503);
@@ -92,5 +97,63 @@ describe('API application', () => {
       requestId,
     });
     expect(JSON.stringify(response.body)).not.toContain('SyntaxError');
+  });
+
+  it('rejects an unauthenticated current-user bootstrap request', async () => {
+    const response = await request(createTestApp()).put('/v1/users/me').expect(401);
+
+    expect(apiErrorResponseSchema.parse(response.body)).toEqual({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Authentication is required.',
+      },
+      requestId,
+    });
+  });
+
+  it('creates or retrieves the current internal user without exposing the Clerk subject', async () => {
+    const findOrCreateCurrentUser = vi.fn().mockResolvedValue({
+      id: '729438da-99b3-4d3d-b566-bfe94401829b',
+      onboardingStatus: 'NOT_STARTED',
+    });
+
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser,
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+      }),
+    )
+      .put('/v1/users/me')
+      .expect(200);
+
+    expect(findOrCreateCurrentUser).toHaveBeenCalledOnce();
+    expect(findOrCreateCurrentUser).toHaveBeenCalledWith('user_private_clerk_subject');
+    expect(currentUserResponseSchema.parse(response.body)).toEqual({
+      data: {
+        id: '729438da-99b3-4d3d-b566-bfe94401829b',
+        onboardingStatus: 'NOT_STARTED',
+      },
+      requestId,
+    });
+    expect(JSON.stringify(response.body)).not.toContain('user_private_clerk_subject');
+  });
+
+  it('returns the same current user when bootstrap is repeated', async () => {
+    const currentUser = {
+      id: '729438da-99b3-4d3d-b566-bfe94401829b',
+      onboardingStatus: 'IN_PROGRESS' as const,
+    };
+    const findOrCreateCurrentUser = vi.fn().mockResolvedValue(currentUser);
+    const app = createTestApp({
+      findOrCreateCurrentUser,
+      resolveClerkSubject: () => 'user_private_clerk_subject',
+    });
+
+    const firstResponse = await request(app).put('/v1/users/me').expect(200);
+    const secondResponse = await request(app).put('/v1/users/me').expect(200);
+
+    expect(currentUserResponseSchema.parse(firstResponse.body).data).toEqual(currentUser);
+    expect(currentUserResponseSchema.parse(secondResponse.body).data).toEqual(currentUser);
+    expect(findOrCreateCurrentUser).toHaveBeenCalledTimes(2);
   });
 });
