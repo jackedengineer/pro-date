@@ -1,4 +1,4 @@
-import { parseClerkPublishableKey } from './public-env';
+import { parseApiBaseUrl, parseClerkPublishableKey } from './public-env';
 
 describe('parseClerkPublishableKey', () => {
   it('accepts trimmed Clerk test and live publishable keys', () => {
@@ -12,4 +12,21 @@ describe('parseClerkPublishableKey', () => {
       expect(parseClerkPublishableKey(value)).toBeNull();
     },
   );
+});
+
+describe('parseApiBaseUrl', () => {
+  it('accepts HTTP and HTTPS URLs and removes trailing slashes', () => {
+    expect(parseApiBaseUrl(' http://192.168.0.100:3000/ ')).toBe('http://192.168.0.100:3000');
+    expect(parseApiBaseUrl('https://api.prodate.example///')).toBe('https://api.prodate.example');
+  });
+
+  it.each([
+    undefined,
+    '',
+    'YOUR_API_BASE_URL',
+    'ftp://api.prodate.example',
+    'https://user:password@api.prodate.example',
+  ])('rejects an absent or unsafe API URL: %s', (value) => {
+    expect(parseApiBaseUrl(value)).toBeNull();
+  });
 });

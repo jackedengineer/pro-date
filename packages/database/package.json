@@ -12,7 +12,7 @@
   "scripts": {
     "db:check": "drizzle-kit check",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node --env-file-if-exists=../../apps/api/.env ../../node_modules/drizzle-kit/bin.cjs migrate",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

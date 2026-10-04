@@ -14,7 +14,7 @@ export function AuthCompleteScreen() {
           </AppText>
         </View>
         <AppText variant="eyebrow">Account secured</AppText>
-        <AppText variant="display">Phone verified</AppText>
+        <AppText variant="display">Account verified</AppText>
         <AppText style={styles.supportingText}>
           Your account is secure. Next, we’ll help you build a profile that feels like you.
         </AppText>
