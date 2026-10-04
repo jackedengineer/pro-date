@@ -28,4 +28,18 @@ describe('<PhoneEntryScreen />', () => {
 
     expect(onContinue).not.toHaveBeenCalled();
   });
+
+  it('announces request failures and prevents duplicate submissions', async () => {
+    const view = await render(
+      <PhoneEntryScreen
+        errorMessage="We couldn’t send a code right now."
+        isSubmitting
+        onBack={jest.fn()}
+        onContinue={jest.fn()}
+      />,
+    );
+
+    expect(view.getByRole('alert')).toHaveTextContent('We couldn’t send a code right now.');
+    expect(view.getByRole('button', { name: 'Sending code' })).toBeDisabled();
+  });
 });

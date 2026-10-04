@@ -1,5 +1,5 @@
 {
-  "name": "@pro-dat/api",
+  "name": "@pro-date/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "typecheck": "tsc --project tsconfig.json"
   },
   "dependencies": {
-    "@pro-dat/contracts": "workspace:*",
+    "@pro-date/contracts": "workspace:*",
     "cors": "2.8.6",
     "express": "5.2.1",
     "helmet": "8.3.0",

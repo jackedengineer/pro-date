@@ -10,6 +10,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ClerkAuthProvider } from '../src/auth/clerk-auth-provider';
 import { resolveBootstrapState } from '../src/bootstrap/resolve-bootstrap-state';
 import { colors, spacing } from '../src/theme/tokens';
 
@@ -39,17 +40,19 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         {bootstrapState === 'error' ? (
           <View accessibilityRole="alert" style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>We couldn’t open pro·dat.</Text>
+            <Text style={styles.errorTitle}>We couldn’t open ProDate.</Text>
             <Text style={styles.errorBody}>Close the app and try again.</Text>
           </View>
         ) : (
-          <Stack
-            screenOptions={{
-              animation: 'fade',
-              contentStyle: styles.root,
-              headerShown: false,
-            }}
-          />
+          <ClerkAuthProvider>
+            <Stack
+              screenOptions={{
+                animation: 'fade',
+                contentStyle: styles.root,
+                headerShown: false,
+              }}
+            />
+          </ClerkAuthProvider>
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>

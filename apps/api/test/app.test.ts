@@ -1,4 +1,4 @@
-import { apiErrorResponseSchema, healthResponseSchema } from '@pro-dat/contracts';
+import { apiErrorResponseSchema, healthResponseSchema } from '@pro-date/contracts';
 import pino from 'pino';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';

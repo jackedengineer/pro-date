@@ -8,6 +8,7 @@ describe('<WelcomeScreen />', () => {
 
     const view = await render(<WelcomeScreen onGetStarted={onGetStarted} />);
 
+    expect(view.getByText('ProDate')).toBeTruthy();
     expect(view.getByText('Meet people, not profiles.')).toBeTruthy();
     expect(view.getByText('Thoughtful prompts. Real conversation.')).toBeTruthy();
 

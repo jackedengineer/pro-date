@@ -15,7 +15,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
       <View style={styles.header}>
         <View style={styles.brandMark} />
         <AppText style={styles.wordmark} variant="button">
-          pro·dat
+          ProDate
         </AppText>
       </View>
 
