@@ -2,9 +2,9 @@
 
 ### A production-shaped, Hinge-inspired dating application built as an end-to-end mobile engineering project
 
-`ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: phone verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
+`ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, Expo SDK 57 onboarding shell, and Clerk-backed phone-OTP client flow are implemented. Live SMS verification requires the local Clerk setup below and remains pending physical-device verification. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
+> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, Expo SDK 57 onboarding shell, and Clerk-backed phone/email OTP client flows are implemented. Email OTP is the current development path while India SMS enablement is pending with Clerk support. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
 
 ## Product preview
 
@@ -12,15 +12,15 @@ Verified screenshots will be added after each workflow runs on the physical iPho
 
 The planned gallery will cover:
 
-| Authentication    | Onboarding          | Discovery        | Engagement       |
-| ----------------- | ------------------- | ---------------- | ---------------- |
-| Phone OTP         | Profile and prompts | Profile card     | Like or comment  |
-| Match             | Messaging           | Safety           | Subscription     |
-| Match celebration | Durable chat        | Block and report | Test entitlement |
+| Authentication     | Onboarding          | Discovery        | Engagement       |
+| ------------------ | ------------------- | ---------------- | ---------------- |
+| Phone or email OTP | Profile and prompts | Profile card     | Like or comment  |
+| Match              | Messaging           | Safety           | Subscription     |
+| Match celebration  | Durable chat        | Block and report | Test entitlement |
 
 ## What this project demonstrates
 
-- A complete mobile journey from phone OTP through matching and messaging
+- A complete mobile journey from passwordless OTP through matching and messaging
 - A custom, accessible Expo interface rather than a generic component-library skin
 - Fully relational dating-domain modeling with PostgreSQL and PostGIS
 - Privacy-aware proximity filtering without exposing exact coordinates
@@ -35,7 +35,7 @@ The planned gallery will cover:
 
 ```mermaid
 flowchart LR
-    A[Phone OTP] --> B[Profile onboarding]
+    A[Phone or email OTP] --> B[Profile onboarding]
     B --> C[Location and preferences]
     C --> D[Discover profiles]
     D --> E[Like or comment on content]
@@ -57,7 +57,7 @@ flowchart LR
 
 | Area          | V0                                                                  | V1                                                       | V2                                                      |
 | ------------- | ------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------- |
-| Identity      | Clerk phone OTP, internal account, 18+ attestation                  | Account recovery and richer lifecycle controls           | Optional stronger age/identity assurance                |
+| Identity      | Clerk phone/email OTP, internal account, 18+ attestation            | Account recovery and richer lifecycle controls           | Optional stronger age/identity assurance                |
 | Profiles      | Attributes, prompts, photos, ordering, completeness                 | More prompt/media formats and profile editing depth      | Voice/video prompts and experiments                     |
 | Discovery     | Distance and preference filtering, baseline ordering, pagination    | Richer filters, undo, improved candidate balancing       | Learned ranking, standouts, explainable recommendations |
 | Engagement    | Item-specific likes/comments, passes, mutual match                  | Incoming-like improvements and richer match feedback     | Roses, boosts, and consumable mechanics                 |
@@ -105,7 +105,7 @@ flowchart TB
         PG[(PostgreSQL + PostGIS)]
     end
 
-    CLERK[Clerk phone OTP]
+    CLERK[Clerk passwordless OTP]
     MEDIA[Cloudinary media]
     RC[RevenueCat entitlements]
     PUSH[Expo Push Service]
@@ -142,7 +142,7 @@ The backend is a modular monolith deployed as two processes from one codebase: a
 | Data access       | Drizzle ORM and committed Drizzle Kit migrations                                  | Type-safe relational access and auditable schema history                             |
 | Geospatial access | `geography(Point, 4326)` plus reviewed parameterized SQL where required           | Correct distance semantics without forcing all queries outside the ORM               |
 | Domain modeling   | Normalized relational tables; no JSONB domain documents                           | Explicit constraints, joins, uniqueness, and queryable relationships                 |
-| Authentication    | Clerk custom phone OTP plus internal UUID users                                   | Provider handles verification; application retains domain identity ownership         |
+| Authentication    | Clerk custom phone/email OTP plus internal UUID users                             | Provider handles verification; application retains domain identity ownership         |
 | Media             | Signed Cloudinary uploads                                                         | The device uploads directly without receiving a provider secret                      |
 | Async work        | PostgreSQL transactional outbox and private worker                                | Couples state changes and side-effect intent atomically                              |
 | Subscriptions     | RevenueCat Test Store, then platform billing sandboxes                            | Production-shaped entitlement handling without collecting card details directly      |
@@ -219,7 +219,7 @@ pro-date/
 │   └── worker/        # Planned transactional-outbox consumers
 ├── packages/
 │   ├── contracts/     # Shared Zod schemas and transport types
-│   ├── database/      # Planned Drizzle schema, migrations, and repositories
+│   ├── database/      # Drizzle schema, PostGIS migrations, pool, and repositories
 │   ├── domain/        # Planned pure domain rules and state transitions
 │   ├── observability/ # Planned logging, tracing, and redaction helpers
 │   └── config/        # Planned extracted shared configuration
@@ -253,27 +253,27 @@ pnpm install
 pnpm verify
 ```
 
-Run the services in separate terminals:
+Configure the provider-backed services as described below, apply the migrations, and then run the services in separate terminals:
 
 ```bash
+pnpm db:migrate
 pnpm dev:api
 pnpm dev:mobile
 ```
 
-The API defaults to `http://localhost:3000`; its liveness and readiness endpoints are `/health/live` and `/health/ready`. The mobile command starts Expo Router and prints the Expo Go QR code. Dependency stores and caches used during this project are kept inside the repository and ignored by Git.
+The API binds to `0.0.0.0:3000` by default; its liveness and readiness endpoints are `/health/live` and `/health/ready`. Readiness includes a database query. The mobile command starts Expo Router and prints the Expo Go QR code. Dependency stores and caches used during this project are kept inside the repository and ignored by Git.
 
-Database migration and seed commands will be introduced with the PostGIS slice; they are intentionally not advertised before they exist.
+## Configure Clerk passwordless OTP
 
-## Configure Clerk phone OTP
-
-ProDate uses a custom Clerk flow so the interface remains fully native to the product while session tokens are encrypted through Expo SecureStore. The flow works in Expo Go and uses Clerk's privacy-preserving `signUpIfMissing` transfer: a phone number is verified before the client learns whether it belongs to an existing or new account.
+ProDate uses a custom Clerk flow so the interface remains fully native to the product while session tokens are encrypted through Expo SecureStore. Both routes work in Expo Go and use Clerk's privacy-preserving `signUpIfMissing` transfer: an email address or phone number is verified before the client learns whether it belongs to an existing or new account.
 
 1. Create a development application in the [Clerk Dashboard](https://dashboard.clerk.com/).
 2. Under **Native applications**, enable the Native API. Clerk notes that this public native pathway bypasses browser CAPTCHA challenges, so production abuse controls and rate limits must be reviewed before release.
 3. Under **User & authentication**:
-   - Disable email authentication.
-   - Enable both sign-up and sign-in with phone.
-   - Enable phone verification at sign-up.
+   - In **Email**, enable sign-up and sign-in with email.
+   - Require email at sign-up, select **Email verification code** for sign-up verification, and select **Email verification code** for sign-in.
+   - Keep email verification links disabled for this JavaScript-only native flow.
+   - In **Phone**, keep sign-up and sign-in with phone plus verification at sign-up enabled if SMS authentication should remain available.
    - Disable password authentication.
    - Keep the development instance in open-access mode for the combined sign-in-or-sign-up flow.
 4. Copy the mobile environment template:
@@ -286,6 +286,7 @@ ProDate uses a custom Clerk flow so the interface remains fully native to the pr
 
    ```dotenv
    EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+   EXPO_PUBLIC_API_BASE_URL=http://your_mac_lan_ip:3000
    ```
 
 6. Stop and restart Metro after changing the environment file:
@@ -296,7 +297,42 @@ ProDate uses a custom Clerk flow so the interface remains fully native to the pr
 
 The publishable key is intentionally available to the Expo bundle. Clerk secret keys are backend-only and must never be placed in `EXPO_PUBLIC_*`, the mobile app, or Git. Without a valid publishable key, ProDate remains runnable and shows a configuration message instead of using mock authentication.
 
-Implementation references: [Clerk Expo quickstart](https://clerk.com/docs/expo/getting-started/quickstart), [Clerk phone OTP custom flow](https://clerk.com/docs/guides/development/custom-flows/authentication/email-sms-otp), [Clerk sign-in-or-up flow](https://clerk.com/docs/guides/development/custom-flows/authentication/sign-in-or-up), and [Expo SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/).
+For cost-free development testing, enter an address such as `prodate+clerk_test@example.com` and use the fixed code `424242`. Clerk does not deliver an email for a `+clerk_test` address, and test addresses do not count against the development allowance. Real development addresses receive an actual message and are limited by Clerk's current development quota. Requiring email can cause a brand-new phone-only sign-up to report a missing email requirement; the combined new-user policy will be validated when India SMS is enabled, while existing phone sign-in remains available.
+
+Implementation references: [Clerk Expo quickstart](https://clerk.com/docs/expo/getting-started/quickstart), [Clerk email/SMS OTP custom flow](https://clerk.com/docs/guides/development/custom-flows/authentication/email-sms-otp), [Clerk sign-in-or-up flow](https://clerk.com/docs/guides/development/custom-flows/authentication/sign-in-or-up), [Clerk test emails and phones](https://clerk.com/docs/guides/development/testing/test-emails-and-phones), and [Expo SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/).
+
+## Configure Neon and backend authentication
+
+The API verifies Clerk session tokens and creates one private ProDate user row per Clerk subject. The mobile contract is `PUT /v1/users/me`; its response contains only the internal UUID and onboarding state.
+
+1. Create a Neon project in the Singapore region and keep Postgres 17 or later selected.
+2. Copy the API environment template:
+
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   ```
+
+3. In the local, ignored `apps/api/.env`, set:
+
+   ```dotenv
+   CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+   CLERK_SECRET_KEY=sk_test_your_key_here
+   DATABASE_URL=postgresql://your_neon_pooled_runtime_connection
+   MIGRATION_DATABASE_URL=postgresql://your_neon_direct_migration_connection
+   ```
+
+4. Apply the committed PostGIS and user-table migrations, then start the API:
+
+   ```bash
+   pnpm db:migrate
+   pnpm dev:api
+   ```
+
+5. On the same Wi-Fi network, set `EXPO_PUBLIC_API_BASE_URL` in `apps/mobile/.env` to the Mac’s LAN address—not `localhost`—and restart Metro.
+
+The pooled Neon URL is used by the long-running Express process; the direct URL is reserved for schema migration. Both URLs and the Clerk secret key are credentials and must be entered locally rather than pasted into chat, screenshots, issues, commits, or `EXPO_PUBLIC_*` variables. The API fails startup when required credentials are absent or malformed.
+
+Implementation references: [Clerk Express quickstart](https://clerk.com/docs/expressjs/getting-started/quickstart), [Clerk Express SDK reference](https://clerk.com/docs/reference/express/overview), [Clerk Expo authenticated requests](https://clerk.com/docs/guides/development/access-clerk-outside-components), [Drizzle PostgreSQL setup](https://orm.drizzle.team/docs/get-started/postgresql-existing), and [Drizzle migrations](https://orm.drizzle.team/docs/migrations).
 
 ## Physical iPhone: Expo Go first run
 
@@ -368,7 +404,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 49 automated tests pass across shared contracts, API integration behavior, bootstrap logic, authentication rules, resend timing, and mobile component behavior.
+- 95 automated tests pass across shared contracts, database invariants, API integration behavior, bootstrap logic, authentication rules, resend timing, and mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -399,28 +435,32 @@ Git push
 
 ## Current status
 
-Last architecture verification: **4 October 2026**
+Last architecture verification: **5 October 2026**
 
-| Milestone                              | Status                  |
-| -------------------------------------- | ----------------------- |
-| Product boundary and V0 journey        | Approved                |
-| Capability map                         | Approved                |
-| Core architecture and provider choices | Approved baseline       |
-| Expo SDK/App Store compatibility       | Verified for SDK 57     |
-| Exact dependency manifest              | Verified and locked     |
-| Installed dependency lock              | Implemented             |
-| Shared API contracts                   | Implemented and tested  |
-| Express health/startup foundation      | Implemented and tested  |
-| Mobile shell specification             | Approved                |
-| Repository scaffold                    | Implemented             |
-| Expo welcome and phone-entry shell     | Implemented and tested  |
-| Expo Doctor / iOS Hermes export        | Verified                |
-| First physical-device run              | Verified                |
-| Clerk phone OTP client flow            | Implemented and tested  |
-| Live Clerk SMS verification            | Awaiting provider setup |
-| V0 vertical slice                      | Not started             |
+| Milestone                              | Status                       |
+| -------------------------------------- | ---------------------------- |
+| Product boundary and V0 journey        | Approved                     |
+| Capability map                         | Approved                     |
+| Core architecture and provider choices | Approved baseline            |
+| Expo SDK/App Store compatibility       | Verified for SDK 57          |
+| Exact dependency manifest              | Verified and locked          |
+| Installed dependency lock              | Implemented                  |
+| Shared API contracts                   | Implemented and tested       |
+| Express health/startup foundation      | Implemented and tested       |
+| Mobile shell specification             | Approved                     |
+| Repository scaffold                    | Implemented                  |
+| Expo welcome and OTP entry shell       | Implemented and tested       |
+| Expo Doctor / iOS Hermes export        | Verified                     |
+| First physical-device run              | Verified                     |
+| Clerk phone OTP client flow            | Implemented and tested       |
+| Clerk email OTP client flow            | Implemented and tested       |
+| Live Clerk SMS verification            | Awaiting provider setup      |
+| Live Clerk email verification          | Verified on physical iPhone  |
+| Neon/PostGIS and Drizzle foundation    | Implemented and tested       |
+| Authenticated internal-user bootstrap  | Implemented; live setup next |
+| V0 vertical slice                      | In progress                  |
 
-The next milestone is to configure the Clerk development instance, complete the live OTP flow on the physical iPhone, and capture verified authentication screenshots. Internal user synchronization plus the Neon/PostGIS and Drizzle foundation follow that provider checkpoint.
+The next checkpoint is live Neon migration plus physical-device verification of the authenticated bootstrap request. Profile onboarding data collection follows once that durable account boundary is confirmed. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 

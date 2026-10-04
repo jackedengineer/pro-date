@@ -14,28 +14,26 @@ import { Screen } from '../../components/screen';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 interface OtpVerificationScreenProps {
+  changeDestinationAccessibilityLabel: string;
+  destination: string;
   errorMessage: string | null;
   isResending?: boolean;
   isSubmitting: boolean;
   onBack: () => void;
   onResend: () => void;
   onSubmit: (code: string) => void;
-  phoneNumber: string;
   resendSecondsRemaining: number;
 }
 
-function maskIndianPhoneNumber(phoneNumber: string): string {
-  return `+91 ••••• ••${phoneNumber.slice(-3)}`;
-}
-
 export function OtpVerificationScreen({
+  changeDestinationAccessibilityLabel,
+  destination,
   errorMessage,
   isResending = false,
   isSubmitting,
   onBack,
   onResend,
   onSubmit,
-  phoneNumber,
   resendSecondsRemaining,
 }: OtpVerificationScreenProps) {
   const [code, setCode] = useState('');
@@ -61,7 +59,7 @@ export function OtpVerificationScreen({
         style={styles.keyboardView}
       >
         <Pressable
-          accessibilityLabel="Change phone number"
+          accessibilityLabel={changeDestinationAccessibilityLabel}
           accessibilityRole="button"
           hitSlop={12}
           onPress={onBack}
@@ -77,12 +75,12 @@ export function OtpVerificationScreen({
           <AppText variant="display">Check your messages</AppText>
           <AppText style={styles.supportingText}>
             Enter the six-digit code sent to{' '}
-            <AppText style={styles.phoneNumber}>{maskIndianPhoneNumber(phoneNumber)}</AppText>.
+            <AppText style={styles.destination}>{destination}</AppText>.
           </AppText>
 
           <View style={styles.fieldGroup}>
             <TextInput
-              accessibilityHint="Enter the six-digit code from your text message"
+              accessibilityHint="Enter the six-digit verification code"
               accessibilityLabel="Verification code"
               autoComplete="one-time-code"
               autoFocus
@@ -197,7 +195,7 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  phoneNumber: {
+  destination: {
     fontFamily: typography.family.medium,
   },
   resendButton: {

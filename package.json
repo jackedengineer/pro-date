@@ -11,6 +11,7 @@
     "dev": "pnpm --parallel --filter @pro-date/api --filter @pro-date/mobile dev",
     "dev:api": "pnpm --filter @pro-date/api dev",
     "dev:mobile": "pnpm --filter @pro-date/mobile dev",
+    "db:migrate": "pnpm --filter @pro-date/database db:migrate",
     "doctor": "pnpm --filter @pro-date/mobile exec expo-doctor",
     "format": "prettier --write --ignore-unknown .",
     "format:check": "prettier --check --ignore-unknown .",

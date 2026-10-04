@@ -8,11 +8,12 @@ describe('<OtpVerificationScreen />', () => {
     const view = await render(
       <OtpVerificationScreen
         errorMessage={null}
+        changeDestinationAccessibilityLabel="Change phone number"
+        destination="+91 ••••• ••210"
         isSubmitting={false}
         onBack={jest.fn()}
         onResend={jest.fn()}
         onSubmit={onSubmit}
-        phoneNumber="+919876543210"
         resendSecondsRemaining={24}
       />,
     );
@@ -34,11 +35,12 @@ describe('<OtpVerificationScreen />', () => {
     const view = await render(
       <OtpVerificationScreen
         errorMessage="That code is not correct. Try again."
+        changeDestinationAccessibilityLabel="Change email address"
+        destination="p•••a@example.com"
         isSubmitting={false}
         onBack={jest.fn()}
         onResend={jest.fn()}
         onSubmit={jest.fn()}
-        phoneNumber="+919876543210"
         resendSecondsRemaining={0}
       />,
     );
@@ -52,11 +54,12 @@ describe('<OtpVerificationScreen />', () => {
     const view = await render(
       <OtpVerificationScreen
         errorMessage={null}
+        changeDestinationAccessibilityLabel="Change email address"
+        destination="p•••a@example.com"
         isSubmitting
         onBack={jest.fn()}
         onResend={onResend}
         onSubmit={jest.fn()}
-        phoneNumber="+919876543210"
         resendSecondsRemaining={12}
       />,
     );

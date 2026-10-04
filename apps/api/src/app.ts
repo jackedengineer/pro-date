@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ApiErrorResponse, HealthResponse } from '@pro-date/contracts';
+import type {
+  ApiErrorResponse,
+  CurrentUserResponse,
+  HealthResponse,
+  OnboardingStatus,
+} from '@pro-date/contracts';
 import cors from 'cors';
-import express, { type ErrorRequestHandler, type Request } from 'express';
+import express, { type ErrorRequestHandler, type Request, type RequestHandler } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import pinoHttp from 'pino-http';
@@ -12,11 +17,19 @@ import { createLogger } from './logger.js';
 type ReadinessStatus = 'up' | 'down';
 type ReadinessChecks = Record<string, ReadinessStatus>;
 
+export interface CurrentUserRecord {
+  id: string;
+  onboardingStatus: OnboardingStatus;
+}
+
 export interface ApiAppOptions {
+  authenticationMiddleware?: RequestHandler;
   clock?: () => Date;
+  findOrCreateCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord>;
   logger?: Logger;
   readinessCheck?: () => Promise<ReadinessChecks>;
   requestId?: () => string;
+  resolveClerkSubject?: (request: Request) => string | null;
 }
 
 function areChecksHealthy(checks: ReadinessChecks): checks is Record<string, 'up'> {
@@ -46,9 +59,13 @@ function getRequestId(request: Request): string {
 
 export function createApiApp(options: ApiAppOptions = {}) {
   const clock = options.clock ?? (() => new Date());
+  const findOrCreateCurrentUser =
+    options.findOrCreateCurrentUser ??
+    (() => Promise.reject(new Error('Current-user persistence is not configured.')));
   const logger = options.logger ?? createLogger();
   const readinessCheck = options.readinessCheck ?? (() => Promise.resolve({ application: 'up' }));
   const requestId = options.requestId ?? randomUUID;
+  const resolveClerkSubject = options.resolveClerkSubject ?? (() => null);
   const app = express();
 
   app.disable('x-powered-by');
@@ -65,6 +82,10 @@ export function createApiApp(options: ApiAppOptions = {}) {
     next();
   });
   app.use(express.json({ limit: '100kb' }));
+
+  if (options.authenticationMiddleware !== undefined) {
+    app.use(options.authenticationMiddleware);
+  }
 
   app.get('/health/live', (request, response) => {
     const body = {
@@ -119,6 +140,31 @@ export function createApiApp(options: ApiAppOptions = {}) {
 
       response.status(503).json(body);
     }
+  });
+
+  app.put('/v1/users/me', async (request, response) => {
+    const clerkSubject = resolveClerkSubject(request);
+
+    if (clerkSubject === null || clerkSubject.length === 0) {
+      const body = {
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication is required.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(401).json(body);
+      return;
+    }
+
+    const currentUser = await findOrCreateCurrentUser(clerkSubject);
+    const body = {
+      data: currentUser,
+      requestId: getRequestId(request),
+    } satisfies CurrentUserResponse;
+
+    response.status(200).json(body);
   });
 
   app.use((request, response) => {

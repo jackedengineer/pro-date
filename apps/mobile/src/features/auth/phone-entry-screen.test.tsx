@@ -6,7 +6,9 @@ describe('<PhoneEntryScreen />', () => {
   it('submits a valid Indian phone number in E.164 form', async () => {
     const onBack = jest.fn();
     const onContinue = jest.fn();
-    const view = await render(<PhoneEntryScreen onBack={onBack} onContinue={onContinue} />);
+    const view = await render(
+      <PhoneEntryScreen onBack={onBack} onContinue={onContinue} onUseEmail={jest.fn()} />,
+    );
     const continueButton = view.getByRole('button', { name: 'Continue' });
 
     expect(continueButton).toBeDisabled();
@@ -21,7 +23,9 @@ describe('<PhoneEntryScreen />', () => {
 
   it('keeps continuation disabled for an invalid number', async () => {
     const onContinue = jest.fn();
-    const view = await render(<PhoneEntryScreen onBack={jest.fn()} onContinue={onContinue} />);
+    const view = await render(
+      <PhoneEntryScreen onBack={jest.fn()} onContinue={onContinue} onUseEmail={jest.fn()} />,
+    );
 
     await fireEvent.changeText(view.getByLabelText('Phone number'), '123');
     await fireEvent.press(view.getByRole('button', { name: 'Continue' }));
@@ -36,10 +40,22 @@ describe('<PhoneEntryScreen />', () => {
         isSubmitting
         onBack={jest.fn()}
         onContinue={jest.fn()}
+        onUseEmail={jest.fn()}
       />,
     );
 
     expect(view.getByRole('alert')).toHaveTextContent('We couldn’t send a code right now.');
     expect(view.getByRole('button', { name: 'Sending code' })).toBeDisabled();
+  });
+
+  it('offers email authentication as an alternative', async () => {
+    const onUseEmail = jest.fn();
+    const view = await render(
+      <PhoneEntryScreen onBack={jest.fn()} onContinue={jest.fn()} onUseEmail={onUseEmail} />,
+    );
+
+    await fireEvent.press(view.getByRole('button', { name: 'Use email instead' }));
+
+    expect(onUseEmail).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,0 +1,32 @@
+{
+  "name": "@pro-date/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "db:check": "drizzle-kit check",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=../../apps/api/.env ../../node_modules/drizzle-kit/bin.cjs migrate",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --project tsconfig.json"
+  },
+  "dependencies": {
+    "@pro-date/contracts": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "5.0.2",
+    "drizzle-kit": "0.31.11",
+    "vitest": "5.0.2"
+  }
+}

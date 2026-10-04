@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { readApiEnvironment } from '../src/env.js';
+import { readApiEnvironment, readApiServiceEnvironment } from '../src/env.js';
 
 describe('readApiEnvironment', () => {
   it('provides safe local defaults', () => {
@@ -36,5 +36,43 @@ describe('readApiEnvironment', () => {
     { NODE_ENV: 'staging' },
   ])('rejects an invalid environment: %o', (environment) => {
     expect(() => readApiEnvironment(environment)).toThrow();
+  });
+
+  it('parses the private service configuration required at startup', () => {
+    expect(
+      readApiServiceEnvironment({
+        CLERK_PUBLISHABLE_KEY: 'pk_test_example',
+        CLERK_SECRET_KEY: 'sk_test_example',
+        DATABASE_URL: 'postgresql://user:password@example.test/pro_date?sslmode=require',
+        LOG_LEVEL: 'warn',
+        NODE_ENV: 'production',
+        PORT: '8080',
+      }),
+    ).toEqual({
+      clerkPublishableKey: 'pk_test_example',
+      clerkSecretKey: 'sk_test_example',
+      databaseUrl: 'postgresql://user:password@example.test/pro_date?sslmode=require',
+      host: '0.0.0.0',
+      logLevel: 'warn',
+      nodeEnv: 'production',
+      port: 8080,
+    });
+  });
+
+  it.each([
+    {
+      CLERK_PUBLISHABLE_KEY: 'pk_test_example',
+      CLERK_SECRET_KEY: 'sk_test_example',
+    },
+    {
+      CLERK_PUBLISHABLE_KEY: 'pk_test_example',
+      DATABASE_URL: 'postgresql://user:password@example.test/pro_date',
+    },
+    {
+      CLERK_SECRET_KEY: 'sk_test_example',
+      DATABASE_URL: 'postgresql://user:password@example.test/pro_date',
+    },
+  ])('rejects missing private service configuration: %o', (environment) => {
+    expect(() => readApiServiceEnvironment(environment)).toThrow();
   });
 });
