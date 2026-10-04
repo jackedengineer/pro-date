@@ -107,7 +107,7 @@ describe('verifyPhoneCode', () => {
   });
 
   it('transfers a verified unknown number to sign-up and finalizes its session', async () => {
-    const transferRequired = clerkError('sign_up_if_missing_transfer');
+    const transferRequired = { code: 'sign_up_if_missing_transfer' };
     const signIn = {
       create: jest.fn(),
       phoneCode: {

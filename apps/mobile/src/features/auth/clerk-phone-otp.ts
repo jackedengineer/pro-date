@@ -39,6 +39,12 @@ function getClerkErrorCode(error: unknown): string | null {
     return null;
   }
 
+  const directCode = error['code'];
+
+  if (typeof directCode === 'string') {
+    return directCode;
+  }
+
   const errors = error['errors'];
 
   if (!Array.isArray(errors) || errors.length === 0) {
