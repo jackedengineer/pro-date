@@ -273,6 +273,37 @@ describe('verifyEmailCode', () => {
     expect(signUp.create).toHaveBeenCalledWith({ transfer: true });
     expect(signUp.finalize).toHaveBeenCalledTimes(1);
   });
+
+  it('uses the nested Clerk API error code when the response wrapper has a generic code', async () => {
+    const signIn = {
+      create: jest.fn(),
+      emailCode: {
+        sendCode: jest.fn(),
+        verifyCode: jest.fn().mockResolvedValue({
+          error: {
+            code: 'api_response_error',
+            errors: [{ code: 'sign_up_if_missing_transfer' }],
+            status: 404,
+          },
+        }),
+      },
+      status: 'needs_first_factor',
+      finalize: jest.fn(),
+      reset: jest.fn(),
+    };
+    const signUp = {
+      create: jest.fn().mockImplementation(() => {
+        signUp.status = 'complete';
+        return Promise.resolve({ error: null });
+      }),
+      finalize: jest.fn().mockResolvedValue({ error: null }),
+      status: 'missing_requirements',
+    };
+
+    await expect(verifyEmailCode(signIn, signUp, '123456')).resolves.toEqual({ ok: true });
+    expect(signUp.create).toHaveBeenCalledWith({ transfer: true });
+    expect(signUp.finalize).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('getSafeAuthErrorMessage', () => {
@@ -324,6 +355,7 @@ describe('getSafeAuthErrorDiagnostic', () => {
   it('returns only non-sensitive provider metadata for development diagnostics', () => {
     expect(
       getSafeAuthErrorDiagnostic({
+        code: 'api_response_error',
         errors: [
           {
             code: 'verification_failed',

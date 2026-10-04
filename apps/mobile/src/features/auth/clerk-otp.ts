@@ -50,27 +50,23 @@ function getClerkErrorCode(error: unknown): string | null {
     return null;
   }
 
-  const directCode = error['code'];
-
-  if (typeof directCode === 'string') {
-    return directCode;
-  }
-
   const errors = error['errors'];
 
-  if (!Array.isArray(errors) || errors.length === 0) {
-    return null;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const firstError: unknown = errors[0];
+
+    if (isUnknownRecord(firstError)) {
+      const nestedCode = firstError['code'];
+
+      if (typeof nestedCode === 'string') {
+        return nestedCode;
+      }
+    }
   }
 
-  const firstError: unknown = errors[0];
+  const directCode = error['code'];
 
-  if (!isUnknownRecord(firstError)) {
-    return null;
-  }
-
-  const code = firstError['code'];
-
-  return typeof code === 'string' ? code : null;
+  return typeof directCode === 'string' ? directCode : null;
 }
 
 export function getSafeAuthErrorDiagnostic(error: unknown): {
