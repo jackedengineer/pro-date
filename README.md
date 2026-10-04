@@ -404,28 +404,28 @@ Git push
 
 Last architecture verification: **4 October 2026**
 
-| Milestone                              | Status                   |
-| -------------------------------------- | ------------------------ |
-| Product boundary and V0 journey        | Approved                 |
-| Capability map                         | Approved                 |
-| Core architecture and provider choices | Approved baseline        |
-| Expo SDK/App Store compatibility       | Verified for SDK 57      |
-| Exact dependency manifest              | Verified and locked      |
-| Installed dependency lock              | Implemented              |
-| Shared API contracts                   | Implemented and tested   |
-| Express health/startup foundation      | Implemented and tested   |
-| Mobile shell specification             | Approved                 |
-| Repository scaffold                    | Implemented              |
-| Expo welcome and OTP entry shell       | Implemented and tested   |
-| Expo Doctor / iOS Hermes export        | Verified                 |
-| First physical-device run              | Verified                 |
-| Clerk phone OTP client flow            | Implemented and tested   |
-| Clerk email OTP client flow            | Implemented and tested   |
-| Live Clerk SMS verification            | Awaiting provider setup  |
-| Live Clerk email verification          | Awaiting dashboard setup |
-| V0 vertical slice                      | Not started              |
+| Milestone                              | Status                      |
+| -------------------------------------- | --------------------------- |
+| Product boundary and V0 journey        | Approved                    |
+| Capability map                         | Approved                    |
+| Core architecture and provider choices | Approved baseline           |
+| Expo SDK/App Store compatibility       | Verified for SDK 57         |
+| Exact dependency manifest              | Verified and locked         |
+| Installed dependency lock              | Implemented                 |
+| Shared API contracts                   | Implemented and tested      |
+| Express health/startup foundation      | Implemented and tested      |
+| Mobile shell specification             | Approved                    |
+| Repository scaffold                    | Implemented                 |
+| Expo welcome and OTP entry shell       | Implemented and tested      |
+| Expo Doctor / iOS Hermes export        | Verified                    |
+| First physical-device run              | Verified                    |
+| Clerk phone OTP client flow            | Implemented and tested      |
+| Clerk email OTP client flow            | Implemented and tested      |
+| Live Clerk SMS verification            | Awaiting provider setup     |
+| Live Clerk email verification          | Verified on physical iPhone |
+| V0 vertical slice                      | Not started                 |
 
-The next milestone is to enable email-code authentication in the Clerk development instance, complete the live OTP flow on the physical iPhone, and capture verified authentication screenshots. Internal user synchronization plus the Neon/PostGIS and Drizzle foundation follow that provider checkpoint.
+The next milestone is authenticated internal-user synchronization plus the Neon/PostGIS and Drizzle foundation. That establishes the durable account boundary required before profile onboarding data is collected. Verified authentication screenshots will be added when a fictional test account is available so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
