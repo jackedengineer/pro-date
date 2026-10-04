@@ -4,8 +4,10 @@ import type { ApiErrorResponse, HealthResponse } from '@pro-dat/contracts';
 import cors from 'cors';
 import express, { type ErrorRequestHandler, type Request } from 'express';
 import helmet from 'helmet';
-import pino, { type Logger } from 'pino';
+import type { Logger } from 'pino';
 import pinoHttp from 'pino-http';
+
+import { createLogger } from './logger.js';
 
 type ReadinessStatus = 'up' | 'down';
 type ReadinessChecks = Record<string, ReadinessStatus>;
@@ -16,14 +18,6 @@ export interface ApiAppOptions {
   readinessCheck?: () => Promise<ReadinessChecks>;
   requestId?: () => string;
 }
-
-const defaultLogger = pino({
-  level: 'info',
-  redact: {
-    paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
-    remove: true,
-  },
-});
 
 function areChecksHealthy(checks: ReadinessChecks): checks is Record<string, 'up'> {
   return Object.values(checks).every((status) => status === 'up');
@@ -52,7 +46,7 @@ function getRequestId(request: Request): string {
 
 export function createApiApp(options: ApiAppOptions = {}) {
   const clock = options.clock ?? (() => new Date());
-  const logger = options.logger ?? defaultLogger;
+  const logger = options.logger ?? createLogger();
   const readinessCheck = options.readinessCheck ?? (() => Promise.resolve({ application: 'up' }));
   const requestId = options.requestId ?? randomUUID;
   const app = express();
