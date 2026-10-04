@@ -3,31 +3,31 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 
 import { isClerkConfigured } from '../../src/config/public-env';
-import { getSafeAuthErrorMessage, requestPhoneCode } from '../../src/features/auth/clerk-otp';
-import { PhoneEntryScreen } from '../../src/features/auth/phone-entry-screen';
+import { getSafeAuthErrorMessage, requestEmailCode } from '../../src/features/auth/clerk-otp';
+import { EmailEntryScreen } from '../../src/features/auth/email-entry-screen';
 
-export default function PhoneRoute() {
-  return isClerkConfigured ? <ConfiguredPhoneRoute /> : <UnconfiguredPhoneRoute />;
+export default function EmailRoute() {
+  return isClerkConfigured ? <ConfiguredEmailRoute /> : <UnconfiguredEmailRoute />;
 }
 
-function UnconfiguredPhoneRoute() {
+function UnconfiguredEmailRoute() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   return (
-    <PhoneEntryScreen
+    <EmailEntryScreen
       errorMessage={errorMessage}
       onBack={() => router.back()}
       onContinue={() => {
         setErrorMessage(
-          'Phone verification is not configured on this build. Add the Clerk publishable key and restart Expo.',
+          'Email verification is not configured on this build. Add the Clerk publishable key and restart Expo.',
         );
       }}
-      onUseEmail={() => router.replace('/auth/email')}
+      onUsePhone={() => router.replace('/auth/phone')}
     />
   );
 }
 
-function ConfiguredPhoneRoute() {
+function ConfiguredEmailRoute() {
   const { isLoaded, isSignedIn } = useAuth();
   const { signIn } = useSignIn();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -41,40 +41,40 @@ function ConfiguredPhoneRoute() {
     return <Redirect href="/onboarding" />;
   }
 
-  const sendCode = async (phoneNumber: string) => {
+  const sendCode = async (emailAddress: string) => {
     if (signIn === null || isSubmitting) {
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
-    const result = await requestPhoneCode(signIn, phoneNumber);
+    const result = await requestEmailCode(signIn, emailAddress);
 
     if (result.ok) {
-      router.push('/auth/verify');
+      router.push('/auth/verify-email');
     } else if ('error' in result) {
-      setErrorMessage(getSafeAuthErrorMessage(result.error, 'request'));
+      setErrorMessage(getSafeAuthErrorMessage(result.error, 'request', 'email'));
     } else {
-      setErrorMessage('Phone verification could not start. Try again.');
+      setErrorMessage('Email verification could not start. Try again.');
     }
 
     setIsSubmitting(false);
   };
 
-  const useEmail = () => {
+  const usePhone = () => {
     if (signIn !== null) {
       void signIn.reset();
     }
-    router.replace('/auth/email');
+    router.replace('/auth/phone');
   };
 
   return (
-    <PhoneEntryScreen
+    <EmailEntryScreen
       errorMessage={errorMessage}
       isSubmitting={isSubmitting}
       onBack={() => router.back()}
-      onContinue={(phoneNumber) => void sendCode(phoneNumber)}
-      onUseEmail={useEmail}
+      onContinue={(emailAddress) => void sendCode(emailAddress)}
+      onUsePhone={usePhone}
     />
   );
 }

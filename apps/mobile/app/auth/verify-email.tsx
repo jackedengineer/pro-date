@@ -3,39 +3,38 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 
 import { isClerkConfigured } from '../../src/config/public-env';
-import { maskIndianPhoneNumber } from '../../src/features/auth/auth-identifiers';
+import { isValidEmailAddress, maskEmailAddress } from '../../src/features/auth/auth-identifiers';
 import {
   getSafeAuthErrorMessage,
-  isIndianE164PhoneNumber,
-  resendPhoneCode,
-  verifyPhoneCode,
+  resendEmailCode,
+  verifyEmailCode,
 } from '../../src/features/auth/clerk-otp';
 import { OtpVerificationScreen } from '../../src/features/auth/otp-verification-screen';
 import { useResendCountdown } from '../../src/features/auth/use-resend-countdown';
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
-export default function VerifyPhoneRoute() {
-  return isClerkConfigured ? <ConfiguredVerifyPhoneRoute /> : <Redirect href="/auth/phone" />;
+export default function VerifyEmailRoute() {
+  return isClerkConfigured ? <ConfiguredVerifyEmailRoute /> : <Redirect href="/auth/email" />;
 }
 
-function ConfiguredVerifyPhoneRoute() {
+function ConfiguredVerifyEmailRoute() {
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const { restart, secondsRemaining } = useResendCountdown(RESEND_COOLDOWN_SECONDS);
   const [activity, setActivity] = useState<'idle' | 'resending' | 'verifying'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const phoneNumber = signIn?.identifier;
+  const emailAddress = signIn?.identifier;
 
-  if (!isIndianE164PhoneNumber(phoneNumber)) {
-    return <Redirect href="/auth/phone" />;
+  if (!isValidEmailAddress(emailAddress)) {
+    return <Redirect href="/auth/email" />;
   }
 
-  const changePhoneNumber = () => {
+  const changeEmailAddress = () => {
     if (signIn !== null) {
       void signIn.reset();
     }
-    router.replace('/auth/phone');
+    router.replace('/auth/email');
   };
 
   const submitCode = async (code: string) => {
@@ -45,7 +44,7 @@ function ConfiguredVerifyPhoneRoute() {
 
     setActivity('verifying');
     setErrorMessage(null);
-    const result = await verifyPhoneCode(signIn, signUp, code);
+    const result = await verifyEmailCode(signIn, signUp, code);
 
     if (result.ok) {
       router.replace('/onboarding');
@@ -53,10 +52,10 @@ function ConfiguredVerifyPhoneRoute() {
     }
 
     if ('error' in result) {
-      setErrorMessage(getSafeAuthErrorMessage(result.error, 'verify'));
+      setErrorMessage(getSafeAuthErrorMessage(result.error, 'verify', 'email'));
     } else if (result.kind === 'missing_requirements') {
       setErrorMessage(
-        'Account setup needs an unsupported Clerk field. Check the dashboard phone-only settings.',
+        'Account setup needs another Clerk field. Check the dashboard sign-up requirements.',
       );
     } else {
       setErrorMessage('This account needs an authentication step ProDate does not support yet.');
@@ -72,14 +71,14 @@ function ConfiguredVerifyPhoneRoute() {
 
     setActivity('resending');
     setErrorMessage(null);
-    const result = await resendPhoneCode(signIn);
+    const result = await resendEmailCode(signIn);
 
     if (result.ok) {
       restart();
     } else if ('error' in result) {
-      setErrorMessage(getSafeAuthErrorMessage(result.error, 'request'));
+      setErrorMessage(getSafeAuthErrorMessage(result.error, 'request', 'email'));
     } else {
-      setErrorMessage('We couldn’t send another code. Change your number and try again.');
+      setErrorMessage('We couldn’t send another code. Change your email and try again.');
     }
 
     setActivity('idle');
@@ -87,12 +86,12 @@ function ConfiguredVerifyPhoneRoute() {
 
   return (
     <OtpVerificationScreen
-      changeDestinationAccessibilityLabel="Change phone number"
-      destination={maskIndianPhoneNumber(phoneNumber)}
+      changeDestinationAccessibilityLabel="Change email address"
+      destination={maskEmailAddress(emailAddress)}
       errorMessage={errorMessage}
       isResending={activity === 'resending'}
       isSubmitting={activity === 'verifying'}
-      onBack={changePhoneNumber}
+      onBack={changeEmailAddress}
       onResend={() => void resendCode()}
       onSubmit={(code) => void submitCode(code)}
       resendSecondsRemaining={secondsRemaining}

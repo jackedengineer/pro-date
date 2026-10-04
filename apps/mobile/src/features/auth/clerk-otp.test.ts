@@ -1,10 +1,13 @@
 import {
   getSafeAuthErrorMessage,
   isIndianE164PhoneNumber,
+  requestEmailCode,
   requestPhoneCode,
+  resendEmailCode,
   resendPhoneCode,
+  verifyEmailCode,
   verifyPhoneCode,
-} from './clerk-phone-otp';
+} from './clerk-otp';
 
 function clerkError(code: string): unknown {
   return { errors: [{ code }] };
@@ -61,6 +64,48 @@ describe('requestPhoneCode', () => {
   });
 });
 
+describe('requestEmailCode', () => {
+  it('requests a privacy-preserving sign-in-or-sign-up email code', async () => {
+    const signIn = {
+      create: jest.fn().mockResolvedValue({ error: null }),
+      emailCode: {
+        sendCode: jest.fn().mockResolvedValue({ error: null }),
+        verifyCode: jest.fn(),
+      },
+      status: 'needs_first_factor',
+      finalize: jest.fn(),
+      reset: jest.fn(),
+    };
+
+    await expect(requestEmailCode(signIn, 'priya@example.com')).resolves.toEqual({ ok: true });
+    expect(signIn.create).toHaveBeenCalledWith({
+      identifier: 'priya@example.com',
+      signUpIfMissing: true,
+    });
+    expect(signIn.emailCode.sendCode).toHaveBeenCalledWith();
+  });
+
+  it('does not send an email when Clerk rejects the sign-in attempt', async () => {
+    const error = clerkError('form_identifier_invalid');
+    const signIn = {
+      create: jest.fn().mockResolvedValue({ error }),
+      emailCode: {
+        sendCode: jest.fn(),
+        verifyCode: jest.fn(),
+      },
+      status: null,
+      finalize: jest.fn(),
+      reset: jest.fn(),
+    };
+
+    await expect(requestEmailCode(signIn, 'priya@example.com')).resolves.toEqual({
+      error,
+      ok: false,
+    });
+    expect(signIn.emailCode.sendCode).not.toHaveBeenCalled();
+  });
+});
+
 describe('resendPhoneCode', () => {
   it('reuses the active verification attempt instead of recreating the sign-in', async () => {
     const signIn = {
@@ -76,6 +121,25 @@ describe('resendPhoneCode', () => {
 
     await expect(resendPhoneCode(signIn)).resolves.toEqual({ ok: true });
     expect(signIn.phoneCode.sendCode).toHaveBeenCalledWith({ channel: 'sms' });
+    expect(signIn.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('resendEmailCode', () => {
+  it('reuses the active verification attempt instead of recreating the sign-in', async () => {
+    const signIn = {
+      create: jest.fn(),
+      emailCode: {
+        sendCode: jest.fn().mockResolvedValue({ error: null }),
+        verifyCode: jest.fn(),
+      },
+      status: 'needs_first_factor',
+      finalize: jest.fn(),
+      reset: jest.fn(),
+    };
+
+    await expect(resendEmailCode(signIn)).resolves.toEqual({ ok: true });
+    expect(signIn.emailCode.sendCode).toHaveBeenCalledWith();
     expect(signIn.create).not.toHaveBeenCalled();
   });
 });
@@ -158,6 +222,58 @@ describe('verifyPhoneCode', () => {
   });
 });
 
+describe('verifyEmailCode', () => {
+  it('finalizes an existing user sign-in after successful verification', async () => {
+    const signIn = {
+      create: jest.fn(),
+      emailCode: {
+        sendCode: jest.fn(),
+        verifyCode: jest.fn().mockImplementation(() => {
+          signIn.status = 'complete';
+          return Promise.resolve({ error: null });
+        }),
+      },
+      status: 'needs_first_factor',
+      finalize: jest.fn().mockResolvedValue({ error: null }),
+      reset: jest.fn(),
+    };
+    const signUp = {
+      create: jest.fn(),
+      finalize: jest.fn(),
+      status: null,
+    };
+
+    await expect(verifyEmailCode(signIn, signUp, '123456')).resolves.toEqual({ ok: true });
+    expect(signIn.finalize).toHaveBeenCalledTimes(1);
+    expect(signUp.create).not.toHaveBeenCalled();
+  });
+
+  it('transfers a verified unknown email to sign-up and finalizes its session', async () => {
+    const signIn = {
+      create: jest.fn(),
+      emailCode: {
+        sendCode: jest.fn(),
+        verifyCode: jest.fn().mockResolvedValue({ error: { code: 'sign_up_if_missing_transfer' } }),
+      },
+      status: 'needs_first_factor',
+      finalize: jest.fn(),
+      reset: jest.fn(),
+    };
+    const signUp = {
+      create: jest.fn().mockImplementation(() => {
+        signUp.status = 'complete';
+        return Promise.resolve({ error: null });
+      }),
+      finalize: jest.fn().mockResolvedValue({ error: null }),
+      status: 'missing_requirements',
+    };
+
+    await expect(verifyEmailCode(signIn, signUp, '123456')).resolves.toEqual({ ok: true });
+    expect(signUp.create).toHaveBeenCalledWith({ transfer: true });
+    expect(signUp.finalize).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('getSafeAuthErrorMessage', () => {
   it('maps known provider failures without exposing raw provider content', () => {
     expect(getSafeAuthErrorMessage(clerkError('form_code_incorrect'), 'verify')).toBe(
@@ -169,6 +285,12 @@ describe('getSafeAuthErrorMessage', () => {
     expect(getSafeAuthErrorMessage(clerkError('too_many_requests'), 'request')).toBe(
       'Too many attempts. Wait a moment and try again.',
     );
+    expect(
+      getSafeAuthErrorMessage(clerkError('form_email_address_invalid'), 'request', 'email'),
+    ).toBe('Enter a valid email address and try again.');
+    expect(
+      getSafeAuthErrorMessage(clerkError('dev_monthly_email_limit_exceeded'), 'request', 'email'),
+    ).toBe('The development email limit has been reached. Use a Clerk test email instead.');
   });
 
   it('uses action-specific fallback copy for unknown errors', () => {
