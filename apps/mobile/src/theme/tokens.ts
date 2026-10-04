@@ -3,6 +3,8 @@ export const colors = {
   border: '#DDD2D7',
   coral: '#E65F55',
   coralPressed: '#C94C45',
+  danger: '#9D2F2B',
+  dangerSoft: '#F7E3E0',
   ink: '#211A1F',
   muted: '#756A72',
   plum: '#5A2E4F',
