@@ -1,0 +1,14 @@
+packages:
+  - apps/*
+  - packages/*
+
+storeDir: .pnpm-store
+cacheDir: .pnpm-cache
+nodeLinker: hoisted
+savePrefix: ''
+engineStrict: true
+strictDepBuilds: true
+
+allowBuilds:
+  esbuild: true
+  unrs-resolver@1.12.2: true

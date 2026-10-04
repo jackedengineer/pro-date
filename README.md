@@ -4,19 +4,19 @@
 
 `pro-dat` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: phone verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** architecture approved; implementation has not started. Features marked “V0” below are planned unless explicitly shown as implemented.
+> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, and Expo SDK 57 onboarding shell are implemented and verified. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
 
 ## Product preview
 
-Verified screenshots will be added as each workflow runs in a tested application build. They will use fictional seed profiles and redact phone numbers, exact locations, tokens, and other private data. Concept mockups will never be presented as implemented product evidence.
+Verified screenshots will be added after each workflow runs on the physical iPhone test path. They will use fictional seed profiles and redact phone numbers, exact locations, tokens, and other private data. Concept mockups will never be presented as implemented product evidence.
 
 The planned gallery will cover:
 
-| Authentication | Onboarding | Discovery | Engagement |
-|---|---|---|---|
-| Phone OTP | Profile and prompts | Profile card | Like or comment |
-| Match | Messaging | Safety | Subscription |
-| Match celebration | Durable chat | Block and report | Test entitlement |
+| Authentication    | Onboarding          | Discovery        | Engagement       |
+| ----------------- | ------------------- | ---------------- | ---------------- |
+| Phone OTP         | Profile and prompts | Profile card     | Like or comment  |
+| Match             | Messaging           | Safety           | Subscription     |
+| Match celebration | Durable chat        | Block and report | Test entitlement |
 
 ## What this project demonstrates
 
@@ -55,17 +55,17 @@ flowchart LR
 
 “V0” is deliberately a thin but complete product loop. Later versions deepen the product only after that loop is reliable.
 
-| Area | V0 | V1 | V2 |
-|---|---|---|---|
-| Identity | Clerk phone OTP, internal account, 18+ attestation | Account recovery and richer lifecycle controls | Optional stronger age/identity assurance |
-| Profiles | Attributes, prompts, photos, ordering, completeness | More prompt/media formats and profile editing depth | Voice/video prompts and experiments |
-| Discovery | Distance and preference filtering, baseline ordering, pagination | Richer filters, undo, improved candidate balancing | Learned ranking, standouts, explainable recommendations |
-| Engagement | Item-specific likes/comments, passes, mutual match | Incoming-like improvements and richer match feedback | Roses, boosts, and consumable mechanics |
-| Messaging | Persisted text messages, Socket.IO delivery, reconciliation | Reactions, typing/read indicators, richer inbox controls | Voice notes and advanced conversation assistance |
-| Safety | Block, unmatch, report, evidence preservation, privacy controls | Moderation operations and proactive interaction nudges | Verification signals and risk-assisted review |
-| Notifications | Match/message push with preferences and receipts | Granular notification settings and reminders | Personalized notification timing |
-| Monetization | RevenueCat Test Store entitlement | App Store / Play Billing sandbox products | Multiple tiers and consumables |
-| Operations | Health checks, logs, Sentry, rate limits, backups/deploy discipline | Operational dashboards and stronger runbooks | Scale testing and multi-replica realtime infrastructure |
+| Area          | V0                                                                  | V1                                                       | V2                                                      |
+| ------------- | ------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------- |
+| Identity      | Clerk phone OTP, internal account, 18+ attestation                  | Account recovery and richer lifecycle controls           | Optional stronger age/identity assurance                |
+| Profiles      | Attributes, prompts, photos, ordering, completeness                 | More prompt/media formats and profile editing depth      | Voice/video prompts and experiments                     |
+| Discovery     | Distance and preference filtering, baseline ordering, pagination    | Richer filters, undo, improved candidate balancing       | Learned ranking, standouts, explainable recommendations |
+| Engagement    | Item-specific likes/comments, passes, mutual match                  | Incoming-like improvements and richer match feedback     | Roses, boosts, and consumable mechanics                 |
+| Messaging     | Persisted text messages, Socket.IO delivery, reconciliation         | Reactions, typing/read indicators, richer inbox controls | Voice notes and advanced conversation assistance        |
+| Safety        | Block, unmatch, report, evidence preservation, privacy controls     | Moderation operations and proactive interaction nudges   | Verification signals and risk-assisted review           |
+| Notifications | Match/message push with preferences and receipts                    | Granular notification settings and reminders             | Personalized notification timing                        |
+| Monetization  | RevenueCat Test Store entitlement                                   | App Store / Play Billing sandbox products                | Multiple tiers and consumables                          |
+| Operations    | Health checks, logs, Sentry, rate limits, backups/deploy discipline | Operational dashboards and stronger runbooks             | Scale testing and multi-replica realtime infrastructure |
 
 Not in V0: an admin moderation dashboard, identity verification, advanced recommendation models, boosts or roses, voice/video prompts, voice/video calling, social login, general email/SMS messaging, multi-region infrastructure, Kubernetes, microservices, Elasticsearch, or a public App Store launch.
 
@@ -73,16 +73,16 @@ Not in V0: an admin moderation dashboard, identity verification, advanced recomm
 
 The interface will be original—not a traced or pixel-identical Hinge UI.
 
-| Area | Direction |
-|---|---|
-| Character | Warm, editorial, calm, intentional, inclusive |
-| Palette | Off-white canvas, white surfaces, near-black text, coral primary accent, deep-plum secondary accent |
-| Typography | Manrope with a readable system-font fallback |
-| Shape | Tactile cards, 16–24 px surface radii, restrained elevation, generous touch targets |
-| Rhythm | 8-point layout grid with optical 4-point adjustments |
-| Motion | Purposeful 180–260 ms transitions, restrained springs, contextual haptics |
+| Area          | Direction                                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Character     | Warm, editorial, calm, intentional, inclusive                                                                     |
+| Palette       | Off-white canvas, white surfaces, near-black text, coral primary accent, deep-plum secondary accent               |
+| Typography    | Manrope with a readable system-font fallback                                                                      |
+| Shape         | Tactile cards, 16–24 px surface radii, restrained elevation, generous touch targets                               |
+| Rhythm        | 8-point layout grid with optical 4-point adjustments                                                              |
+| Motion        | Purposeful 180–260 ms transitions, restrained springs, contextual haptics                                         |
 | Accessibility | Dynamic type, VoiceOver labels, WCAG AA contrast, reduced motion, 44-point minimum targets, non-color-only states |
-| Theme | Light V0 theme with semantic tokens ready for a future dark theme |
+| Theme         | Light V0 theme with semantic tokens ready for a future dark theme                                                 |
 
 The initial internal component set includes `AppText`, `Button`, `IconButton`, `TextField`, `PhoneField`, `OtpField`, `Avatar`, `Badge`, `PhotoTile`, `PromptCard`, `ProfileCard`, `BottomSheet`, `ProgressBar`, `Screen`, `EmptyState`, `ErrorState`, `OfflineBanner`, `Toast`, and `Skeleton`.
 
@@ -131,40 +131,40 @@ The backend is a modular monolith deployed as two processes from one codebase: a
 
 ## Architecture decision register
 
-| Decision | Choice | Why |
-|---|---|---|
-| Mobile runtime | [Expo SDK 57](https://expo.dev/changelog/sdk-57), React Native 0.86, React 19.2.3 | Current stable Expo line and supported by the current iOS Expo Go application |
-| Navigation | Expo Router | Expo-first routing, deep links, and typed route support |
-| UI foundation | React Native primitives, `StyleSheet`, typed tokens, internal components | Distinctive product experience without a generic Material-style visual system |
-| API | Express 5 REST under `/v1` | Explicit, versionable, testable mobile contracts |
-| Realtime | Socket.IO | Reconnect-friendly transport; durable state remains in PostgreSQL |
-| Database | Neon PostgreSQL with PostGIS in Singapore | Relational integrity, transactions, and geospatial filtering near the backend region |
-| Data access | Drizzle ORM and committed Drizzle Kit migrations | Type-safe relational access and auditable schema history |
-| Geospatial access | `geography(Point, 4326)` plus reviewed parameterized SQL where required | Correct distance semantics without forcing all queries outside the ORM |
-| Domain modeling | Normalized relational tables; no JSONB domain documents | Explicit constraints, joins, uniqueness, and queryable relationships |
-| Authentication | Clerk custom phone OTP plus internal UUID users | Provider handles verification; application retains domain identity ownership |
-| Media | Signed Cloudinary uploads | The device uploads directly without receiving a provider secret |
-| Async work | PostgreSQL transactional outbox and private worker | Couples state changes and side-effect intent atomically |
-| Subscriptions | RevenueCat Test Store, then platform billing sandboxes | Production-shaped entitlement handling without collecting card details directly |
-| Deployment | Railway API/worker and Neon database in Singapore | Simple first deployment with Docker, WebSockets, private services, and nearby data |
-| Scale posture | One API replica and no Redis in V0 | Avoids infrastructure without a demonstrated scaling need |
+| Decision          | Choice                                                                            | Why                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Mobile runtime    | [Expo SDK 57](https://expo.dev/changelog/sdk-57), React Native 0.86, React 19.2.3 | Current stable Expo line and supported by the current iOS Expo Go application        |
+| Navigation        | Expo Router                                                                       | Expo-first routing, deep links, and typed route support                              |
+| UI foundation     | React Native primitives, `StyleSheet`, typed tokens, internal components          | Distinctive product experience without a generic Material-style visual system        |
+| API               | Express 5 REST under `/v1`                                                        | Explicit, versionable, testable mobile contracts                                     |
+| Realtime          | Socket.IO                                                                         | Reconnect-friendly transport; durable state remains in PostgreSQL                    |
+| Database          | Neon PostgreSQL with PostGIS in Singapore                                         | Relational integrity, transactions, and geospatial filtering near the backend region |
+| Data access       | Drizzle ORM and committed Drizzle Kit migrations                                  | Type-safe relational access and auditable schema history                             |
+| Geospatial access | `geography(Point, 4326)` plus reviewed parameterized SQL where required           | Correct distance semantics without forcing all queries outside the ORM               |
+| Domain modeling   | Normalized relational tables; no JSONB domain documents                           | Explicit constraints, joins, uniqueness, and queryable relationships                 |
+| Authentication    | Clerk custom phone OTP plus internal UUID users                                   | Provider handles verification; application retains domain identity ownership         |
+| Media             | Signed Cloudinary uploads                                                         | The device uploads directly without receiving a provider secret                      |
+| Async work        | PostgreSQL transactional outbox and private worker                                | Couples state changes and side-effect intent atomically                              |
+| Subscriptions     | RevenueCat Test Store, then platform billing sandboxes                            | Production-shaped entitlement handling without collecting card details directly      |
+| Deployment        | Railway API/worker and Neon database in Singapore                                 | Simple first deployment with Docker, WebSockets, private services, and nearby data   |
+| Scale posture     | One API replica and no Redis in V0                                                | Avoids infrastructure without a demonstrated scaling need                            |
 
 ## Technology stack
 
-Exact package versions will be installed and locked only after compatibility checks; Expo-native packages will be selected with `npx expo install` rather than guessed manually.
+Exact package versions are pinned in the workspace lockfile. Expo-native versions are checked against Expo SDK 57 with Expo CLI and Expo Doctor rather than inferred from semver alone.
 
-| Layer | Technologies |
-|---|---|
-| Workspace | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces |
-| Mobile | Expo 57, React Native 0.86, React 19.2.3, Expo Router |
-| Mobile UI | React Native `StyleSheet`, Reanimated, Gesture Handler, Keyboard Controller, Expo Image/Image Picker/Image Manipulator, DateTimePicker, Haptics, Safe Area Context, Lucide React Native, Manrope |
-| Mobile state/forms | TanStack Query, React Hook Form, Zod, React state first; Zustand only if a real cross-screen need appears |
-| API | Express 5, Zod, Helmet, CORS, rate limiting, Pino, generated OpenAPI 3.1 with a protected Scalar reference |
-| Data | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon |
-| Integrations | Clerk, Cloudinary, Socket.IO, Expo Notifications/Push, RevenueCat, Sentry |
-| Mobile tests | Jest, `jest-expo`, React Native Testing Library, Maestro |
-| API tests | Vitest, Supertest, Testcontainers with real PostGIS |
-| Delivery | Docker, Railway, Neon, EAS Build/Update, GitHub Actions |
+| Layer              | Technologies                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                                     |
+| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                            |
+| Mobile UI          | React Native `StyleSheet`, Reanimated, Gesture Handler, Keyboard Controller, Expo Image/Image Picker/Image Manipulator, DateTimePicker, Haptics, Safe Area Context, Lucide React Native, Manrope |
+| Mobile state/forms | TanStack Query, React Hook Form, Zod, React state first; Zustand only if a real cross-screen need appears                                                                                        |
+| API                | Express 5, Zod, Helmet, CORS, rate limiting, Pino, generated OpenAPI 3.1 with a protected Scalar reference                                                                                       |
+| Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                                        |
+| Integrations       | Clerk, Cloudinary, Socket.IO, Expo Notifications/Push, RevenueCat, Sentry                                                                                                                        |
+| Mobile tests       | Jest, `jest-expo`, React Native Testing Library, Maestro                                                                                                                                         |
+| API tests          | Vitest, Supertest, Testcontainers with real PostGIS                                                                                                                                              |
+| Delivery           | Docker, Railway, Neon, EAS Build/Update, GitHub Actions                                                                                                                                          |
 
 Intentionally deferred: Redis, the Socket.IO Redis adapter, Kubernetes, microservices, Elasticsearch, a large third-party UI kit, and speculative global-state infrastructure.
 
@@ -209,33 +209,33 @@ Generated OpenAPI documentation will be exposed from the running API once endpoi
 
 This is a production-shaped project, not an operating public dating service. Its safety model is deliberately honest about the absence of staffed moderation and identity verification in V0.
 
-## Planned repository structure
+## Repository structure (implemented and planned)
 
 ```text
 pro-dat/
 ├── apps/
 │   ├── mobile/        # Expo application
 │   ├── api/           # Express HTTP and Socket.IO service
-│   └── worker/        # Transactional-outbox consumers
+│   └── worker/        # Planned transactional-outbox consumers
 ├── packages/
 │   ├── contracts/     # Shared Zod schemas and transport types
-│   ├── database/      # Drizzle schema, migrations, and repositories
-│   ├── domain/        # Pure domain rules and state transitions
-│   ├── observability/ # Logging, tracing, and redaction helpers
-│   └── config/        # Shared TypeScript/lint/build configuration
-├── tests/
-│   └── e2e/           # Maestro flows and test fixtures
-├── Dockerfile
+│   ├── database/      # Planned Drizzle schema, migrations, and repositories
+│   ├── domain/        # Planned pure domain rules and state transitions
+│   ├── observability/ # Planned logging, tracing, and redaction helpers
+│   └── config/        # Planned extracted shared configuration
+├── tests/             # Planned cross-service test suites
+│   └── e2e/           # Planned Maestro flows and test fixtures
+├── Dockerfile         # Planned deployment image
 ├── package.json
 ├── pnpm-workspace.yaml
 └── README.md          # The only tracked project Markdown document
 ```
 
-Private specifications, plans, goals, task lists, and detailed decision records live in a sibling local directory outside this Git repository.
+Private specifications, plans, goals, task lists, and detailed decision records live under the local, gitignored `.project-docs/` directory. This keeps all project work inside the workspace without publishing working notes to GitHub.
 
 ## Local development
 
-The executable quick start will be added with the first scaffold. The approved prerequisites are:
+The current prerequisites are:
 
 - Node.js 24 LTS
 - Corepack-managed pnpm
@@ -245,18 +245,24 @@ The executable quick start will be added with the first scaffold. The approved p
 - Docker for local PostGIS integration tests
 - Provider development/test accounts as their integrations are introduced
 
-The intended command contract is:
+Install and verify the implemented foundation from the repository root:
 
 ```bash
 corepack enable
 pnpm install
-pnpm env:check
-pnpm db:migrate
-pnpm db:seed
-pnpm dev
+pnpm verify
 ```
 
-These commands are documentation of the target developer experience until the corresponding scripts are implemented. The README will not mark setup as working until it has been verified from a fresh clone.
+Run the services in separate terminals:
+
+```bash
+pnpm dev:api
+pnpm dev:mobile
+```
+
+The API defaults to `http://localhost:3000`; its liveness and readiness endpoints are `/health/live` and `/health/ready`. The mobile command starts Expo Router and prints the Expo Go QR code. Dependency stores and caches used during this project are kept inside the repository and ignored by Git.
+
+Database migration and seed commands will be introduced with the PostGIS slice; they are intentionally not advertised before they exist.
 
 ## Physical iPhone: Expo Go first run
 
@@ -264,18 +270,18 @@ These commands are documentation of the target developer experience until the co
 
 1. Install or update Expo Go on the iPhone and confirm the phone runs iOS 16.4 or later.
 2. Create an Expo account if needed and sign into that same account in both Expo Go and the terminal.
-3. From the mobile workspace, run:
+3. From the repository root, sign in and validate the project:
 
    ```bash
-   npx expo login
-   npx expo install --fix
-   npx expo-doctor@latest
-   npx expo start
+   pnpm --filter @pro-dat/mobile exec expo login
+   pnpm --filter @pro-dat/mobile exec expo install --check
+   pnpm doctor
+   pnpm dev:mobile
    ```
 
 4. Keep the Mac and iPhone on the same Wi-Fi network.
 5. Scan the terminal QR code with the iPhone Camera application.
-6. If the LAN cannot connect, stop Metro and use `npx expo start --tunnel`. Tunnel mode is slower but bypasses many local-network discovery problems.
+6. If the LAN cannot connect, stop Metro and use `pnpm --filter @pro-dat/mobile exec expo start --tunnel`. Tunnel mode is slower but bypasses many local-network discovery problems.
 
 Expo Go is appropriate for navigation, interface work, backend calls, location, and Clerk's custom JavaScript phone-OTP flow. It is not the final runtime:
 
@@ -300,31 +306,39 @@ An EAS cloud development build for a physical iPhone requires an active Apple De
 
 The build profiles are:
 
-| Profile | Purpose |
-|---|---|
+| Profile       | Purpose                                        |
+| ------------- | ---------------------------------------------- |
 | `development` | Native development client with developer tools |
-| `preview` | Production-shaped internal testing |
-| `production` | Store-signed release candidate |
+| `preview`     | Production-shaped internal testing             |
+| `production`  | Store-signed release candidate                 |
 
 EAS Update is reserved for JavaScript and asset changes compatible with the installed runtime. Native dependency or configuration changes always produce a new build.
 
 ## Testing and quality gates
 
-| Gate | Evidence required |
-|---|---|
-| Format and lint | No repository-format or lint violations |
-| Type safety | Strict TypeScript passes across all workspaces |
-| Domain tests | Pure rules and state transitions are deterministic |
-| Mobile tests | Components are behavior- and accessibility-tested |
-| API integration | Routes are exercised through Supertest |
-| Database integration | Queries and constraints run against real PostGIS through Testcontainers |
-| Native flows | Critical paths run through Maestro on a development/preview build |
-| Dependency health | Expo Doctor and package compatibility checks pass |
-| Migration safety | Forward migrations pass on a fresh and representative database |
-| Security | Authorization, input boundaries, upload constraints, webhook verification, redaction, and rate limits are tested |
-| Delivery | Docker build and environment validation pass before deployment |
+| Gate                 | Evidence required                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Format and lint      | No repository-format or lint violations                                                                          |
+| Type safety          | Strict TypeScript passes across all workspaces                                                                   |
+| Domain tests         | Pure rules and state transitions are deterministic                                                               |
+| Mobile tests         | Components are behavior- and accessibility-tested                                                                |
+| API integration      | Routes are exercised through Supertest                                                                           |
+| Database integration | Queries and constraints run against real PostGIS through Testcontainers                                          |
+| Native flows         | Critical paths run through Maestro on a development/preview build                                                |
+| Dependency health    | Expo Doctor and package compatibility checks pass                                                                |
+| Migration safety     | Forward migrations pass on a fresh and representative database                                                   |
+| Security             | Authorization, input boundaries, upload constraints, webhook verification, redaction, and rate limits are tested |
+| Delivery             | Docker build and environment validation pass before deployment                                                   |
 
 CI and coverage badges will be added only after real workflows produce those results.
+
+Current foundation evidence:
+
+- 29 automated tests pass across shared contracts, API integration behavior, bootstrap logic, and mobile component behavior.
+- Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
+- The dependency graph has no peer dependency issues.
+- Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
+- Metro produces a successful iOS Hermes export with only the three Manrope weights used by the interface.
 
 ## Deployment model
 
@@ -353,20 +367,25 @@ Git push
 
 Last architecture verification: **4 October 2026**
 
-| Milestone | Status |
-|---|---|
-| Product boundary and V0 journey | Approved |
-| Capability map | Approved |
-| Core architecture and provider choices | Approved baseline |
-| Expo SDK/App Store compatibility | Verified for SDK 57 |
-| Exact dependency manifest | Proposed for approval |
-| Installed dependency lock | Not started |
-| Mobile shell specification | Proposed for review |
-| Repository scaffold | Not started |
-| First physical-device run | Not started |
-| V0 vertical slice | Not started |
+| Milestone                              | Status                    |
+| -------------------------------------- | ------------------------- |
+| Product boundary and V0 journey        | Approved                  |
+| Capability map                         | Approved                  |
+| Core architecture and provider choices | Approved baseline         |
+| Expo SDK/App Store compatibility       | Verified for SDK 57       |
+| Exact dependency manifest              | Verified and locked       |
+| Installed dependency lock              | Implemented               |
+| Shared API contracts                   | Implemented and tested    |
+| Express health/startup foundation      | Implemented and tested    |
+| Mobile shell specification             | Approved                  |
+| Repository scaffold                    | Implemented               |
+| Expo welcome and phone-entry shell     | Implemented and tested    |
+| Expo Doctor / iOS Hermes export        | Verified                  |
+| First physical-device run              | Awaiting device test      |
+| Live Clerk phone OTP                   | Next implementation slice |
+| V0 vertical slice                      | Not started               |
 
-The next milestone is to approve the mobile-shell specification and exact package manifest, scaffold the monorepo, and verify the shell on the physical iPhone before domain features are added.
+The next milestone is to run the shell in Expo Go on the physical iPhone, capture the first verified screenshots, and then implement the Clerk phone-OTP slice without mixing placeholder authentication into the production path.
 
 ## Legal and intellectual-property note
 
