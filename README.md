@@ -1,8 +1,8 @@
-# pro-dat
+# ProDate
 
 ### A production-shaped, Hinge-inspired dating application built as an end-to-end mobile engineering project
 
-`pro-dat` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: phone verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
+`ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: phone verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
 > **Project status:** the repository foundation, shared transport contracts, hardened API health surface, and Expo SDK 57 onboarding shell are implemented and verified. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
 
@@ -212,7 +212,7 @@ This is a production-shaped project, not an operating public dating service. Its
 ## Repository structure (implemented and planned)
 
 ```text
-pro-dat/
+pro-date/
 ├── apps/
 │   ├── mobile/        # Expo application
 │   ├── api/           # Express HTTP and Socket.IO service
@@ -273,15 +273,15 @@ Database migration and seed commands will be introduced with the PostGIS slice; 
 3. From the repository root, sign in and validate the project:
 
    ```bash
-   pnpm --filter @pro-dat/mobile exec expo login
-   pnpm --filter @pro-dat/mobile exec expo install --check
+   pnpm --filter @pro-date/mobile exec expo login
+   pnpm --filter @pro-date/mobile exec expo install --check
    pnpm doctor
    pnpm dev:mobile
    ```
 
 4. Keep the Mac and iPhone on the same Wi-Fi network.
 5. Scan the terminal QR code with the iPhone Camera application.
-6. If the LAN cannot connect, stop Metro and use `pnpm --filter @pro-dat/mobile exec expo start --tunnel`. Tunnel mode is slower but bypasses many local-network discovery problems.
+6. If the LAN cannot connect, stop Metro and use `pnpm --filter @pro-date/mobile exec expo start --tunnel`. Tunnel mode is slower but bypasses many local-network discovery problems.
 
 Expo Go is appropriate for navigation, interface work, backend calls, location, and Clerk's custom JavaScript phone-OTP flow. It is not the final runtime:
 

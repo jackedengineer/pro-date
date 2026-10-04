@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ApiErrorResponse, HealthResponse } from '@pro-dat/contracts';
+import type { ApiErrorResponse, HealthResponse } from '@pro-date/contracts';
 import cors from 'cors';
 import express, { type ErrorRequestHandler, type Request } from 'express';
 import helmet from 'helmet';

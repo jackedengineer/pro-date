@@ -1,5 +1,5 @@
 {
-  "name": "pro-dat",
+  "name": "pro-date",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,10 +8,10 @@
     "node": ">=24.14.0 <25"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @pro-dat/api --filter @pro-dat/mobile dev",
-    "dev:api": "pnpm --filter @pro-dat/api dev",
-    "dev:mobile": "pnpm --filter @pro-dat/mobile dev",
-    "doctor": "pnpm --filter @pro-dat/mobile exec expo-doctor",
+    "dev": "pnpm --parallel --filter @pro-date/api --filter @pro-date/mobile dev",
+    "dev:api": "pnpm --filter @pro-date/api dev",
+    "dev:mobile": "pnpm --filter @pro-date/mobile dev",
+    "doctor": "pnpm --filter @pro-date/mobile exec expo-doctor",
     "format": "prettier --write --ignore-unknown .",
     "format:check": "prettier --check --ignore-unknown .",
     "lint": "eslint . --max-warnings 0",

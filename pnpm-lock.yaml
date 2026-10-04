@@ -196,7 +196,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@pro-dat/contracts':
+      '@pro-date/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       cors:
