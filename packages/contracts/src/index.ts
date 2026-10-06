@@ -11,8 +11,26 @@ export type { HealthResponse } from './health';
 export {
   birthDateSchema,
   displayNameSchema,
+  genderIdentitySchema,
+  heightUpdateSchema,
+  identityUpdateSchema,
+  interestedInSchema,
+  interestedInValueSchema,
   isAtLeastAge,
+  locationUpdateSchema,
+  preferencesUpdateSchema,
   profileResponseSchema,
+  pronounsSchema,
+  relationshipIntentSchema,
   updateProfileRequestSchema,
 } from './profile';
-export type { ProfileResponse, UpdateProfileRequest } from './profile';
+export type {
+  HeightUpdate,
+  IdentityUpdate,
+  InterestedInValue,
+  LocationUpdate,
+  PreferencesUpdate,
+  ProfileResponse,
+  RelationshipIntent,
+  UpdateProfileRequest,
+} from './profile';
