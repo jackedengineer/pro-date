@@ -29,8 +29,8 @@ describe('profile repository', () => {
     const { params, sql } = buildOnboardingProgressQuery(database, userId, 'BIRTHDAY').toSQL();
 
     expect(sql).toContain('update "users"');
-    expect(sql).toContain('"onboarding_status" = $1');
-    expect(sql).toContain('"onboarding_step" = $2');
+    expect(sql).toContain('greatest("users"."onboarding_status", $1::onboarding_status)');
+    expect(sql).toContain('greatest("users"."onboarding_step", $2::onboarding_step)');
     expect(sql).toContain('returning "onboarding_status", "onboarding_step"');
     expect(params).toEqual(['IN_PROGRESS', 'BIRTHDAY', userId]);
   });

@@ -52,8 +52,8 @@ export function buildOnboardingProgressQuery(
   return database
     .update(users)
     .set({
-      onboardingStatus: 'IN_PROGRESS',
-      onboardingStep: nextStep,
+      onboardingStatus: sql<OnboardingStatus>`greatest(${users.onboardingStatus}, ${'IN_PROGRESS'}::onboarding_status)`,
+      onboardingStep: sql<OnboardingStep>`greatest(${users.onboardingStep}, ${nextStep}::onboarding_step)`,
       updatedAt: sql`now()`,
     })
     .where(eq(users.id, userId))
