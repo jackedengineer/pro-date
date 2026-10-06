@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   ApiErrorResponse,
+  CompleteProfilePromptsRequest,
   CompleteProfilePhotosRequest,
   CreateProfilePhotoRequest,
   CurrentUserResponse,
@@ -14,10 +15,12 @@ import type {
   PreferencesUpdate,
   ProfilePhotoListResponse,
   ProfilePhotoUploadIntentResponse,
+  ProfilePromptListResponse,
   ProfileResponse,
 } from '@pro-date/contracts';
 import {
   completeProfilePhotosRequestSchema,
+  completeProfilePromptsRequestSchema,
   createProfilePhotoRequestSchema,
   isAtLeastAge,
   updateProfileRequestSchema,
@@ -36,6 +39,7 @@ import pinoHttp from 'pino-http';
 import { createLogger } from './logger.js';
 import { ProfilePhotoProviderError } from './media/profile-photo-provider.js';
 import type { ProfilePhotoService } from './media/profile-photo-service.js';
+import type { ProfilePromptService } from './profile/profile-prompt-service.js';
 
 type ReadinessStatus = 'up' | 'down';
 type ReadinessChecks = Record<string, ReadinessStatus>;
@@ -67,6 +71,7 @@ export interface ApiAppOptions {
   findOrCreateCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord>;
   logger?: Logger;
   profilePhotoService?: ProfilePhotoService;
+  profilePromptService?: ProfilePromptService;
   readinessCheck?: () => Promise<ReadinessChecks>;
   requestId?: () => string;
   resolveClerkSubject?: (request: Request) => string | null;
@@ -122,6 +127,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
     (() => Promise.reject(new Error('Current-user persistence is not configured.')));
   const logger = options.logger ?? createLogger();
   const profilePhotoService = options.profilePhotoService;
+  const profilePromptService = options.profilePromptService;
   const readinessCheck = options.readinessCheck ?? (() => Promise.resolve({ application: 'up' }));
   const requestId = options.requestId ?? randomUUID;
   const resolveClerkSubject = options.resolveClerkSubject ?? (() => null);
@@ -509,6 +515,98 @@ export function createApiApp(options: ApiAppOptions = {}) {
       onboardingStep: result.onboardingStep,
       requestId: getRequestId(request),
     } satisfies ProfilePhotoListResponse;
+
+    response.status(200).json(body);
+  });
+
+  async function resolveProfilePromptUser(
+    request: Request,
+    response: Response,
+  ): Promise<CurrentUserRecord | null> {
+    const clerkSubject = resolveClerkSubject(request);
+
+    if (clerkSubject === null || clerkSubject.length === 0) {
+      const body = {
+        error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(401).json(body);
+      return null;
+    }
+
+    const currentUser = await findOrCreateCurrentUser(clerkSubject);
+
+    if (onboardingStepRank[currentUser.onboardingStep] < onboardingStepRank.PROMPTS) {
+      const body = {
+        error: {
+          code: 'ONBOARDING_STEP_REQUIRED',
+          message: 'Complete the earlier profile steps first.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
+      return null;
+    }
+
+    if (profilePromptService === undefined) {
+      const body = {
+        error: {
+          code: 'PROFILE_UNAVAILABLE',
+          message: 'Profile prompts are not configured yet.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(503).json(body);
+      return null;
+    }
+
+    return currentUser;
+  }
+
+  app.get('/v1/users/me/profile-prompts', async (request, response) => {
+    const currentUser = await resolveProfilePromptUser(request, response);
+
+    if (currentUser === null || profilePromptService === undefined) return;
+
+    const body = {
+      data: await profilePromptService.list(currentUser.id),
+      onboardingStep: currentUser.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePromptListResponse;
+
+    response.status(200).json(body);
+  });
+
+  app.put('/v1/users/me/profile-prompts', async (request, response) => {
+    const currentUser = await resolveProfilePromptUser(request, response);
+
+    if (currentUser === null || profilePromptService === undefined) return;
+
+    const input = completeProfilePromptsRequestSchema.safeParse(request.body);
+
+    if (!input.success) {
+      const body = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Choose three different prompts and answer each with at least five words.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
+    const update: CompleteProfilePromptsRequest = input.data;
+    const result = await profilePromptService.complete(currentUser.id, update.prompts);
+    const body = {
+      data: result.answers,
+      onboardingStep: result.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePromptListResponse;
 
     response.status(200).json(body);
   });
