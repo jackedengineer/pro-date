@@ -51,12 +51,42 @@ describe('readApiEnvironment', () => {
     ).toEqual({
       clerkPublishableKey: 'pk_test_example',
       clerkSecretKey: 'sk_test_example',
+      cloudinary: null,
       databaseUrl: 'postgresql://user:password@example.test/pro_date?sslmode=require',
       host: '0.0.0.0',
       logLevel: 'warn',
       nodeEnv: 'production',
       port: 8080,
     });
+  });
+
+  it('parses a complete private Cloudinary configuration', () => {
+    expect(
+      readApiServiceEnvironment({
+        CLERK_PUBLISHABLE_KEY: 'pk_test_example',
+        CLERK_SECRET_KEY: 'sk_test_example',
+        CLOUDINARY_API_KEY: '123456789012345',
+        CLOUDINARY_API_SECRET: 'private-cloudinary-secret',
+        CLOUDINARY_CLOUD_NAME: 'pro-date-dev',
+        DATABASE_URL: 'postgresql://user:password@example.test/pro_date',
+      }).cloudinary,
+    ).toEqual({
+      apiKey: '123456789012345',
+      apiSecret: 'private-cloudinary-secret',
+      cloudName: 'pro-date-dev',
+    });
+  });
+
+  it('keeps media disabled when the optional Cloudinary secret is missing', () => {
+    expect(
+      readApiServiceEnvironment({
+        CLERK_PUBLISHABLE_KEY: 'pk_test_example',
+        CLERK_SECRET_KEY: 'sk_test_example',
+        CLOUDINARY_API_KEY: '123456789012345',
+        CLOUDINARY_CLOUD_NAME: 'pro-date-dev',
+        DATABASE_URL: 'postgresql://user:password@example.test/pro_date',
+      }).cloudinary,
+    ).toBeNull();
   });
 
   it.each([

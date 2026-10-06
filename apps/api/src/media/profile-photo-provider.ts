@@ -142,6 +142,10 @@ export function createProfilePhotoProvider({
         uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       };
     },
+
+    getDeliveryUrl(publicId: string, version: number) {
+      return client.buildDeliveryUrl(publicId, version);
+    },
   };
 }
 

@@ -2,18 +2,41 @@ import { clerkMiddleware, getAuth } from '@clerk/express';
 import {
   createCurrentUserRepository,
   createDatabaseResources,
+  createProfilePhotoRepository,
   createProfileRepository,
 } from '@pro-date/database';
 
 import { createApiApp } from './app.js';
 import { readApiServiceEnvironment } from './env.js';
 import { createLogger } from './logger.js';
+import {
+  createCloudinaryProfilePhotoClient,
+  createProfilePhotoProvider,
+} from './media/profile-photo-provider.js';
+import { createProfilePhotoService } from './media/profile-photo-service.js';
 
 const environment = readApiServiceEnvironment();
 const logger = createLogger(environment.logLevel);
 const { database, pool } = createDatabaseResources(environment.databaseUrl);
 const currentUserRepository = createCurrentUserRepository(database);
+const profilePhotoRepository = createProfilePhotoRepository(database);
 const profileRepository = createProfileRepository(database);
+const profilePhotoService =
+  environment.cloudinary === null
+    ? undefined
+    : createProfilePhotoService(
+        createProfilePhotoProvider({
+          apiKey: environment.cloudinary.apiKey,
+          cloudName: environment.cloudinary.cloudName,
+          client: createCloudinaryProfilePhotoClient(environment.cloudinary),
+        }),
+        profilePhotoRepository,
+      );
+
+if (profilePhotoService === undefined) {
+  logger.warn('Cloudinary is incomplete; profile photo routes will remain unavailable');
+}
+
 const app = createApiApp({
   authenticationMiddleware: clerkMiddleware({
     publishableKey: environment.clerkPublishableKey,
@@ -22,6 +45,7 @@ const app = createApiApp({
   findOrCreateCurrentUser: (clerkSubject) =>
     currentUserRepository.findOrCreateByClerkSubject(clerkSubject),
   logger,
+  ...(profilePhotoService === undefined ? {} : { profilePhotoService }),
   readinessCheck: async () => {
     await pool.query('select 1');
 

@@ -10,6 +10,9 @@ const apiEnvironmentSchema = z.object({
 const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
   CLERK_PUBLISHABLE_KEY: z.string().trim().startsWith('pk_'),
   CLERK_SECRET_KEY: z.string().trim().startsWith('sk_'),
+  CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().trim().min(1).optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
   DATABASE_URL: z
     .url()
     .refine(
@@ -17,6 +20,12 @@ const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
       'DATABASE_URL must use the postgres or postgresql protocol.',
     ),
 });
+
+export interface CloudinaryEnvironment {
+  apiKey: string;
+  apiSecret: string;
+  cloudName: string;
+}
 
 export interface ApiEnvironment {
   host: string;
@@ -28,6 +37,7 @@ export interface ApiEnvironment {
 export interface ApiServiceEnvironment extends ApiEnvironment {
   clerkPublishableKey: string;
   clerkSecretKey: string;
+  cloudinary: CloudinaryEnvironment | null;
   databaseUrl: string;
 }
 
@@ -48,10 +58,21 @@ export function readApiServiceEnvironment(
   input: Record<string, string | undefined> = process.env,
 ): ApiServiceEnvironment {
   const environment = apiServiceEnvironmentSchema.parse(input);
+  const cloudinary =
+    environment.CLOUDINARY_API_KEY !== undefined &&
+    environment.CLOUDINARY_API_SECRET !== undefined &&
+    environment.CLOUDINARY_CLOUD_NAME !== undefined
+      ? {
+          apiKey: environment.CLOUDINARY_API_KEY,
+          apiSecret: environment.CLOUDINARY_API_SECRET,
+          cloudName: environment.CLOUDINARY_CLOUD_NAME,
+        }
+      : null;
 
   return {
     clerkPublishableKey: environment.CLERK_PUBLISHABLE_KEY,
     clerkSecretKey: environment.CLERK_SECRET_KEY,
+    cloudinary,
     databaseUrl: environment.DATABASE_URL,
     host: environment.HOST,
     logLevel: environment.LOG_LEVEL,
