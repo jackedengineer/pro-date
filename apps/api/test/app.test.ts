@@ -13,6 +13,23 @@ import { createApiApp, type ApiAppOptions } from '../src/app.js';
 const requestId = '59a2c4a6-110e-470e-bcab-c762c18dec45';
 const timestamp = '2026-10-04T11:00:00.000Z';
 
+const emptyProfileDraft = {
+  arePronounsVisible: true,
+  birthDate: null,
+  displayName: null,
+  genderIdentity: null,
+  hasLocation: false,
+  heightCm: null,
+  interestedIn: [],
+  isGenderVisible: true,
+  isHeightVisible: true,
+  locationLabel: null,
+  onboardingStatus: 'IN_PROGRESS' as const,
+  onboardingStep: 'IDENTITY' as const,
+  pronouns: null,
+  relationshipIntent: null,
+};
+
 function createTestApp(options: ApiAppOptions = {}) {
   return createApiApp({
     clock: () => new Date(timestamp),
@@ -207,9 +224,8 @@ describe('API application', () => {
       onboardingStatus: 'NOT_STARTED',
     });
     const saveProfileDisplayName = vi.fn().mockResolvedValue({
-      birthDate: null,
+      ...emptyProfileDraft,
       displayName: 'Ada',
-      onboardingStatus: 'IN_PROGRESS',
       onboardingStep: 'BIRTHDAY',
     });
 
@@ -231,9 +247,8 @@ describe('API application', () => {
     );
     expect(profileResponseSchema.parse(response.body)).toEqual({
       data: {
-        birthDate: null,
+        ...emptyProfileDraft,
         displayName: 'Ada',
-        onboardingStatus: 'IN_PROGRESS',
         onboardingStep: 'BIRTHDAY',
       },
       requestId,
@@ -277,10 +292,9 @@ describe('API application', () => {
       onboardingStatus: 'IN_PROGRESS',
     });
     const saveProfileBirthDate = vi.fn().mockResolvedValue({
+      ...emptyProfileDraft,
       birthDate: '2000-02-29',
       displayName: 'Ada',
-      onboardingStatus: 'IN_PROGRESS',
-      onboardingStep: 'IDENTITY',
     });
 
     const response = await request(
@@ -300,12 +314,152 @@ describe('API application', () => {
     );
     expect(profileResponseSchema.parse(response.body)).toEqual({
       data: {
+        ...emptyProfileDraft,
         birthDate: '2000-02-29',
         displayName: 'Ada',
-        onboardingStatus: 'IN_PROGRESS',
-        onboardingStep: 'IDENTITY',
       },
       requestId,
+    });
+  });
+
+  it('persists identity and pronoun visibility before advancing to preferences', async () => {
+    const saveProfileIdentity = vi.fn().mockResolvedValue({
+      ...emptyProfileDraft,
+      arePronounsVisible: true,
+      genderIdentity: 'Non-binary',
+      isGenderVisible: false,
+      onboardingStep: 'PREFERENCES',
+      pronouns: 'they/them',
+    });
+
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser: vi.fn().mockResolvedValue({
+          id: '729438da-99b3-4d3d-b566-bfe94401829b',
+          onboardingStep: 'IDENTITY',
+          onboardingStatus: 'IN_PROGRESS',
+        }),
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfileIdentity,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({
+        identity: {
+          arePronounsVisible: true,
+          genderIdentity: 'Non-binary',
+          isGenderVisible: false,
+          pronouns: 'they/them',
+        },
+      })
+      .expect(200);
+
+    expect(saveProfileIdentity).toHaveBeenCalledWith('729438da-99b3-4d3d-b566-bfe94401829b', {
+      arePronounsVisible: true,
+      genderIdentity: 'Non-binary',
+      isGenderVisible: false,
+      pronouns: 'they/them',
+    });
+    expect(profileResponseSchema.parse(response.body).data.onboardingStep).toBe('PREFERENCES');
+  });
+
+  it('persists dating preferences before advancing to location', async () => {
+    const saveProfilePreferences = vi.fn().mockResolvedValue({
+      ...emptyProfileDraft,
+      interestedIn: ['WOMEN', 'NON_BINARY_PEOPLE'],
+      onboardingStep: 'LOCATION',
+      relationshipIntent: 'LONG_TERM',
+    });
+
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser: vi.fn().mockResolvedValue({
+          id: '729438da-99b3-4d3d-b566-bfe94401829b',
+          onboardingStep: 'PREFERENCES',
+          onboardingStatus: 'IN_PROGRESS',
+        }),
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfilePreferences,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({
+        preferences: {
+          interestedIn: ['WOMEN', 'NON_BINARY_PEOPLE'],
+          relationshipIntent: 'LONG_TERM',
+        },
+      })
+      .expect(200);
+
+    expect(profileResponseSchema.parse(response.body).data.onboardingStep).toBe('LOCATION');
+  });
+
+  it('persists exact location without returning coordinates', async () => {
+    const saveProfileLocation = vi.fn().mockResolvedValue({
+      ...emptyProfileDraft,
+      hasLocation: true,
+      locationLabel: 'Mumbai, Maharashtra',
+      onboardingStep: 'DETAILS',
+    });
+
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser: vi.fn().mockResolvedValue({
+          id: '729438da-99b3-4d3d-b566-bfe94401829b',
+          onboardingStep: 'LOCATION',
+          onboardingStatus: 'IN_PROGRESS',
+        }),
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfileLocation,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({
+        location: {
+          countryCode: 'IN',
+          latitude: 19.076,
+          locality: 'Mumbai',
+          longitude: 72.8777,
+          region: 'Maharashtra',
+        },
+      })
+      .expect(200);
+
+    expect(profileResponseSchema.parse(response.body).data).toMatchObject({
+      hasLocation: true,
+      locationLabel: 'Mumbai, Maharashtra',
+      onboardingStep: 'DETAILS',
+    });
+    expect(JSON.stringify(response.body)).not.toContain('19.076');
+    expect(JSON.stringify(response.body)).not.toContain('72.8777');
+  });
+
+  it('persists canonical height before advancing to photos', async () => {
+    const saveProfileHeight = vi.fn().mockResolvedValue({
+      ...emptyProfileDraft,
+      heightCm: 173,
+      onboardingStep: 'PHOTOS',
+    });
+
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser: vi.fn().mockResolvedValue({
+          id: '729438da-99b3-4d3d-b566-bfe94401829b',
+          onboardingStep: 'DETAILS',
+          onboardingStatus: 'IN_PROGRESS',
+        }),
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfileHeight,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({ height: { centimeters: 173, isVisible: true } })
+      .expect(200);
+
+    expect(profileResponseSchema.parse(response.body).data).toMatchObject({
+      heightCm: 173,
+      onboardingStatus: 'IN_PROGRESS',
+      onboardingStep: 'PHOTOS',
     });
   });
 });

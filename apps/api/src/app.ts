@@ -3,10 +3,14 @@ import { randomUUID } from 'node:crypto';
 import type {
   ApiErrorResponse,
   CurrentUserResponse,
+  HeightUpdate,
   HealthResponse,
-  ProfileResponse,
+  IdentityUpdate,
+  LocationUpdate,
   OnboardingStatus,
   OnboardingStep,
+  PreferencesUpdate,
+  ProfileResponse,
 } from '@pro-date/contracts';
 import { isAtLeastAge, updateProfileRequestSchema } from '@pro-date/contracts';
 import cors from 'cors';
@@ -26,12 +30,7 @@ export interface CurrentUserRecord {
   onboardingStatus: OnboardingStatus;
 }
 
-export interface ProfileCheckpointRecord {
-  birthDate: string | null;
-  displayName: string | null;
-  onboardingStatus: OnboardingStatus;
-  onboardingStep: OnboardingStep;
-}
+export type ProfileCheckpointRecord = ProfileResponse['data'];
 
 export interface ApiAppOptions {
   authenticationMiddleware?: RequestHandler;
@@ -46,6 +45,19 @@ export interface ApiAppOptions {
     displayName: string,
   ) => Promise<ProfileCheckpointRecord>;
   saveProfileBirthDate?: (userId: string, birthDate: string) => Promise<ProfileCheckpointRecord>;
+  saveProfileHeight?: (userId: string, height: HeightUpdate) => Promise<ProfileCheckpointRecord>;
+  saveProfileIdentity?: (
+    userId: string,
+    identity: IdentityUpdate,
+  ) => Promise<ProfileCheckpointRecord>;
+  saveProfileLocation?: (
+    userId: string,
+    location: LocationUpdate,
+  ) => Promise<ProfileCheckpointRecord>;
+  saveProfilePreferences?: (
+    userId: string,
+    preferences: PreferencesUpdate,
+  ) => Promise<ProfileCheckpointRecord>;
 }
 
 function areChecksHealthy(checks: ReadinessChecks): checks is Record<string, 'up'> {
@@ -87,6 +99,18 @@ export function createApiApp(options: ApiAppOptions = {}) {
     (() => Promise.reject(new Error('Profile persistence is not configured.')));
   const saveProfileBirthDate =
     options.saveProfileBirthDate ??
+    (() => Promise.reject(new Error('Profile persistence is not configured.')));
+  const saveProfileHeight =
+    options.saveProfileHeight ??
+    (() => Promise.reject(new Error('Profile persistence is not configured.')));
+  const saveProfileIdentity =
+    options.saveProfileIdentity ??
+    (() => Promise.reject(new Error('Profile persistence is not configured.')));
+  const saveProfileLocation =
+    options.saveProfileLocation ??
+    (() => Promise.reject(new Error('Profile persistence is not configured.')));
+  const saveProfilePreferences =
+    options.saveProfilePreferences ??
     (() => Promise.reject(new Error('Profile persistence is not configured.')));
   const app = express();
 
@@ -218,7 +242,15 @@ export function createApiApp(options: ApiAppOptions = {}) {
                 ? 'Your name must be between 2 and 40 characters.'
                 : issue.path[0] === 'birthDate'
                   ? 'Enter a valid birthday.'
-                  : 'This profile field is not supported.',
+                  : issue.path[0] === 'identity'
+                    ? 'Check your identity and pronoun details.'
+                    : issue.path[0] === 'preferences'
+                      ? 'Choose who you want to meet and what you are looking for.'
+                      : issue.path[0] === 'location'
+                        ? 'We could not use that location.'
+                        : issue.path[0] === 'height'
+                          ? 'Choose a height between 120 and 230 cm.'
+                          : 'This profile field is not supported.',
             path: issue.path.join('.') || 'profile',
           })),
           message: 'Check the highlighted profile fields.',
@@ -260,6 +292,14 @@ export function createApiApp(options: ApiAppOptions = {}) {
       profile = await saveProfileDisplayName(currentUser.id, input.data.displayName);
     } else if (input.data.birthDate !== undefined) {
       profile = await saveProfileBirthDate(currentUser.id, input.data.birthDate);
+    } else if (input.data.identity !== undefined) {
+      profile = await saveProfileIdentity(currentUser.id, input.data.identity);
+    } else if (input.data.preferences !== undefined) {
+      profile = await saveProfilePreferences(currentUser.id, input.data.preferences);
+    } else if (input.data.location !== undefined) {
+      profile = await saveProfileLocation(currentUser.id, input.data.location);
+    } else if (input.data.height !== undefined) {
+      profile = await saveProfileHeight(currentUser.id, input.data.height);
     } else {
       throw new Error('The validated profile update did not contain a supported field.');
     }
