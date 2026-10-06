@@ -24,6 +24,15 @@
         {
           "locationWhenInUsePermission": "ProDate uses your location to show relevant people nearby. Your exact location is never shown on your profile."
         }
+      ],
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": false,
+          "microphonePermission": false,
+          "photosPermission": "ProDate uses only the photos you choose to build your dating profile."
+        }
       ]
     ],
     "experiments": {

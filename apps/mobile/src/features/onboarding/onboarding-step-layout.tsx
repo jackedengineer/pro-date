@@ -21,7 +21,12 @@ export function OnboardingStepLayout({
 }: OnboardingStepLayoutProps) {
   return (
     <Screen style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           {onBack === undefined ? null : (
             <Pressable

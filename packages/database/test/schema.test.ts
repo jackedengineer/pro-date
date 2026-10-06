@@ -1,7 +1,14 @@
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
 
-import { onboardingStatus, onboardingStep, profiles, users } from '../src/schema.js';
+import {
+  onboardingStatus,
+  onboardingStep,
+  profilePhotos,
+  profilePromptAnswers,
+  profiles,
+  users,
+} from '../src/schema.js';
 
 describe('users schema', () => {
   it('uses an internal UUID and a unique Clerk subject', () => {
@@ -72,5 +79,63 @@ describe('profiles schema', () => {
 
     expect(sqlTypes).not.toContain('json');
     expect(sqlTypes).not.toContain('jsonb');
+  });
+});
+
+describe('profile photos schema', () => {
+  it('stores provider identity and presentation order relationally', () => {
+    const table = getTableConfig(profilePhotos);
+    const id = table.columns.find((column) => column.name === 'id');
+    const userId = table.columns.find((column) => column.name === 'user_id');
+    const providerAssetId = table.columns.find((column) => column.name === 'provider_asset_id');
+    const providerPublicId = table.columns.find((column) => column.name === 'provider_public_id');
+    const position = table.columns.find((column) => column.name === 'position');
+
+    expect(id).toMatchObject({ hasDefault: true, notNull: true, primary: true });
+    expect(userId).toMatchObject({ notNull: true });
+    expect(providerAssetId).toMatchObject({ isUnique: true, notNull: true });
+    expect(providerPublicId).toMatchObject({ isUnique: true, notNull: true });
+    expect(position).toMatchObject({ dataType: 'number', notNull: true });
+    expect(table.foreignKeys).toHaveLength(1);
+    expect(
+      table.uniqueConstraints.some(
+        (constraint) => constraint.name === 'profile_photos_user_position_unique',
+      ),
+    ).toBe(true);
+    expect(table.checks.map((check) => check.name)).toEqual(
+      expect.arrayContaining([
+        'profile_photos_bytes_check',
+        'profile_photos_dimensions_check',
+        'profile_photos_format_check',
+        'profile_photos_position_check',
+      ]),
+    );
+  });
+});
+
+describe('profile prompt answers schema', () => {
+  it('stores ordered prompt answers without document columns', () => {
+    const table = getTableConfig(profilePromptAnswers);
+    const promptId = table.columns.find((column) => column.name === 'prompt_id');
+    const answer = table.columns.find((column) => column.name === 'answer');
+
+    expect(promptId?.getSQLType()).toBe('varchar(64)');
+    expect(answer?.getSQLType()).toBe('varchar(280)');
+    expect(table.foreignKeys).toHaveLength(1);
+    expect(table.uniqueConstraints.map((constraint) => constraint.name)).toEqual(
+      expect.arrayContaining([
+        'profile_prompt_answers_user_prompt_unique',
+        'profile_prompt_answers_user_position_unique',
+      ]),
+    );
+    expect(table.checks.map((constraint) => constraint.name)).toContain(
+      'profile_prompt_answers_position_check',
+    );
+    expect(table.checks.map((constraint) => constraint.name)).toEqual(
+      expect.arrayContaining([
+        'profile_prompt_answers_answer_length_check',
+        'profile_prompt_answers_prompt_id_check',
+      ]),
+    );
   });
 });

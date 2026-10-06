@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   ApiErrorResponse,
+  CompleteProfilePromptsRequest,
+  CompleteProfilePhotosRequest,
+  CreateProfilePhotoRequest,
   CurrentUserResponse,
   HeightUpdate,
   HealthResponse,
@@ -10,16 +13,34 @@ import type {
   OnboardingStatus,
   OnboardingStep,
   PreferencesUpdate,
+  ProfilePhotoListResponse,
+  ProfilePhotoUploadIntentResponse,
+  ProfilePromptListResponse,
   ProfileResponse,
 } from '@pro-date/contracts';
-import { isAtLeastAge, updateProfileRequestSchema } from '@pro-date/contracts';
+import {
+  completeProfilePhotosRequestSchema,
+  completeProfilePromptsRequestSchema,
+  createProfilePhotoRequestSchema,
+  isAtLeastAge,
+  profilePhotoIdSchema,
+  updateProfileRequestSchema,
+} from '@pro-date/contracts';
 import cors from 'cors';
-import express, { type ErrorRequestHandler, type Request, type RequestHandler } from 'express';
+import express, {
+  type ErrorRequestHandler,
+  type Request,
+  type RequestHandler,
+  type Response,
+} from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import pinoHttp from 'pino-http';
 
 import { createLogger } from './logger.js';
+import { ProfilePhotoProviderError } from './media/profile-photo-provider.js';
+import type { ProfilePhotoService } from './media/profile-photo-service.js';
+import type { ProfilePromptService } from './profile/profile-prompt-service.js';
 
 type ReadinessStatus = 'up' | 'down';
 type ReadinessChecks = Record<string, ReadinessStatus>;
@@ -50,6 +71,8 @@ export interface ApiAppOptions {
   clock?: () => Date;
   findOrCreateCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord>;
   logger?: Logger;
+  profilePhotoService?: ProfilePhotoService;
+  profilePromptService?: ProfilePromptService;
   readinessCheck?: () => Promise<ReadinessChecks>;
   requestId?: () => string;
   resolveClerkSubject?: (request: Request) => string | null;
@@ -104,6 +127,8 @@ export function createApiApp(options: ApiAppOptions = {}) {
     options.findOrCreateCurrentUser ??
     (() => Promise.reject(new Error('Current-user persistence is not configured.')));
   const logger = options.logger ?? createLogger();
+  const profilePhotoService = options.profilePhotoService;
+  const profilePromptService = options.profilePromptService;
   const readinessCheck = options.readinessCheck ?? (() => Promise.resolve({ application: 'up' }));
   const requestId = options.requestId ?? randomUUID;
   const resolveClerkSubject = options.resolveClerkSubject ?? (() => null);
@@ -352,6 +377,279 @@ export function createApiApp(options: ApiAppOptions = {}) {
     response.status(200).json(body);
   });
 
+  async function resolveProfilePhotoUser(
+    request: Request,
+    response: Response,
+  ): Promise<CurrentUserRecord | null> {
+    const clerkSubject = resolveClerkSubject(request);
+
+    if (clerkSubject === null || clerkSubject.length === 0) {
+      const body = {
+        error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(401).json(body);
+      return null;
+    }
+
+    const currentUser = await findOrCreateCurrentUser(clerkSubject);
+
+    if (onboardingStepRank[currentUser.onboardingStep] < onboardingStepRank.PHOTOS) {
+      const body = {
+        error: {
+          code: 'ONBOARDING_STEP_REQUIRED',
+          message: 'Complete the earlier profile steps first.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
+      return null;
+    }
+
+    if (profilePhotoService === undefined) {
+      const body = {
+        error: {
+          code: 'MEDIA_UNAVAILABLE',
+          message: 'Photo uploads are not configured yet.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(503).json(body);
+      return null;
+    }
+
+    return currentUser;
+  }
+
+  app.get('/v1/users/me/profile-photos', async (request, response) => {
+    const currentUser = await resolveProfilePhotoUser(request, response);
+
+    if (currentUser === null || profilePhotoService === undefined) {
+      return;
+    }
+
+    const body = {
+      data: await profilePhotoService.list(currentUser.id),
+      onboardingStep: currentUser.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePhotoListResponse;
+
+    response.status(200).json(body);
+  });
+
+  app.post('/v1/users/me/profile-photo-upload-intents', async (request, response) => {
+    const currentUser = await resolveProfilePhotoUser(request, response);
+
+    if (currentUser === null || profilePhotoService === undefined) {
+      return;
+    }
+
+    const body = {
+      data: profilePhotoService.createUploadIntent(currentUser.id),
+      requestId: getRequestId(request),
+    } satisfies ProfilePhotoUploadIntentResponse;
+
+    response.status(201).json(body);
+  });
+
+  app.post('/v1/users/me/profile-photos', async (request, response) => {
+    const currentUser = await resolveProfilePhotoUser(request, response);
+
+    if (currentUser === null || profilePhotoService === undefined) {
+      return;
+    }
+
+    const input = createProfilePhotoRequestSchema.safeParse(request.body);
+
+    if (!input.success) {
+      const body = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The uploaded photo proof is invalid.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
+    const upload: CreateProfilePhotoRequest = input.data;
+    const body = {
+      data: await profilePhotoService.add(currentUser.id, upload),
+      onboardingStep: currentUser.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePhotoListResponse;
+
+    response.status(201).json(body);
+  });
+
+  app.put('/v1/users/me/profile-photos', async (request, response) => {
+    const currentUser = await resolveProfilePhotoUser(request, response);
+
+    if (currentUser === null || profilePhotoService === undefined) {
+      return;
+    }
+
+    const input = completeProfilePhotosRequestSchema.safeParse(request.body);
+
+    if (!input.success) {
+      const body = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Add at least four different photos before continuing.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
+    const update: CompleteProfilePhotosRequest = input.data;
+    const result = await profilePhotoService.complete(currentUser.id, update.photoIds);
+    const body = {
+      data: result.photos,
+      onboardingStep: result.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePhotoListResponse;
+
+    response.status(200).json(body);
+  });
+
+  app.delete('/v1/users/me/profile-photos/:photoId', async (request, response) => {
+    const currentUser = await resolveProfilePhotoUser(request, response);
+
+    if (currentUser === null || profilePhotoService === undefined) return;
+
+    const photoId = profilePhotoIdSchema.safeParse(request.params.photoId);
+
+    if (!photoId.success) {
+      const body = {
+        error: { code: 'VALIDATION_ERROR', message: 'The profile photo ID is invalid.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
+    const photos = await profilePhotoService.remove(currentUser.id, photoId.data);
+
+    if (photos === null) {
+      const body = {
+        error: { code: 'NOT_FOUND', message: 'That profile photo was not found.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(404).json(body);
+      return;
+    }
+
+    const body = {
+      data: photos,
+      onboardingStep: currentUser.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePhotoListResponse;
+
+    response.status(200).json(body);
+  });
+
+  async function resolveProfilePromptUser(
+    request: Request,
+    response: Response,
+  ): Promise<CurrentUserRecord | null> {
+    const clerkSubject = resolveClerkSubject(request);
+
+    if (clerkSubject === null || clerkSubject.length === 0) {
+      const body = {
+        error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(401).json(body);
+      return null;
+    }
+
+    const currentUser = await findOrCreateCurrentUser(clerkSubject);
+
+    if (onboardingStepRank[currentUser.onboardingStep] < onboardingStepRank.PROMPTS) {
+      const body = {
+        error: {
+          code: 'ONBOARDING_STEP_REQUIRED',
+          message: 'Complete the earlier profile steps first.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
+      return null;
+    }
+
+    if (profilePromptService === undefined) {
+      const body = {
+        error: {
+          code: 'PROFILE_UNAVAILABLE',
+          message: 'Profile prompts are not configured yet.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(503).json(body);
+      return null;
+    }
+
+    return currentUser;
+  }
+
+  app.get('/v1/users/me/profile-prompts', async (request, response) => {
+    const currentUser = await resolveProfilePromptUser(request, response);
+
+    if (currentUser === null || profilePromptService === undefined) return;
+
+    const body = {
+      data: await profilePromptService.list(currentUser.id),
+      onboardingStep: currentUser.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePromptListResponse;
+
+    response.status(200).json(body);
+  });
+
+  app.put('/v1/users/me/profile-prompts', async (request, response) => {
+    const currentUser = await resolveProfilePromptUser(request, response);
+
+    if (currentUser === null || profilePromptService === undefined) return;
+
+    const input = completeProfilePromptsRequestSchema.safeParse(request.body);
+
+    if (!input.success) {
+      const body = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Choose three different prompts and answer each with at least five words.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
+    const update: CompleteProfilePromptsRequest = input.data;
+    const result = await profilePromptService.complete(currentUser.id, update.prompts);
+    const body = {
+      data: result.answers,
+      onboardingStep: result.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePromptListResponse;
+
+    response.status(200).json(body);
+  });
+
   app.use((request, response) => {
     const body = {
       error: {
@@ -377,6 +675,22 @@ export function createApiApp(options: ApiAppOptions = {}) {
       } satisfies ApiErrorResponse;
 
       response.status(400).json(body);
+      return;
+    }
+
+    if (error instanceof ProfilePhotoProviderError) {
+      const body = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message:
+            error.code === 'INVALID_UPLOAD_PROOF'
+              ? 'We could not verify that upload.'
+              : 'Use a JPEG photo under 10 MB with both edges at least 600 px.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
       return;
     }
 

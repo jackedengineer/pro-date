@@ -8,21 +8,21 @@ import { OnboardingProgress } from './onboarding-progress';
 export function ProfileCheckpointScreen() {
   return (
     <Screen style={styles.screen}>
-      <OnboardingProgress current={7} total={9} />
+      <OnboardingProgress current={9} total={9} />
       <View style={styles.content}>
         <View accessibilityElementsHidden style={styles.statusMark}>
           <AppText style={styles.statusIcon} variant="title">
             ✓
           </AppText>
         </View>
-        <AppText variant="eyebrow">Foundation committed</AppText>
-        <AppText variant="display">Core profile shipped.</AppText>
+        <AppText variant="eyebrow">Prompts committed</AppText>
+        <AppText variant="display">The profile has a point of view.</AppText>
         <AppText style={styles.supportingText}>
-          Your basics are synced. Next, give the profile some visual signal.
+          Your basics, photos, and conversation hooks are synced. One complete card review is next.
         </AppText>
         <View style={styles.nextStep}>
           <AppText style={styles.nextStepText} variant="button">
-            Next: photos
+            Next: profile review
           </AppText>
         </View>
       </View>
