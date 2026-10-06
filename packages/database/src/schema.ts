@@ -115,7 +115,31 @@ export const profilePhotos = pgTable(
   ],
 );
 
+export const profilePromptAnswers = pgTable(
+  'profile_prompt_answers',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    promptId: varchar('prompt_id', { length: 64 }).notNull(),
+    answer: varchar('answer', { length: 280 }).notNull(),
+    position: smallint('position').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique('profile_prompt_answers_user_prompt_unique').on(table.userId, table.promptId),
+    unique('profile_prompt_answers_user_position_unique').on(table.userId, table.position),
+    check(
+      'profile_prompt_answers_position_check',
+      sql`${table.position} >= 0 and ${table.position} < 3`,
+    ),
+  ],
+);
+
 export type NewUser = typeof users.$inferInsert;
 export type Profile = typeof profiles.$inferSelect;
 export type ProfilePhoto = typeof profilePhotos.$inferSelect;
+export type ProfilePromptAnswer = typeof profilePromptAnswers.$inferSelect;
 export type User = typeof users.$inferSelect;

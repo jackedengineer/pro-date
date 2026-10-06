@@ -1,7 +1,14 @@
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
 
-import { onboardingStatus, onboardingStep, profilePhotos, profiles, users } from '../src/schema.js';
+import {
+  onboardingStatus,
+  onboardingStep,
+  profilePhotos,
+  profilePromptAnswers,
+  profiles,
+  users,
+} from '../src/schema.js';
 
 describe('users schema', () => {
   it('uses an internal UUID and a unique Clerk subject', () => {
@@ -98,6 +105,27 @@ describe('profile photos schema', () => {
         'profile_photos_format_check',
         'profile_photos_position_check',
       ]),
+    );
+  });
+});
+
+describe('profile prompt answers schema', () => {
+  it('stores ordered prompt answers without document columns', () => {
+    const table = getTableConfig(profilePromptAnswers);
+    const promptId = table.columns.find((column) => column.name === 'prompt_id');
+    const answer = table.columns.find((column) => column.name === 'answer');
+
+    expect(promptId?.getSQLType()).toBe('varchar(64)');
+    expect(answer?.getSQLType()).toBe('varchar(280)');
+    expect(table.foreignKeys).toHaveLength(1);
+    expect(table.uniqueConstraints.map((constraint) => constraint.name)).toEqual(
+      expect.arrayContaining([
+        'profile_prompt_answers_user_prompt_unique',
+        'profile_prompt_answers_user_position_unique',
+      ]),
+    );
+    expect(table.checks.map((constraint) => constraint.name)).toContain(
+      'profile_prompt_answers_position_check',
     );
   });
 });
