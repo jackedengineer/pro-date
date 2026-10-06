@@ -5,7 +5,15 @@ import {
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  type LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import type { LocalProfilePhoto } from '../../api/profile-photos';
 import { AppButton } from '../../components/app-button';
@@ -21,6 +29,17 @@ interface ProfilePhotosScreenProps {
   pickPhoto: () => Promise<LocalProfilePhoto | null>;
   removePhoto: (photoId: string) => Promise<ProfilePhoto[]>;
   uploadPhoto: (photo: LocalProfilePhoto, position: number) => Promise<ProfilePhoto[]>;
+}
+
+const PHOTO_CARD_ASPECT_RATIO = 4 / 5;
+
+function getPhotoCardSize(gridWidth: number) {
+  const width = Math.max(0, (gridWidth - spacing.md) / 2);
+
+  return {
+    height: width / PHOTO_CARD_ASPECT_RATIO,
+    width,
+  };
 }
 
 function sortPhotos(photos: ProfilePhoto[]): ProfilePhoto[] {
@@ -39,13 +58,25 @@ export function ProfilePhotosScreen({
   removePhoto,
   uploadPhoto,
 }: ProfilePhotosScreenProps) {
+  const { width: viewportWidth } = useWindowDimensions();
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePosition, setActivePosition] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [measuredGridWidth, setMeasuredGridWidth] = useState<number | null>(null);
   const photosByPosition = new Map(photos.map((photo) => [photo.position, photo]));
+  const gridWidth = measuredGridWidth ?? Math.max(0, viewportWidth - spacing.lg * 2);
+  const photoCardSize = getPhotoCardSize(gridWidth);
+
+  const measureGrid = useCallback((event: LayoutChangeEvent) => {
+    const nextWidth = event.nativeEvent.layout.width;
+
+    setMeasuredGridWidth((currentWidth) =>
+      currentWidth === null || Math.abs(currentWidth - nextWidth) >= 0.5 ? nextWidth : currentWidth,
+    );
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -198,7 +229,7 @@ export function ProfilePhotosScreen({
           <AppText style={styles.supportingText}>Fetching your photo draft…</AppText>
         </View>
       ) : loadError === null ? (
-        <View style={styles.grid}>
+        <View onLayout={measureGrid} style={styles.grid} testID="profile-photo-grid">
           {Array.from({ length: PROFILE_PHOTO_MAX_COUNT }, (_, index) => {
             const currentPhoto = photosByPosition.get(index);
 
@@ -218,6 +249,7 @@ export function ProfilePhotosScreen({
                   onPress={() => void addPhoto(index)}
                   style={({ pressed }) => [
                     styles.photoCard,
+                    photoCardSize,
                     styles.emptyCard,
                     pressed && styles.cardPressed,
                   ]}
@@ -258,7 +290,7 @@ export function ProfilePhotosScreen({
                 }
                 accessible
                 key={currentPhoto.id}
-                style={styles.photoCard}
+                style={[styles.photoCard, photoCardSize]}
               >
                 <Image
                   accessibilityIgnoresInvertColors
@@ -429,11 +461,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   photoCard: {
-    aspectRatio: 0.78,
     backgroundColor: colors.border,
     borderRadius: radii.md,
     overflow: 'hidden',
-    width: '47%',
   },
   imageOutline: {
     bottom: 0,

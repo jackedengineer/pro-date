@@ -45,20 +45,33 @@ describe('ProfilePhotosScreen', () => {
     expect(view.getByRole('button', { name: 'Commit photos and continue' })).toBeDisabled();
   });
 
-  it('centers the empty-slot affordance within the full photo card', async () => {
+  it('keeps every photo slot at a stable 4:5 size after measuring the grid', async () => {
     const view = await render(
       <ProfilePhotosScreen
         completePhotos={jest.fn()}
-        loadPhotos={jest.fn().mockResolvedValue([])}
+        loadPhotos={jest.fn().mockResolvedValue([photo(0)])}
         pickPhoto={jest.fn()}
         removePhoto={jest.fn()}
         uploadPhoto={jest.fn()}
       />,
     );
 
-    const firstCard = await view.findByRole('button', { name: 'Add photo 1' });
-    expect(firstCard).toHaveStyle({ aspectRatio: 0.78, width: '47%' });
-    expect(view.getByTestId('empty-photo-content-0')).toHaveStyle({
+    await view.findByLabelText('Lead profile photo');
+    await fireEvent(view.getByTestId('profile-photo-grid'), 'layout', {
+      nativeEvent: { layout: { height: 0, width: 320, x: 0, y: 0 } },
+    });
+
+    await waitFor(() => {
+      expect(view.getByLabelText('Lead profile photo')).toHaveStyle({
+        height: 190,
+        width: 152,
+      });
+      expect(view.getByRole('button', { name: 'Add photo 2' })).toHaveStyle({
+        height: 190,
+        width: 152,
+      });
+    });
+    expect(view.getByTestId('empty-photo-content-1')).toHaveStyle({
       alignItems: 'center',
       bottom: 0,
       justifyContent: 'center',
