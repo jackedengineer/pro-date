@@ -12,10 +12,14 @@ const newUser = {
 
 const foundationProps = {
   captureLocation: jest.fn(),
+  completePhotos: jest.fn(),
+  loadPhotos: jest.fn().mockResolvedValue([]),
+  pickPhoto: jest.fn(),
   saveHeight: jest.fn(),
   saveIdentity: jest.fn(),
   saveLocation: jest.fn(),
   savePreferences: jest.fn(),
+  uploadPhoto: jest.fn(),
 };
 
 function profileCheckpoint(overrides: Partial<ProfileCheckpoint> = {}): ProfileCheckpoint {
@@ -279,6 +283,7 @@ describe('ProfileOnboardingFlow', () => {
       .mockResolvedValue(profileCheckpoint({ heightCm: 173, onboardingStep: 'PHOTOS' }));
     const view = await render(
       <ProfileOnboardingFlow
+        {...foundationProps}
         captureLocation={captureLocation}
         initialUser={{
           ...newUser,
@@ -311,8 +316,7 @@ describe('ProfileOnboardingFlow', () => {
     await fireEvent(view.getByTestId('height-picker'), 'valueChange', 173, 53);
     await fireEvent.press(view.getByRole('button', { name: 'Save height and continue' }));
 
-    await waitFor(() => expect(view.getByText('Core profile shipped.')).toBeTruthy());
-    expect(view.getByText('Next: photos')).toBeTruthy();
+    await waitFor(() => expect(view.getByText('Show the build, not just the bio.')).toBeTruthy());
     expect(saveIdentity).toHaveBeenCalledWith({
       arePronounsVisible: true,
       genderIdentity: 'Non-binary',
@@ -332,7 +336,7 @@ describe('ProfileOnboardingFlow', () => {
     ['PREFERENCES', 'Who should make your queue?'],
     ['LOCATION', 'Set your discovery area.'],
     ['DETAILS', 'Add your height.'],
-    ['PHOTOS', 'Core profile shipped.'],
+    ['PHOTOS', 'Show the build, not just the bio.'],
   ] as const)('resumes %s at its dedicated screen', async (onboardingStep, heading) => {
     const view = await render(
       <ProfileOnboardingFlow

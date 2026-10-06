@@ -10,12 +10,16 @@ const currentUser = {
 
 const profileActions = {
   captureLocation: jest.fn(),
+  completePhotos: jest.fn(),
+  loadPhotos: jest.fn().mockResolvedValue([]),
+  pickPhoto: jest.fn(),
   saveBirthDate: jest.fn(),
   saveDisplayName: jest.fn(),
   saveHeight: jest.fn(),
   saveIdentity: jest.fn(),
   saveLocation: jest.fn(),
   savePreferences: jest.fn(),
+  uploadPhoto: jest.fn(),
 };
 
 describe('CurrentUserBootstrapScreen', () => {

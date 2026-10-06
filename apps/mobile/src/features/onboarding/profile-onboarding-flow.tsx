@@ -3,11 +3,13 @@ import type {
   IdentityUpdate,
   LocationUpdate,
   PreferencesUpdate,
+  ProfilePhoto,
 } from '@pro-date/contracts';
 import { useState } from 'react';
 
 import type { CurrentUser } from '../../api/current-user';
 import type { ProfileCheckpoint } from '../../api/profile';
+import type { CompletedProfilePhotos, LocalProfilePhoto } from '../../api/profile-photos';
 import { BirthdayScreen } from './birthday-screen';
 import { DisplayNameScreen } from './display-name-screen';
 import { HeightScreen } from './height-screen';
@@ -16,20 +18,33 @@ import { LocationScreen } from './location-screen';
 import { PreferencesScreen } from './preferences-screen';
 import { ProfileCheckpointScreen } from './profile-checkpoint-screen';
 import { ProfileOnboardingIntroScreen } from './profile-onboarding-intro-screen';
+import { ProfilePhotosScreen } from './profile-photos-screen';
 
 export interface ProfileOnboardingFlowProps {
   captureLocation: () => Promise<LocationUpdate>;
+  completePhotos: (photoIds: string[]) => Promise<CompletedProfilePhotos>;
   initialUser: CurrentUser;
+  loadPhotos: () => Promise<ProfilePhoto[]>;
+  pickPhoto: () => Promise<LocalProfilePhoto | null>;
   saveBirthDate: (birthDate: string) => Promise<ProfileCheckpoint>;
   saveDisplayName: (displayName: string) => Promise<ProfileCheckpoint>;
   saveHeight: (height: HeightUpdate) => Promise<ProfileCheckpoint>;
   saveIdentity: (identity: IdentityUpdate) => Promise<ProfileCheckpoint>;
   saveLocation: (location: LocationUpdate) => Promise<ProfileCheckpoint>;
   savePreferences: (preferences: PreferencesUpdate) => Promise<ProfileCheckpoint>;
+  uploadPhoto: (photo: LocalProfilePhoto, position: number) => Promise<ProfilePhoto[]>;
 }
 
 type VisibleStep =
-  'birthday' | 'foundation' | 'height' | 'identity' | 'intro' | 'location' | 'name' | 'preferences';
+  | 'birthday'
+  | 'foundation'
+  | 'height'
+  | 'identity'
+  | 'intro'
+  | 'location'
+  | 'name'
+  | 'photos'
+  | 'preferences';
 
 function getInitialVisibleStep(user: CurrentUser): VisibleStep {
   if (user.onboardingStatus === 'NOT_STARTED') {
@@ -47,7 +62,7 @@ function getInitialVisibleStep(user: CurrentUser): VisibleStep {
     IDENTITY: 'identity',
     LOCATION: 'location',
     NAME: 'name',
-    PHOTOS: 'foundation',
+    PHOTOS: 'photos',
     PREFERENCES: 'preferences',
     PROMPTS: 'foundation',
     REVIEW: 'foundation',
@@ -58,13 +73,17 @@ function getInitialVisibleStep(user: CurrentUser): VisibleStep {
 
 export function ProfileOnboardingFlow({
   captureLocation,
+  completePhotos,
   initialUser,
+  loadPhotos,
+  pickPhoto,
   saveBirthDate,
   saveDisplayName,
   saveHeight,
   saveIdentity,
   saveLocation,
   savePreferences,
+  uploadPhoto,
 }: ProfileOnboardingFlowProps) {
   const [profile, setProfile] = useState<ProfileCheckpoint>();
   const [visibleStep, setVisibleStep] = useState<VisibleStep>(() =>
@@ -176,8 +195,23 @@ export function ProfileOnboardingFlow({
         onSave={async (height) => {
           const checkpoint = await saveHeight(height);
           setProfile(checkpoint);
+          setVisibleStep('photos');
+        }}
+      />
+    );
+  }
+
+  if (visibleStep === 'photos') {
+    return (
+      <ProfilePhotosScreen
+        completePhotos={async (photoIds) => {
+          await completePhotos(photoIds);
           setVisibleStep('foundation');
         }}
+        loadPhotos={loadPhotos}
+        onBack={profile?.heightCm == null ? undefined : () => setVisibleStep('height')}
+        pickPhoto={pickPhoto}
+        uploadPhoto={uploadPhoto}
       />
     );
   }
