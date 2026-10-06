@@ -40,9 +40,11 @@ describe('profiles schema', () => {
   it('stores one normalized profile draft per internal user', () => {
     const table = getTableConfig(profiles);
     const userId = table.columns.find((column) => column.name === 'user_id');
+    const birthDate = table.columns.find((column) => column.name === 'birth_date');
     const displayName = table.columns.find((column) => column.name === 'display_name');
 
     expect(userId).toMatchObject({ notNull: true, primary: true });
+    expect(birthDate).toMatchObject({ dataType: 'string', notNull: false });
     expect(displayName).toMatchObject({ notNull: false });
     expect(table.foreignKeys).toHaveLength(1);
   });

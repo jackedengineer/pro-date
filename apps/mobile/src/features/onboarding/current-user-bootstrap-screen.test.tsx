@@ -18,7 +18,11 @@ describe('CurrentUserBootstrapScreen', () => {
         }),
     );
     const view = await render(
-      <CurrentUserBootstrapScreen bootstrap={bootstrap} saveDisplayName={jest.fn()} />,
+      <CurrentUserBootstrapScreen
+        bootstrap={bootstrap}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={jest.fn()}
+      />,
     );
 
     expect(view.getByText('Preparing your profile')).toBeTruthy();
@@ -35,7 +39,11 @@ describe('CurrentUserBootstrapScreen', () => {
       .mockRejectedValueOnce(new Error('The API is temporarily unavailable.'))
       .mockResolvedValueOnce(currentUser);
     const view = await render(
-      <CurrentUserBootstrapScreen bootstrap={bootstrap} saveDisplayName={jest.fn()} />,
+      <CurrentUserBootstrapScreen
+        bootstrap={bootstrap}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={jest.fn()}
+      />,
     );
 
     await waitFor(() => expect(view.getByText('The API is temporarily unavailable.')).toBeTruthy());

@@ -12,7 +12,7 @@ interface ProfileOnboardingIntroScreenProps {
 const workflow = [
   {
     badge: 'PR',
-    description: 'Send a thoughtful like or reply.',
+    description: 'Like a photo or reply with intent.',
     title: 'Open a PR',
   },
   {
@@ -22,7 +22,7 @@ const workflow = [
   },
   {
     badge: '✓',
-    description: 'You matched—start a thread.',
+    description: 'Mutual interest. Thread unlocked.',
     title: 'Merged',
   },
 ] as const;
@@ -40,7 +40,7 @@ export function ProfileOnboardingIntroScreen({ onContinue }: ProfileOnboardingIn
           <View style={styles.autosaveBadge}>
             <View style={styles.autosaveDot} />
             <AppText style={styles.autosaveText} variant="caption">
-              Autosaves
+              Draft sync: on
             </AppText>
           </View>
         </View>
@@ -48,14 +48,13 @@ export function ProfileOnboardingIntroScreen({ onContinue }: ProfileOnboardingIn
         <View style={styles.hero}>
           <AppText variant="display">Build a profile worth replying to.</AppText>
           <AppText style={styles.supportingText}>
-            Clear beats clever. We’ll help you show enough personality to make the first message
-            easy.
+            Clear beats clever. Ship enough personality to make the first message easy.
           </AppText>
         </View>
 
         <View style={styles.workflow}>
           <AppText style={styles.workflowLabel} variant="eyebrow">
-            How ProDate works
+            The interaction model
           </AppText>
           {workflow.map((item) => (
             <View key={item.title} style={styles.workflowRow}>
@@ -75,7 +74,7 @@ export function ProfileOnboardingIntroScreen({ onContinue }: ProfileOnboardingIn
         <View style={styles.footer}>
           <AppButton label="Start building" onPress={onContinue} />
           <AppText style={styles.footerNote} variant="caption">
-            About 4 minutes · Edit anything before publishing
+            ~4 min · Edit anything before you ship
           </AppText>
         </View>
       </ScrollView>

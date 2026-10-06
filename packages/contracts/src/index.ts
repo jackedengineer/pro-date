@@ -8,5 +8,11 @@ export {
 export type { CurrentUserResponse, OnboardingStatus, OnboardingStep } from './current-user';
 export { healthResponseSchema } from './health';
 export type { HealthResponse } from './health';
-export { displayNameSchema, profileResponseSchema, updateProfileRequestSchema } from './profile';
+export {
+  birthDateSchema,
+  displayNameSchema,
+  isAtLeastAge,
+  profileResponseSchema,
+  updateProfileRequestSchema,
+} from './profile';
 export type { ProfileResponse, UpdateProfileRequest } from './profile';

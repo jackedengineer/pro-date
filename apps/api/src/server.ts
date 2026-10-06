@@ -32,6 +32,7 @@ const app = createApiApp({
 
     return auth.isAuthenticated ? auth.userId : null;
   },
+  saveProfileBirthDate: (userId, birthDate) => profileRepository.saveBirthDate(userId, birthDate),
   saveProfileDisplayName: (userId, displayName) =>
     profileRepository.saveDisplayName(userId, displayName),
 });

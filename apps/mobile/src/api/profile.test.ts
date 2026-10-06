@@ -1,4 +1,4 @@
-import { saveProfileDisplayName } from './profile';
+import { saveProfileBirthDate, saveProfileDisplayName } from './profile';
 import type { GetSessionToken } from './current-user';
 
 const apiBaseUrl = 'https://api.prodate.example';
@@ -10,6 +10,7 @@ describe('saveProfileDisplayName', () => {
       new Response(
         JSON.stringify({
           data: {
+            birthDate: null,
             displayName: 'Ada',
             onboardingStatus: 'IN_PROGRESS',
             onboardingStep: 'BIRTHDAY',
@@ -29,6 +30,7 @@ describe('saveProfileDisplayName', () => {
         getToken,
       }),
     ).resolves.toEqual({
+      birthDate: null,
       displayName: 'Ada',
       onboardingStatus: 'IN_PROGRESS',
       onboardingStep: 'BIRTHDAY',
@@ -96,5 +98,49 @@ describe('saveProfileDisplayName', () => {
         getToken,
       }),
     ).rejects.toThrow('The server returned an unexpected response.');
+  });
+});
+
+describe('saveProfileBirthDate', () => {
+  it('sends an authenticated calendar-date patch and parses the complete draft', async () => {
+    const fetchImplementation = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            birthDate: '2000-02-29',
+            displayName: 'Ada',
+            onboardingStatus: 'IN_PROGRESS',
+            onboardingStep: 'IDENTITY',
+          },
+          requestId,
+        }),
+        { headers: { 'content-type': 'application/json' }, status: 200 },
+      ),
+    );
+    const getToken = jest.fn().mockResolvedValue('session-token') as GetSessionToken;
+
+    await expect(
+      saveProfileBirthDate({
+        apiBaseUrl,
+        birthDate: '2000-02-29',
+        fetchImplementation,
+        getToken,
+      }),
+    ).resolves.toEqual({
+      birthDate: '2000-02-29',
+      displayName: 'Ada',
+      onboardingStatus: 'IN_PROGRESS',
+      onboardingStep: 'IDENTITY',
+    });
+
+    expect(fetchImplementation).toHaveBeenCalledWith(`${apiBaseUrl}/v1/users/me/profile`, {
+      body: JSON.stringify({ birthDate: '2000-02-29' }),
+      headers: {
+        Accept: 'application/json',
+        Authorization: 'Bearer session-token',
+        'Content-Type': 'application/json',
+      },
+      method: 'PATCH',
+    });
   });
 });

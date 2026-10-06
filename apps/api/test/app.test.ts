@@ -207,6 +207,7 @@ describe('API application', () => {
       onboardingStatus: 'NOT_STARTED',
     });
     const saveProfileDisplayName = vi.fn().mockResolvedValue({
+      birthDate: null,
       displayName: 'Ada',
       onboardingStatus: 'IN_PROGRESS',
       onboardingStep: 'BIRTHDAY',
@@ -230,6 +231,7 @@ describe('API application', () => {
     );
     expect(profileResponseSchema.parse(response.body)).toEqual({
       data: {
+        birthDate: null,
         displayName: 'Ada',
         onboardingStatus: 'IN_PROGRESS',
         onboardingStep: 'BIRTHDAY',
@@ -237,5 +239,73 @@ describe('API application', () => {
       requestId,
     });
     expect(JSON.stringify(response.body)).not.toContain('user_private_clerk_subject');
+  });
+
+  it('rejects a birthday that is under 18 using the server clock', async () => {
+    const saveProfileBirthDate = vi.fn();
+    const response = await request(
+      createTestApp({
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfileBirthDate,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({ birthDate: '2008-10-05' })
+      .expect(422);
+
+    expect(apiErrorResponseSchema.parse(response.body)).toEqual({
+      error: {
+        code: 'VALIDATION_ERROR',
+        details: [
+          {
+            code: 'too_young',
+            message: 'You must be 18 or older to use ProDate.',
+            path: 'birthDate',
+          },
+        ],
+        message: 'Check the highlighted profile fields.',
+      },
+      requestId,
+    });
+    expect(saveProfileBirthDate).not.toHaveBeenCalled();
+  });
+
+  it('persists a calendar birthday and advances onboarding to identity', async () => {
+    const findOrCreateCurrentUser = vi.fn().mockResolvedValue({
+      id: '729438da-99b3-4d3d-b566-bfe94401829b',
+      onboardingStep: 'BIRTHDAY',
+      onboardingStatus: 'IN_PROGRESS',
+    });
+    const saveProfileBirthDate = vi.fn().mockResolvedValue({
+      birthDate: '2000-02-29',
+      displayName: 'Ada',
+      onboardingStatus: 'IN_PROGRESS',
+      onboardingStep: 'IDENTITY',
+    });
+
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser,
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfileBirthDate,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({ birthDate: '2000-02-29' })
+      .expect(200);
+
+    expect(saveProfileBirthDate).toHaveBeenCalledWith(
+      '729438da-99b3-4d3d-b566-bfe94401829b',
+      '2000-02-29',
+    );
+    expect(profileResponseSchema.parse(response.body)).toEqual({
+      data: {
+        birthDate: '2000-02-29',
+        displayName: 'Ada',
+        onboardingStatus: 'IN_PROGRESS',
+        onboardingStep: 'IDENTITY',
+      },
+      requestId,
+    });
   });
 });

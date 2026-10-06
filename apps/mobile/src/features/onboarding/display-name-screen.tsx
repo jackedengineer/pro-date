@@ -87,10 +87,10 @@ export function DisplayNameScreen({ onBack, onSave }: DisplayNameScreenProps) {
           </View>
 
           <View style={styles.content}>
-            <AppText variant="eyebrow">The basics</AppText>
-            <AppText variant="display">What should we call you?</AppText>
+            <AppText variant="eyebrow">Profile config</AppText>
+            <AppText variant="display">What name are we shipping?</AppText>
             <AppText style={styles.supportingText}>
-              Use the first name or chosen name you’d introduce yourself with.
+              First name or chosen name—whatever feels most you.
             </AppText>
 
             <View style={styles.fieldGroup}>
@@ -112,7 +112,7 @@ export function DisplayNameScreen({ onBack, onSave }: DisplayNameScreenProps) {
                 }}
                 onFocus={() => setIsFocused(true)}
                 onSubmitEditing={() => void save()}
-                placeholder="Your name"
+                placeholder="e.g. Ada"
                 placeholderTextColor={colors.muted}
                 returnKeyType="done"
                 selectionColor={colors.coral}
@@ -122,7 +122,7 @@ export function DisplayNameScreen({ onBack, onSave }: DisplayNameScreenProps) {
                 value={displayName}
               />
               <View style={styles.fieldMeta}>
-                <AppText variant="caption">Shown on your profile · Editable later</AppText>
+                <AppText variant="caption">Public on your profile · Editable anytime</AppText>
                 <AppText style={styles.characterCount} variant="caption">
                   {displayName.length}/40
                 </AppText>
@@ -137,12 +137,12 @@ export function DisplayNameScreen({ onBack, onSave }: DisplayNameScreenProps) {
 
           <View style={styles.footer}>
             <AppText style={styles.autosaveText} variant="caption">
-              Saved automatically after each step
+              Draft sync is on
             </AppText>
             <AppButton
               accessibilityLabel={isSaving ? 'Saving name' : 'Save and continue'}
               disabled={displayName.trim().length === 0 || isSaving}
-              label={isSaving ? 'Saving…' : 'Save & continue'}
+              label={isSaving ? 'Committing…' : 'Commit & continue'}
               onPress={() => void save()}
             />
           </View>

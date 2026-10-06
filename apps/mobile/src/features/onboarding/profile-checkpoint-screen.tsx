@@ -12,25 +12,25 @@ interface ProfileCheckpointScreenProps {
 export function ProfileCheckpointScreen({ displayName }: ProfileCheckpointScreenProps) {
   return (
     <Screen style={styles.screen}>
-      <OnboardingProgress current={2} total={8} />
+      <OnboardingProgress current={3} total={8} />
       <View style={styles.content}>
         <View accessibilityElementsHidden style={styles.statusMark}>
           <AppText style={styles.statusIcon} variant="title">
             ✓
           </AppText>
         </View>
-        <AppText variant="eyebrow">Checkpoint saved</AppText>
+        <AppText variant="eyebrow">Commit successful</AppText>
         <AppText variant="display">
           {displayName === undefined
-            ? 'Profile draft restored'
-            : `Nice to meet you, ${displayName}.`}
+            ? 'Draft restored. No lost work.'
+            : `Basics shipped, ${displayName}.`}
         </AppText>
         <AppText style={styles.supportingText}>
-          Your progress is safely stored. We’ll continue from exactly here.
+          Your profile draft is synced. Identity &amp; pronouns are next.
         </AppText>
         <View style={styles.nextStep}>
           <AppText style={styles.nextStepText} variant="button">
-            Next: birthday
+            Next: identity &amp; pronouns
           </AppText>
         </View>
       </View>

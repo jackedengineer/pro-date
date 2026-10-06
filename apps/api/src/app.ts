@@ -8,7 +8,7 @@ import type {
   OnboardingStatus,
   OnboardingStep,
 } from '@pro-date/contracts';
-import { updateProfileRequestSchema } from '@pro-date/contracts';
+import { isAtLeastAge, updateProfileRequestSchema } from '@pro-date/contracts';
 import cors from 'cors';
 import express, { type ErrorRequestHandler, type Request, type RequestHandler } from 'express';
 import helmet from 'helmet';
@@ -27,7 +27,8 @@ export interface CurrentUserRecord {
 }
 
 export interface ProfileCheckpointRecord {
-  displayName: string;
+  birthDate: string | null;
+  displayName: string | null;
   onboardingStatus: OnboardingStatus;
   onboardingStep: OnboardingStep;
 }
@@ -44,6 +45,7 @@ export interface ApiAppOptions {
     userId: string,
     displayName: string,
   ) => Promise<ProfileCheckpointRecord>;
+  saveProfileBirthDate?: (userId: string, birthDate: string) => Promise<ProfileCheckpointRecord>;
 }
 
 function areChecksHealthy(checks: ReadinessChecks): checks is Record<string, 'up'> {
@@ -82,6 +84,9 @@ export function createApiApp(options: ApiAppOptions = {}) {
   const resolveClerkSubject = options.resolveClerkSubject ?? (() => null);
   const saveProfileDisplayName =
     options.saveProfileDisplayName ??
+    (() => Promise.reject(new Error('Profile persistence is not configured.')));
+  const saveProfileBirthDate =
+    options.saveProfileBirthDate ??
     (() => Promise.reject(new Error('Profile persistence is not configured.')));
   const app = express();
 
@@ -211,7 +216,9 @@ export function createApiApp(options: ApiAppOptions = {}) {
             message:
               issue.path[0] === 'displayName'
                 ? 'Your name must be between 2 and 40 characters.'
-                : 'This profile field is not supported.',
+                : issue.path[0] === 'birthDate'
+                  ? 'Enter a valid birthday.'
+                  : 'This profile field is not supported.',
             path: issue.path.join('.') || 'profile',
           })),
           message: 'Check the highlighted profile fields.',
@@ -223,8 +230,39 @@ export function createApiApp(options: ApiAppOptions = {}) {
       return;
     }
 
+    if (
+      input.data.birthDate !== undefined &&
+      !isAtLeastAge(input.data.birthDate, clock().toISOString().slice(0, 10), 18)
+    ) {
+      const body = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          details: [
+            {
+              code: 'too_young',
+              message: 'You must be 18 or older to use ProDate.',
+              path: 'birthDate',
+            },
+          ],
+          message: 'Check the highlighted profile fields.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
     const currentUser = await findOrCreateCurrentUser(clerkSubject);
-    const profile = await saveProfileDisplayName(currentUser.id, input.data.displayName);
+    let profile: ProfileCheckpointRecord;
+
+    if (input.data.displayName !== undefined) {
+      profile = await saveProfileDisplayName(currentUser.id, input.data.displayName);
+    } else if (input.data.birthDate !== undefined) {
+      profile = await saveProfileBirthDate(currentUser.id, input.data.birthDate);
+    } else {
+      throw new Error('The validated profile update did not contain a supported field.');
+    }
     const body = {
       data: profile,
       requestId: getRequestId(request),
