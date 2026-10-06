@@ -52,3 +52,25 @@ export type {
   ProfilePhotoListResponse,
   ProfilePhotoUploadIntentResponse,
 } from './profile-photo';
+export {
+  completeProfilePromptsRequestSchema,
+  PROFILE_PROMPT_ANSWER_MAX_CHARACTERS,
+  PROFILE_PROMPT_ANSWER_MIN_CHARACTERS,
+  PROFILE_PROMPT_ANSWER_MIN_WORDS,
+  PROFILE_PROMPT_CATALOGUE,
+  PROFILE_PROMPT_COUNT,
+  PROFILE_PROMPT_IDS,
+  profilePromptAnswerInputSchema,
+  profilePromptAnswerSchema,
+  profilePromptAnswerTextSchema,
+  profilePromptIdSchema,
+  profilePromptListResponseSchema,
+  profilePromptPositionSchema,
+} from './profile-prompt';
+export type {
+  CompleteProfilePromptsRequest,
+  ProfilePromptAnswer,
+  ProfilePromptAnswerInput,
+  ProfilePromptId,
+  ProfilePromptListResponse,
+} from './profile-prompt';
