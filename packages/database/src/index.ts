@@ -10,6 +10,9 @@ export {
   type CurrentUserRecord,
 } from './current-user-repository.js';
 export {
+  buildProfilePhotoCompactQuery,
+  buildProfilePhotoDeleteQuery,
+  buildProfilePhotoFindQuery,
   buildProfilePhotoInsertQuery,
   buildProfilePhotoListQuery,
   buildProfilePhotoOrderUpdateQuery,

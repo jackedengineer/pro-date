@@ -15,6 +15,7 @@ function createClient(
 ): ProfilePhotoCloudinaryClient {
   return {
     buildDeliveryUrl: vi.fn().mockReturnValue('https://res.cloudinary.com/demo/profile.jpg'),
+    deleteResource: vi.fn().mockResolvedValue({ result: 'ok' }),
     getResource: vi.fn().mockResolvedValue({
       asset_id: 'asset-immutable-id',
       bytes: 1_250_000,
@@ -163,5 +164,19 @@ describe('profile photo provider', () => {
         version: 1_790_000_001,
       }),
     ).rejects.toMatchObject<Partial<ProfilePhotoProviderError>>({ code: 'INELIGIBLE_MEDIA' });
+  });
+
+  it('deletes only an asset scoped to the current internal user', async () => {
+    const client = createClient();
+    const provider = createProfilePhotoProvider({ apiKey: 'key', cloudName: 'cloud', client });
+
+    await expect(provider.deleteUpload(userId, publicId)).resolves.toBeUndefined();
+    expect(client.deleteResource).toHaveBeenCalledWith(publicId);
+    await expect(
+      provider.deleteUpload(
+        userId,
+        'pro-date/users/c0b4c84f-68cb-4ba0-b120-7f5af320be1e/profile/7d256e61-ed8f-41ba-a8bb-7b5dcc279f29',
+      ),
+    ).rejects.toMatchObject<Partial<ProfilePhotoProviderError>>({ code: 'INVALID_UPLOAD_PROOF' });
   });
 });

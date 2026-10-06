@@ -5,7 +5,7 @@ import {
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import type { LocalProfilePhoto } from '../../api/profile-photos';
 import { AppButton } from '../../components/app-button';
@@ -19,6 +19,7 @@ interface ProfilePhotosScreenProps {
   loadPhotos: () => Promise<ProfilePhoto[]>;
   onBack?: (() => void) | undefined;
   pickPhoto: () => Promise<LocalProfilePhoto | null>;
+  removePhoto: (photoId: string) => Promise<ProfilePhoto[]>;
   uploadPhoto: (photo: LocalProfilePhoto, position: number) => Promise<ProfilePhoto[]>;
 }
 
@@ -35,6 +36,7 @@ export function ProfilePhotosScreen({
   loadPhotos,
   onBack,
   pickPhoto,
+  removePhoto,
   uploadPhoto,
 }: ProfilePhotosScreenProps) {
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
@@ -115,6 +117,32 @@ export function ProfilePhotosScreen({
 
       return next;
     });
+  };
+
+  const confirmRemove = (photo: ProfilePhoto, position: number) => {
+    if (activePosition !== null || isSaving) return;
+
+    Alert.alert(
+      'Remove this photo?',
+      'It will be deleted from your ProDate profile and media storage.',
+      [
+        { style: 'cancel', text: 'Keep photo' },
+        {
+          onPress: () => {
+            setActionError(null);
+            setActivePosition(position);
+            void removePhoto(photo.id)
+              .then((remaining) => setPhotos(sortPhotos(remaining)))
+              .catch((error: unknown) =>
+                setActionError(errorMessage(error, 'We could not remove that photo.')),
+              )
+              .finally(() => setActivePosition(null));
+          },
+          style: 'destructive',
+          text: 'Remove',
+        },
+      ],
+    );
   };
 
   const complete = async () => {
@@ -229,6 +257,20 @@ export function ProfilePhotosScreen({
                       {index === 0 ? 'LEAD' : `0${index + 1}`}
                     </AppText>
                   </View>
+                  <Pressable
+                    accessibilityLabel={`Remove photo ${index + 1}`}
+                    accessibilityRole="button"
+                    disabled={activePosition !== null || isSaving}
+                    hitSlop={4}
+                    onPress={() => confirmRemove(currentPhoto, index)}
+                    style={styles.removeButton}
+                  >
+                    {activePosition === index ? (
+                      <ActivityIndicator color={colors.ink} size="small" />
+                    ) : (
+                      <AppText style={styles.removeText}>×</AppText>
+                    )}
+                  </Pressable>
                 </View>
                 <View style={styles.reorderRow}>
                   <Pressable
@@ -408,6 +450,19 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.medium,
     fontSize: 18,
     lineHeight: 21,
+  },
+  removeButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: radii.pill,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  removeText: {
+    color: colors.ink,
+    fontSize: 24,
+    lineHeight: 27,
   },
   supportingText: {
     color: colors.muted,

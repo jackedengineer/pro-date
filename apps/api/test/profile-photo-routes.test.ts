@@ -85,6 +85,7 @@ describe('profile photo routes', () => {
             complete: vi.fn(),
             createUploadIntent,
             list: vi.fn(),
+            remove: vi.fn(),
           },
         }),
       ),
@@ -113,6 +114,7 @@ describe('profile photo routes', () => {
             complete: vi.fn(),
             createUploadIntent,
             list: vi.fn(),
+            remove: vi.fn(),
           },
         }),
       ),
@@ -134,6 +136,7 @@ describe('profile photo routes', () => {
             complete: vi.fn(),
             createUploadIntent: vi.fn(),
             list: vi.fn(),
+            remove: vi.fn(),
           },
         }),
       ),
@@ -156,6 +159,7 @@ describe('profile photo routes', () => {
             complete: vi.fn(),
             createUploadIntent: vi.fn(),
             list: vi.fn(),
+            remove: vi.fn(),
           },
         }),
       ),
@@ -187,6 +191,7 @@ describe('profile photo routes', () => {
             complete,
             createUploadIntent: vi.fn(),
             list: vi.fn(),
+            remove: vi.fn(),
           },
         }),
       ),
@@ -220,6 +225,7 @@ describe('profile photo routes', () => {
             complete,
             createUploadIntent: vi.fn(),
             list: vi.fn(),
+            remove: vi.fn(),
           },
         }),
       ),
@@ -230,5 +236,48 @@ describe('profile photo routes', () => {
 
     expect(profilePhotoListResponseSchema.parse(response.body).onboardingStep).toBe('PROMPTS');
     expect(complete).toHaveBeenCalledWith(userId, photoIds);
+  });
+
+  it('removes an owned photo and returns the compacted collection', async () => {
+    const remove = vi.fn().mockResolvedValue([]);
+    const response = await request(
+      createTestApp(
+        authenticatedOptions({
+          profilePhotoService: {
+            add: vi.fn(),
+            complete: vi.fn(),
+            createUploadIntent: vi.fn(),
+            list: vi.fn(),
+            remove,
+          },
+        }),
+      ),
+    )
+      .delete(`/v1/users/me/profile-photos/${photos[0]!.id}`)
+      .expect(200);
+
+    expect(profilePhotoListResponseSchema.parse(response.body).data).toEqual([]);
+    expect(remove).toHaveBeenCalledWith(userId, photos[0]!.id);
+  });
+
+  it('does not reveal whether another user owns a missing photo', async () => {
+    const remove = vi.fn().mockResolvedValue(null);
+    const response = await request(
+      createTestApp(
+        authenticatedOptions({
+          profilePhotoService: {
+            add: vi.fn(),
+            complete: vi.fn(),
+            createUploadIntent: vi.fn(),
+            list: vi.fn(),
+            remove,
+          },
+        }),
+      ),
+    )
+      .delete(`/v1/users/me/profile-photos/${photos[0]!.id}`)
+      .expect(404);
+
+    expect(apiErrorResponseSchema.parse(response.body).error.code).toBe('NOT_FOUND');
   });
 });

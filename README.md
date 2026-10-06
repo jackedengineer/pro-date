@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** passwordless authentication and profile onboarding through curated prompts are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add and order four to six photos through signed direct uploads; and answer three of twenty curated prompts before reaching profile review. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 241 automated tests. Live photo upload remains intentionally unavailable until a complete backend-only Cloudinary credential set is present. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Profile review, discovery, engagement, messaging, safety workflows, and subscriptions remain in development.
+> **Project status:** passwordless authentication and profile onboarding through curated prompts are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add, order, and remove four to six photos through signed direct uploads; and answer three of twenty curated prompts before reaching profile review. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 249 automated tests. Live photo upload remains intentionally unavailable until a complete backend-only Cloudinary credential set is present. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Profile review, discovery, engagement, messaging, safety workflows, and subscriptions remain in development.
 
 ## Product preview
 
@@ -458,7 +458,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 241 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
+- 249 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.

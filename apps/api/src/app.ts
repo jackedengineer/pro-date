@@ -23,6 +23,7 @@ import {
   completeProfilePromptsRequestSchema,
   createProfilePhotoRequestSchema,
   isAtLeastAge,
+  profilePhotoIdSchema,
   updateProfileRequestSchema,
 } from '@pro-date/contracts';
 import cors from 'cors';
@@ -513,6 +514,44 @@ export function createApiApp(options: ApiAppOptions = {}) {
     const body = {
       data: result.photos,
       onboardingStep: result.onboardingStep,
+      requestId: getRequestId(request),
+    } satisfies ProfilePhotoListResponse;
+
+    response.status(200).json(body);
+  });
+
+  app.delete('/v1/users/me/profile-photos/:photoId', async (request, response) => {
+    const currentUser = await resolveProfilePhotoUser(request, response);
+
+    if (currentUser === null || profilePhotoService === undefined) return;
+
+    const photoId = profilePhotoIdSchema.safeParse(request.params.photoId);
+
+    if (!photoId.success) {
+      const body = {
+        error: { code: 'VALIDATION_ERROR', message: 'The profile photo ID is invalid.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
+    const photos = await profilePhotoService.remove(currentUser.id, photoId.data);
+
+    if (photos === null) {
+      const body = {
+        error: { code: 'NOT_FOUND', message: 'That profile photo was not found.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(404).json(body);
+      return;
+    }
+
+    const body = {
+      data: photos,
+      onboardingStep: currentUser.onboardingStep,
       requestId: getRequestId(request),
     } satisfies ProfilePhotoListResponse;
 

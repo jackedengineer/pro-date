@@ -40,6 +40,7 @@ export {
   PROFILE_PHOTO_MAX_BYTES,
   PROFILE_PHOTO_MAX_COUNT,
   PROFILE_PHOTO_MIN_COUNT,
+  profilePhotoIdSchema,
   profilePhotoListResponseSchema,
   profilePhotoPositionSchema,
   profilePhotoSchema,

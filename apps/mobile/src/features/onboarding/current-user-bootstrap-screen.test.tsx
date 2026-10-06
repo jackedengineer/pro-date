@@ -15,6 +15,7 @@ const profileActions = {
   loadPhotos: jest.fn().mockResolvedValue([]),
   loadPrompts: jest.fn().mockResolvedValue([]),
   pickPhoto: jest.fn(),
+  removePhoto: jest.fn(),
   saveBirthDate: jest.fn(),
   saveDisplayName: jest.fn(),
   saveHeight: jest.fn(),

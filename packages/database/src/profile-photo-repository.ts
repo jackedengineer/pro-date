@@ -1,5 +1,5 @@
 import type { OnboardingStep } from '@pro-date/contracts';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import type { ProDateDatabase } from './client.js';
 import { buildOnboardingProgressQuery } from './profile-repository.js';
@@ -8,6 +8,7 @@ import { profilePhotos } from './schema.js';
 type ProfilePhotoInsertDatabase = Pick<ProDateDatabase, 'insert'>;
 type ProfilePhotoReadDatabase = Pick<ProDateDatabase, 'select'>;
 type ProfilePhotoUpdateDatabase = Pick<ProDateDatabase, 'update'>;
+type ProfilePhotoDeleteDatabase = Pick<ProDateDatabase, 'delete'>;
 
 export interface NewProfilePhotoRecord {
   bytes: number;
@@ -53,6 +54,40 @@ export function buildProfilePhotoListQuery(database: ProfilePhotoReadDatabase, u
     .from(profilePhotos)
     .where(eq(profilePhotos.userId, userId))
     .orderBy(profilePhotos.position);
+}
+
+export function buildProfilePhotoFindQuery(
+  database: ProfilePhotoReadDatabase,
+  userId: string,
+  photoId: string,
+) {
+  return database
+    .select(profilePhotoSelection)
+    .from(profilePhotos)
+    .where(and(eq(profilePhotos.userId, userId), eq(profilePhotos.id, photoId)))
+    .limit(1);
+}
+
+export function buildProfilePhotoDeleteQuery(
+  database: ProfilePhotoDeleteDatabase,
+  userId: string,
+  photoId: string,
+) {
+  return database
+    .delete(profilePhotos)
+    .where(and(eq(profilePhotos.userId, userId), eq(profilePhotos.id, photoId)))
+    .returning(profilePhotoSelection);
+}
+
+export function buildProfilePhotoCompactQuery(
+  database: ProfilePhotoUpdateDatabase,
+  userId: string,
+  deletedPosition: number,
+) {
+  return database
+    .update(profilePhotos)
+    .set({ position: sql<number>`${profilePhotos.position} - 1`, updatedAt: sql`now()` })
+    .where(and(eq(profilePhotos.userId, userId), gt(profilePhotos.position, deletedPosition)));
 }
 
 export function buildProfilePhotoOrderUpdateQuery(
@@ -105,6 +140,27 @@ export function createProfilePhotoRepository(database: ProDateDatabase) {
 
     async list(userId: string): Promise<ProfilePhotoRecord[]> {
       return buildProfilePhotoListQuery(database, userId);
+    },
+
+    async find(userId: string, photoId: string): Promise<ProfilePhotoRecord | null> {
+      const [photo] = await buildProfilePhotoFindQuery(database, userId, photoId);
+
+      return photo ?? null;
+    },
+
+    async remove(userId: string, photoId: string) {
+      return database.transaction(async (transaction) => {
+        const [removed] = await buildProfilePhotoDeleteQuery(transaction, userId, photoId);
+
+        if (removed === undefined) return null;
+
+        await transaction.execute(
+          sql`set constraints profile_photos_user_position_unique deferred`,
+        );
+        await buildProfilePhotoCompactQuery(transaction, userId, removed.position);
+
+        return { photo: removed, photos: await buildProfilePhotoListQuery(transaction, userId) };
+      });
     },
 
     async save(userId: string, photo: NewProfilePhotoRecord): Promise<ProfilePhotoRecord> {

@@ -33,6 +33,10 @@ interface CompleteProfilePhotosOptions extends ProfilePhotoApiOptions {
   photoIds: string[];
 }
 
+interface DeleteProfilePhotoOptions extends ProfilePhotoApiOptions {
+  photoId: string;
+}
+
 export interface CompletedProfilePhotos {
   onboardingStep: OnboardingStep;
   photos: ProfilePhoto[];
@@ -234,4 +238,27 @@ export async function completeProfilePhotos({
   const result = parsePhotoList(responseBody);
 
   return { onboardingStep: result.onboardingStep, photos: result.photos };
+}
+
+export async function deleteProfilePhoto({
+  apiBaseUrl,
+  fetchImplementation = fetch,
+  getToken,
+  photoId,
+}: DeleteProfilePhotoOptions): Promise<ProfilePhoto[]> {
+  const token = await getRequiredToken(getToken);
+  const response = await fetchImplementation(
+    `${apiBaseUrl}/v1/users/me/profile-photos/${encodeURIComponent(photoId)}`,
+    {
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+      method: 'DELETE',
+    },
+  );
+  const responseBody = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throwApiError(responseBody, 'We could not remove that photo. Please try again.');
+  }
+
+  return parsePhotoList(responseBody).photos;
 }

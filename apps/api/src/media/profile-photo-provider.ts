@@ -18,6 +18,10 @@ const cloudinaryResourceSchema = z.object({
   width: z.number().int().positive(),
 });
 
+const cloudinaryDeleteResponseSchema = z.object({
+  result: z.enum(['not found', 'ok']),
+});
+
 interface UploadParameters {
   format: 'jpg';
   overwrite: false;
@@ -27,6 +31,7 @@ interface UploadParameters {
 
 export interface ProfilePhotoCloudinaryClient {
   buildDeliveryUrl: (publicId: string, version: number) => string;
+  deleteResource: (publicId: string) => Promise<unknown>;
   getResource: (publicId: string) => Promise<unknown>;
   signUpload: (parameters: UploadParameters) => string;
   verifyResponse: (publicId: string, version: number, signature: string) => boolean;
@@ -143,6 +148,20 @@ export function createProfilePhotoProvider({
       };
     },
 
+    async deleteUpload(userId: string, publicId: string) {
+      if (!publicId.startsWith(`pro-date/users/${userId}/profile/`)) {
+        throw new ProfilePhotoProviderError('INVALID_UPLOAD_PROOF');
+      }
+
+      const result = cloudinaryDeleteResponseSchema.safeParse(
+        await client.deleteResource(publicId),
+      );
+
+      if (!result.success) {
+        throw new Error('The media provider returned an unexpected deletion response.');
+      }
+    },
+
     getDeliveryUrl(publicId: string, version: number) {
       return client.buildDeliveryUrl(publicId, version);
     },
@@ -177,6 +196,12 @@ export function createCloudinaryProfilePhotoClient({
           { fetch_format: 'auto' },
         ],
         version,
+      }),
+    deleteResource: (publicId) =>
+      cloudinary.uploader.destroy(publicId, {
+        invalidate: true,
+        resource_type: 'image',
+        type: 'upload',
       }),
     getResource: (publicId) =>
       cloudinary.api.resource(publicId, { resource_type: 'image', type: 'upload' }),

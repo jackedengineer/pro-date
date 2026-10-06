@@ -21,6 +21,7 @@ import {
 import {
   addProfilePhoto,
   completeProfilePhotos,
+  deleteProfilePhoto,
   listProfilePhotos,
   type LocalProfilePhoto,
 } from '../../src/api/profile-photos';
@@ -135,6 +136,16 @@ function ConfiguredOnboardingRoute() {
     },
     [getToken],
   );
+  const removePhoto = useCallback(
+    (photoId: string) => {
+      if (apiBaseUrl === null) {
+        return Promise.reject(new Error('The ProDate API is not configured.'));
+      }
+
+      return deleteProfilePhoto({ apiBaseUrl, getToken, photoId });
+    },
+    [getToken],
+  );
   const loadPrompts = useCallback(() => {
     if (apiBaseUrl === null) {
       return Promise.reject(new Error('The ProDate API is not configured.'));
@@ -172,6 +183,7 @@ function ConfiguredOnboardingRoute() {
       loadPhotos={loadPhotos}
       loadPrompts={loadPrompts}
       pickPhoto={pickProfilePhoto}
+      removePhoto={removePhoto}
       saveBirthDate={saveBirthDate}
       saveDisplayName={saveDisplayName}
       saveHeight={saveHeight}

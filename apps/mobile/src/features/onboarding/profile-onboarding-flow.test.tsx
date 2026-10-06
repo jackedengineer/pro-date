@@ -17,6 +17,7 @@ const foundationProps = {
   loadPhotos: jest.fn().mockResolvedValue([]),
   loadPrompts: jest.fn().mockResolvedValue([]),
   pickPhoto: jest.fn(),
+  removePhoto: jest.fn(),
   saveHeight: jest.fn(),
   saveIdentity: jest.fn(),
   saveLocation: jest.fn(),

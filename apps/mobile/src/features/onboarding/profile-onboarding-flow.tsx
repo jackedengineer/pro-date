@@ -32,6 +32,7 @@ export interface ProfileOnboardingFlowProps {
   loadPhotos: () => Promise<ProfilePhoto[]>;
   loadPrompts: () => Promise<ProfilePromptAnswer[]>;
   pickPhoto: () => Promise<LocalProfilePhoto | null>;
+  removePhoto: (photoId: string) => Promise<ProfilePhoto[]>;
   saveBirthDate: (birthDate: string) => Promise<ProfileCheckpoint>;
   saveDisplayName: (displayName: string) => Promise<ProfileCheckpoint>;
   saveHeight: (height: HeightUpdate) => Promise<ProfileCheckpoint>;
@@ -86,6 +87,7 @@ export function ProfileOnboardingFlow({
   loadPhotos,
   loadPrompts,
   pickPhoto,
+  removePhoto,
   saveBirthDate,
   saveDisplayName,
   saveHeight,
@@ -220,6 +222,7 @@ export function ProfileOnboardingFlow({
         loadPhotos={loadPhotos}
         onBack={profile?.heightCm == null ? undefined : () => setVisibleStep('height')}
         pickPhoto={pickPhoto}
+        removePhoto={removePhoto}
         uploadPhoto={uploadPhoto}
       />
     );

@@ -2,6 +2,8 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildProfilePhotoCompactQuery,
+  buildProfilePhotoDeleteQuery,
   buildProfilePhotoInsertQuery,
   buildProfilePhotoListQuery,
   buildProfilePhotoOrderUpdateQuery,
@@ -62,5 +64,17 @@ describe('profile photo repository', () => {
     expect(sql).toContain('"profile_photos"."user_id" =');
     expect(sql).toContain('"profile_photos"."id" in');
     expect(params).toEqual(expect.arrayContaining([secondPhotoId, 0, firstPhotoId, 1, userId]));
+  });
+
+  it('deletes only an owned photo and compacts the remaining positions', () => {
+    const database = drizzle.mock({ schema });
+    const deletion = buildProfilePhotoDeleteQuery(database, userId, firstPhotoId).toSQL();
+    const compaction = buildProfilePhotoCompactQuery(database, userId, 1).toSQL();
+
+    expect(deletion.sql).toContain('delete from "profile_photos"');
+    expect(deletion.params).toEqual(expect.arrayContaining([userId, firstPhotoId]));
+    expect(compaction.sql).toContain('update "profile_photos"');
+    expect(compaction.sql).toContain('"profile_photos"."position" >');
+    expect(compaction.params).toEqual(expect.arrayContaining([1, userId]));
   });
 });

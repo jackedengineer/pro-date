@@ -16,6 +16,7 @@ export interface ProfilePhotoProvider {
     upload: CreateProfilePhotoRequest,
   ) => Promise<ConfirmedProfilePhoto>;
   createUploadIntent: (userId: string) => UploadIntent;
+  deleteUpload: (userId: string, publicId: string) => Promise<void>;
   getDeliveryUrl: (publicId: string, version: number) => string;
 }
 
@@ -25,6 +26,11 @@ export interface ProfilePhotoRepository {
     photoIds: string[],
   ) => Promise<{ onboardingStep: OnboardingStep; photos: ProfilePhotoRecord[] }>;
   list: (userId: string) => Promise<ProfilePhotoRecord[]>;
+  find: (userId: string, photoId: string) => Promise<ProfilePhotoRecord | null>;
+  remove: (
+    userId: string,
+    photoId: string,
+  ) => Promise<{ photo: ProfilePhotoRecord; photos: ProfilePhotoRecord[] } | null>;
   save: (userId: string, photo: NewProfilePhotoRecord) => Promise<ProfilePhotoRecord>;
 }
 
@@ -36,6 +42,7 @@ export interface ProfilePhotoService {
   ) => Promise<{ onboardingStep: OnboardingStep; photos: ProfilePhoto[] }>;
   createUploadIntent: (userId: string) => UploadIntent;
   list: (userId: string) => Promise<ProfilePhoto[]>;
+  remove: (userId: string, photoId: string) => Promise<ProfilePhoto[] | null>;
 }
 
 function toProfilePhoto(photo: ProfilePhotoRecord, provider: ProfilePhotoProvider): ProfilePhoto {
@@ -83,5 +90,15 @@ export function createProfilePhotoService(
 
     createUploadIntent: (userId) => provider.createUploadIntent(userId),
     list,
+    async remove(userId, photoId) {
+      const photo = await repository.find(userId, photoId);
+
+      if (photo === null) return null;
+
+      await provider.deleteUpload(userId, photo.providerPublicId);
+      const result = await repository.remove(userId, photoId);
+
+      return result?.photos.map((remaining) => toProfilePhoto(remaining, provider)) ?? null;
+    },
   };
 }

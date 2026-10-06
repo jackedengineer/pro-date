@@ -4,6 +4,7 @@ import type { GetSessionToken } from './current-user';
 import {
   addProfilePhoto,
   completeProfilePhotos,
+  deleteProfilePhoto,
   listProfilePhotos,
   type LocalProfilePhoto,
 } from './profile-photos';
@@ -197,6 +198,28 @@ describe('profile photo API', () => {
       },
       method: 'PUT',
     });
+  });
+
+  it('deletes an authenticated photo and returns the compacted collection', async () => {
+    const fetchImplementation = jest
+      .fn()
+      .mockResolvedValue(response({ data: [], onboardingStep: 'PHOTOS', requestId }));
+
+    await expect(
+      deleteProfilePhoto({
+        apiBaseUrl,
+        fetchImplementation,
+        getToken,
+        photoId: profilePhoto.id,
+      }),
+    ).resolves.toEqual([]);
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      `${apiBaseUrl}/v1/users/me/profile-photos/${profilePhoto.id}`,
+      {
+        headers: { Accept: 'application/json', Authorization: 'Bearer session-token' },
+        method: 'DELETE',
+      },
+    );
   });
 
   it('uses the API error message when media is not configured', async () => {

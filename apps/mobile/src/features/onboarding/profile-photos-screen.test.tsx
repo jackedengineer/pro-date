@@ -1,5 +1,6 @@
 import type { ProfilePhoto } from '@pro-date/contracts';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 import type { LocalProfilePhoto } from '../../api/profile-photos';
 import { ProfilePhotosScreen } from './profile-photos-screen';
@@ -22,6 +23,10 @@ function photo(index: number): ProfilePhoto {
 }
 
 describe('ProfilePhotosScreen', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('loads the draft and keeps continue disabled until four photos exist', async () => {
     const loadPhotos = jest.fn().mockResolvedValue([photo(0), photo(1), photo(2)]);
     const view = await render(
@@ -29,6 +34,7 @@ describe('ProfilePhotosScreen', () => {
         completePhotos={jest.fn()}
         loadPhotos={loadPhotos}
         pickPhoto={jest.fn()}
+        removePhoto={jest.fn()}
         uploadPhoto={jest.fn()}
       />,
     );
@@ -47,6 +53,7 @@ describe('ProfilePhotosScreen', () => {
         completePhotos={jest.fn()}
         loadPhotos={jest.fn().mockResolvedValue([])}
         pickPhoto={pickPhoto}
+        removePhoto={jest.fn()}
         uploadPhoto={uploadPhoto}
       />,
     );
@@ -66,6 +73,7 @@ describe('ProfilePhotosScreen', () => {
         completePhotos={jest.fn()}
         loadPhotos={jest.fn().mockResolvedValue([])}
         pickPhoto={jest.fn().mockResolvedValue(null)}
+        removePhoto={jest.fn()}
         uploadPhoto={uploadPhoto}
       />,
     );
@@ -84,6 +92,7 @@ describe('ProfilePhotosScreen', () => {
         completePhotos={completePhotos}
         loadPhotos={jest.fn().mockResolvedValue(photos)}
         pickPhoto={jest.fn()}
+        removePhoto={jest.fn()}
         uploadPhoto={jest.fn()}
       />,
     );
@@ -109,6 +118,7 @@ describe('ProfilePhotosScreen', () => {
         completePhotos={jest.fn()}
         loadPhotos={loadPhotos}
         pickPhoto={jest.fn()}
+        removePhoto={jest.fn()}
         uploadPhoto={jest.fn()}
       />,
     );
@@ -117,5 +127,27 @@ describe('ProfilePhotosScreen', () => {
     expect(view.getByText('Photo uploads are not configured yet.')).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Retry loading photos' }));
     expect(loadPhotos).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirms before deleting a photo from storage', async () => {
+    const removePhoto = jest.fn().mockResolvedValue([]);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+      buttons?.find((button) => button.style === 'destructive')?.onPress?.();
+    });
+    const view = await render(
+      <ProfilePhotosScreen
+        completePhotos={jest.fn()}
+        loadPhotos={jest.fn().mockResolvedValue([photo(0)])}
+        pickPhoto={jest.fn()}
+        removePhoto={removePhoto}
+        uploadPhoto={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(view.getByRole('button', { name: 'Remove photo 1' })).toBeTruthy());
+    await fireEvent.press(view.getByRole('button', { name: 'Remove photo 1' }));
+
+    expect(alert).toHaveBeenCalledWith('Remove this photo?', expect.any(String), expect.any(Array));
+    await waitFor(() => expect(removePhoto).toHaveBeenCalledWith(photo(0).id));
   });
 });

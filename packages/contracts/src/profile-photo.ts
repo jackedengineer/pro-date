@@ -6,6 +6,8 @@ export const PROFILE_PHOTO_MIN_COUNT = 4;
 export const PROFILE_PHOTO_MAX_COUNT = 6;
 export const PROFILE_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 
+export const profilePhotoIdSchema = z.uuid();
+
 const providerPublicIdSchema = z
   .string()
   .trim()
@@ -47,7 +49,7 @@ export const createProfilePhotoRequestSchema = z.strictObject({
 export const profilePhotoSchema = z.strictObject({
   deliveryUrl: z.url().startsWith('https://res.cloudinary.com/'),
   height: z.number().int().positive(),
-  id: z.uuid(),
+  id: profilePhotoIdSchema,
   position: profilePhotoPositionSchema,
   width: z.number().int().positive(),
 });
