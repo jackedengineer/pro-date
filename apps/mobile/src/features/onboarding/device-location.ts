@@ -56,14 +56,27 @@ const expoLocationServices: ProfileLocationServices = {
 export async function captureProfileLocation(
   services: ProfileLocationServices = expoLocationServices,
 ): Promise<LocationUpdate> {
-  const permission = await services.requestForegroundPermission();
+  let permission: 'denied' | 'granted';
+
+  try {
+    permission = await services.requestForegroundPermission();
+  } catch {
+    throw new Error('We could not read your location. Check location services and try again.');
+  }
 
   if (permission !== 'granted') {
     throw new Error('Location access is needed to show relevant people nearby.');
   }
 
-  const coordinates = await services.getCurrentCoordinates();
-  const address = await services.reverseGeocode(coordinates);
+  let coordinates: Coordinates;
+  let address: CoarseAddress | null;
+
+  try {
+    coordinates = await services.getCurrentCoordinates();
+    address = await services.reverseGeocode(coordinates);
+  } catch {
+    throw new Error('We could not read your location. Check location services and try again.');
+  }
   const locality = address?.locality ?? address?.district ?? address?.subregion;
 
   if (address?.countryCode === null || address?.countryCode === undefined || locality == null) {

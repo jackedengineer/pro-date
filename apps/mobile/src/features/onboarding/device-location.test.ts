@@ -68,4 +68,14 @@ describe('captureProfileLocation', () => {
       'We could not identify your city. Check location services and try again.',
     );
   });
+
+  it('does not expose native location errors in the interface', async () => {
+    const services = createLocationServices({
+      getCurrentCoordinates: jest.fn().mockRejectedValue(new Error('Native provider details')),
+    });
+
+    await expect(captureProfileLocation(services)).rejects.toThrow(
+      'We could not read your location. Check location services and try again.',
+    );
+  });
 });

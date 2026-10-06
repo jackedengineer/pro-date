@@ -5,12 +5,13 @@ import {
   saveProfileIdentity,
   saveProfileLocation,
   saveProfilePreferences,
+  type ProfileCheckpoint,
 } from './profile';
 import type { GetSessionToken } from './current-user';
 
 const apiBaseUrl = 'https://api.prodate.example';
 const requestId = '59a2c4a6-110e-470e-bcab-c762c18dec45';
-const emptyProfileDraft = {
+const emptyProfileDraft: ProfileCheckpoint = {
   arePronounsVisible: true,
   birthDate: null,
   displayName: null,
@@ -25,7 +26,19 @@ const emptyProfileDraft = {
   onboardingStep: 'IDENTITY',
   pronouns: null,
   relationshipIntent: null,
-} as const;
+};
+
+interface FoundationTestOptions {
+  apiBaseUrl: string;
+  fetchImplementation: typeof fetch;
+  getToken: GetSessionToken;
+}
+
+interface FoundationTestCase {
+  body: Record<string, unknown>;
+  checkpoint: ProfileCheckpoint;
+  save: (options: FoundationTestOptions) => Promise<ProfileCheckpoint>;
+}
 
 describe('saveProfileDisplayName', () => {
   it('sends an authenticated profile patch and parses the checkpoint', async () => {
@@ -182,7 +195,14 @@ describe('profile foundation updates', () => {
         onboardingStep: 'PREFERENCES',
         pronouns: 'they/them',
       },
-      save: saveProfileIdentity,
+      save: (options) =>
+        saveProfileIdentity({
+          ...options,
+          arePronounsVisible: true,
+          genderIdentity: 'Non-binary',
+          isGenderVisible: false,
+          pronouns: 'they/them',
+        }),
     },
     {
       body: {
@@ -197,7 +217,12 @@ describe('profile foundation updates', () => {
         onboardingStep: 'LOCATION',
         relationshipIntent: 'LONG_TERM',
       },
-      save: saveProfilePreferences,
+      save: (options) =>
+        saveProfilePreferences({
+          ...options,
+          interestedIn: ['WOMEN', 'NON_BINARY_PEOPLE'],
+          relationshipIntent: 'LONG_TERM',
+        }),
     },
     {
       body: {
@@ -215,7 +240,15 @@ describe('profile foundation updates', () => {
         locationLabel: 'Mumbai, Maharashtra',
         onboardingStep: 'DETAILS',
       },
-      save: saveProfileLocation,
+      save: (options) =>
+        saveProfileLocation({
+          ...options,
+          countryCode: 'IN',
+          latitude: 19.076,
+          locality: 'Mumbai',
+          longitude: 72.8777,
+          region: 'Maharashtra',
+        }),
     },
     {
       body: { height: { centimeters: 173, isVisible: true } },
@@ -224,34 +257,32 @@ describe('profile foundation updates', () => {
         heightCm: 173,
         onboardingStep: 'PHOTOS',
       },
-      save: saveProfileHeight,
+      save: (options) => saveProfileHeight({ ...options, centimeters: 173, isVisible: true }),
     },
-  ] as const)('sends and validates the $checkpoint.onboardingStep update', async (testCase) => {
-    const fetchImplementation = jest.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: testCase.checkpoint, requestId }), {
-        headers: { 'content-type': 'application/json' },
-        status: 200,
-      }),
-    );
-    const getToken = jest.fn().mockResolvedValue('session-token') as GetSessionToken;
+  ] satisfies FoundationTestCase[])(
+    'sends and validates the $checkpoint.onboardingStep update',
+    async (testCase) => {
+      const fetchImplementation = jest.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: testCase.checkpoint, requestId }), {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        }),
+      );
+      const getToken = jest.fn().mockResolvedValue('session-token') as GetSessionToken;
 
-    await expect(
-      testCase.save({
-        apiBaseUrl,
-        fetchImplementation,
-        getToken,
-        ...testCase.body[Object.keys(testCase.body)[0] as keyof typeof testCase.body],
-      } as never),
-    ).resolves.toEqual(testCase.checkpoint);
+      await expect(testCase.save({ apiBaseUrl, fetchImplementation, getToken })).resolves.toEqual(
+        testCase.checkpoint,
+      );
 
-    expect(fetchImplementation).toHaveBeenCalledWith(`${apiBaseUrl}/v1/users/me/profile`, {
-      body: JSON.stringify(testCase.body),
-      headers: {
-        Accept: 'application/json',
-        Authorization: 'Bearer session-token',
-        'Content-Type': 'application/json',
-      },
-      method: 'PATCH',
-    });
-  });
+      expect(fetchImplementation).toHaveBeenCalledWith(`${apiBaseUrl}/v1/users/me/profile`, {
+        body: JSON.stringify(testCase.body),
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer session-token',
+          'Content-Type': 'application/json',
+        },
+        method: 'PATCH',
+      });
+    },
+  );
 });
