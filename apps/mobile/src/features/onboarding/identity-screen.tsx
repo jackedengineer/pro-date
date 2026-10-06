@@ -1,6 +1,6 @@
 import type { IdentityUpdate } from '@pro-date/contracts';
 import { useState } from 'react';
-import { StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { AppText } from '../../components/app-text';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
@@ -20,6 +20,13 @@ interface IdentityScreenProps {
 export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenProps) {
   const [genderIdentity, setGenderIdentity] = useState(initialValue?.genderIdentity);
   const [pronouns, setPronouns] = useState(initialValue?.pronouns);
+  const [isCustomGender, setIsCustomGender] = useState(
+    initialValue?.genderIdentity !== undefined &&
+      !genderOptions.includes(initialValue.genderIdentity),
+  );
+  const [areCustomPronouns, setAreCustomPronouns] = useState(
+    initialValue?.pronouns !== undefined && !pronounOptions.includes(initialValue.pronouns),
+  );
   const [isGenderVisible, setIsGenderVisible] = useState(initialValue?.isGenderVisible ?? true);
   const [arePronounsVisible, setArePronounsVisible] = useState(
     initialValue?.arePronounsVisible ?? true,
@@ -28,12 +35,25 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
   const [isSaving, setIsSaving] = useState(false);
 
   const save = async () => {
-    if (genderIdentity === undefined || pronouns === undefined || isSaving) return;
+    if (
+      genderIdentity === undefined ||
+      genderIdentity.trim().length < 2 ||
+      pronouns === undefined ||
+      pronouns.trim().length < 2 ||
+      isSaving
+    ) {
+      return;
+    }
     setErrorMessage(null);
     setIsSaving(true);
 
     try {
-      await onSave({ arePronounsVisible, genderIdentity, isGenderVisible, pronouns });
+      await onSave({
+        arePronounsVisible,
+        genderIdentity: genderIdentity.trim(),
+        isGenderVisible,
+        pronouns: pronouns.trim(),
+      });
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : 'We could not save these details.');
       setIsSaving(false);
@@ -46,7 +66,12 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
       footer={
         <ProfileStepFooter
           accessibilityLabel="Save identity and continue"
-          disabled={genderIdentity === undefined || pronouns === undefined}
+          disabled={
+            genderIdentity === undefined ||
+            genderIdentity.trim().length < 2 ||
+            pronouns === undefined ||
+            pronouns.trim().length < 2
+          }
           errorMessage={errorMessage}
           isSaving={isSaving}
           onPress={() => void save()}
@@ -70,10 +95,37 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
             key={option}
             label={option}
             mode="single"
-            onPress={() => setGenderIdentity(option)}
-            selected={genderIdentity === option}
+            onPress={() => {
+              setGenderIdentity(option);
+              setIsCustomGender(false);
+            }}
+            selected={!isCustomGender && genderIdentity === option}
           />
         ))}
+        <SelectionControl
+          disabled={isSaving}
+          label="Self-describe"
+          mode="single"
+          onPress={() => {
+            setGenderIdentity(isCustomGender ? genderIdentity : '');
+            setIsCustomGender(true);
+          }}
+          selected={isCustomGender}
+        />
+        {isCustomGender ? (
+          <TextInput
+            accessibilityLabel="Describe your gender identity"
+            autoCapitalize="sentences"
+            editable={!isSaving}
+            maxLength={40}
+            onChangeText={setGenderIdentity}
+            placeholder="Use your own words"
+            placeholderTextColor={colors.muted}
+            selectionColor={colors.coral}
+            style={styles.customInput}
+            value={genderIdentity}
+          />
+        ) : null}
       </View>
 
       <VisibilityRow
@@ -93,10 +145,37 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
             key={option}
             label={option}
             mode="single"
-            onPress={() => setPronouns(option)}
-            selected={pronouns === option}
+            onPress={() => {
+              setPronouns(option);
+              setAreCustomPronouns(false);
+            }}
+            selected={!areCustomPronouns && pronouns === option}
           />
         ))}
+        <SelectionControl
+          disabled={isSaving}
+          label="Self-describe pronouns"
+          mode="single"
+          onPress={() => {
+            setPronouns(areCustomPronouns ? pronouns : '');
+            setAreCustomPronouns(true);
+          }}
+          selected={areCustomPronouns}
+        />
+        {areCustomPronouns ? (
+          <TextInput
+            accessibilityLabel="Describe your pronouns"
+            autoCapitalize="none"
+            editable={!isSaving}
+            maxLength={30}
+            onChangeText={setPronouns}
+            placeholder="e.g. xe/xem"
+            placeholderTextColor={colors.muted}
+            selectionColor={colors.coral}
+            style={styles.customInput}
+            value={pronouns}
+          />
+        ) : null}
       </View>
 
       <VisibilityRow
@@ -136,6 +215,17 @@ function VisibilityRow({
 }
 
 const styles = StyleSheet.create({
+  customInput: {
+    backgroundColor: colors.surface,
+    borderColor: colors.plum,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.ink,
+    fontFamily: typography.family.body,
+    fontSize: 16,
+    minHeight: 56,
+    paddingHorizontal: spacing.md,
+  },
   section: {
     gap: spacing.sm,
     marginTop: spacing.md,
