@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, Expo SDK 57 shell, Clerk-backed phone/email OTP flows, Neon-backed internal users, and the persisted name and birthday onboarding checkpoints are implemented. Birthdays use a native Expo Go-compatible picker, a normalized PostgreSQL calendar date, and server-enforced 18+ validation. Email OTP is the current development path while India SMS enablement is pending with Clerk support. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
+> **Project status:** authentication and the complete non-media profile foundation are implemented end to end. A user can verify by Clerk email/phone OTP, create the internal account, and persist name, birthday, self-described identity, pronouns, dating preferences, relationship intent, location, and height through the Expo app, Express API, Drizzle, and Neon/PostGIS. Exact coordinates remain server-private; the app receives only a coarse location label. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Photos, prompts, discovery, engagement, messaging, safety workflows, and subscriptions remain in development.
 
 ## Product preview
 
@@ -141,41 +141,43 @@ The backend is a modular monolith deployed as two processes from one codebase: a
 
 ## Architecture decision register
 
-| Decision          | Choice                                                                            | Why                                                                                  |
-| ----------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Mobile runtime    | [Expo SDK 57](https://expo.dev/changelog/sdk-57), React Native 0.86, React 19.2.3 | Current stable Expo line and supported by the current iOS Expo Go application        |
-| Navigation        | Expo Router                                                                       | Expo-first routing, deep links, and typed route support                              |
-| UI foundation     | React Native primitives, `StyleSheet`, typed tokens, internal components          | Distinctive product experience without a generic Material-style visual system        |
-| Birthday input    | Expo UI SwiftUI/Compose `DateTimePicker`                                          | Native, accessible date selection included in Expo Go for SDK 57                     |
-| API               | Express 5 REST under `/v1`                                                        | Explicit, versionable, testable mobile contracts                                     |
-| Realtime          | Socket.IO                                                                         | Reconnect-friendly transport; durable state remains in PostgreSQL                    |
-| Database          | Neon PostgreSQL with PostGIS in Singapore                                         | Relational integrity, transactions, and geospatial filtering near the backend region |
-| Data access       | Drizzle ORM and committed Drizzle Kit migrations                                  | Type-safe relational access and auditable schema history                             |
-| Geospatial access | `geography(Point, 4326)` plus reviewed parameterized SQL where required           | Correct distance semantics without forcing all queries outside the ORM               |
-| Domain modeling   | Normalized relational tables; no JSONB domain documents                           | Explicit constraints, joins, uniqueness, and queryable relationships                 |
-| Authentication    | Clerk custom phone/email OTP plus internal UUID users                             | Provider handles verification; application retains domain identity ownership         |
-| Media             | Signed Cloudinary uploads                                                         | The device uploads directly without receiving a provider secret                      |
-| Async work        | PostgreSQL transactional outbox and private worker                                | Couples state changes and side-effect intent atomically                              |
-| Subscriptions     | RevenueCat Test Store, then platform billing sandboxes                            | Production-shaped entitlement handling without collecting card details directly      |
-| Deployment        | Railway API/worker and Neon database in Singapore                                 | Simple first deployment with Docker, WebSockets, private services, and nearby data   |
-| Scale posture     | One API replica and no Redis in V0                                                | Avoids infrastructure without a demonstrated scaling need                            |
+| Decision          | Choice                                                                            | Why                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Mobile runtime    | [Expo SDK 57](https://expo.dev/changelog/sdk-57), React Native 0.86, React 19.2.3 | Current stable Expo line and supported by the current iOS Expo Go application          |
+| Navigation        | Expo Router                                                                       | Expo-first routing, deep links, and typed route support                                |
+| UI foundation     | React Native primitives, `StyleSheet`, typed tokens, internal components          | Distinctive product experience without a generic Material-style visual system          |
+| Birthday input    | Expo UI SwiftUI/Compose `DateTimePicker`                                          | Native, accessible date selection included in Expo Go for SDK 57                       |
+| Height input      | Expo UI universal `Picker`                                                        | Native wheel control on iOS with a cross-platform SDK 57 API                           |
+| Device location   | Expo Location, foreground permission only                                         | Expo Go-compatible capture with an explicit privacy explanation and recoverable denial |
+| API               | Express 5 REST under `/v1`                                                        | Explicit, versionable, testable mobile contracts                                       |
+| Realtime          | Socket.IO                                                                         | Reconnect-friendly transport; durable state remains in PostgreSQL                      |
+| Database          | Neon PostgreSQL with PostGIS in Singapore                                         | Relational integrity, transactions, and geospatial filtering near the backend region   |
+| Data access       | Drizzle ORM and committed Drizzle Kit migrations                                  | Type-safe relational access and auditable schema history                               |
+| Geospatial access | `geography(Point, 4326)` plus reviewed parameterized SQL where required           | Correct distance semantics without forcing all queries outside the ORM                 |
+| Domain modeling   | Normalized relational tables; no JSONB domain documents                           | Explicit constraints, joins, uniqueness, and queryable relationships                   |
+| Authentication    | Clerk custom phone/email OTP plus internal UUID users                             | Provider handles verification; application retains domain identity ownership           |
+| Media             | Signed Cloudinary uploads                                                         | The device uploads directly without receiving a provider secret                        |
+| Async work        | PostgreSQL transactional outbox and private worker                                | Couples state changes and side-effect intent atomically                                |
+| Subscriptions     | RevenueCat Test Store, then platform billing sandboxes                            | Production-shaped entitlement handling without collecting card details directly        |
+| Deployment        | Railway API/worker and Neon database in Singapore                                 | Simple first deployment with Docker, WebSockets, private services, and nearby data     |
+| Scale posture     | One API replica and no Redis in V0                                                | Avoids infrastructure without a demonstrated scaling need                              |
 
 ## Technology stack
 
 Exact package versions are pinned in the workspace lockfile. Expo-native versions are checked against Expo SDK 57 with Expo CLI and Expo Doctor rather than inferred from semver alone.
 
-| Layer              | Technologies                                                                                                                                                                                             |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                                             |
-| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                                    |
-| Mobile UI          | React Native `StyleSheet`, Expo UI DateTimePicker, Reanimated, Gesture Handler, Keyboard Controller, Expo Image/Image Picker/Image Manipulator, Haptics, Safe Area Context, Lucide React Native, Manrope |
-| Mobile state/forms | TanStack Query, React Hook Form, Zod, React state first; Zustand only if a real cross-screen need appears                                                                                                |
-| API                | Express 5, Zod, Helmet, CORS, rate limiting, Pino, generated OpenAPI 3.1 with a protected Scalar reference                                                                                               |
-| Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                                                |
-| Integrations       | Clerk, Cloudinary, Socket.IO, Expo Notifications/Push, RevenueCat, Sentry                                                                                                                                |
-| Mobile tests       | Jest, `jest-expo`, React Native Testing Library, Maestro                                                                                                                                                 |
-| API tests          | Vitest, Supertest, Testcontainers with real PostGIS                                                                                                                                                      |
-| Delivery           | Docker, Railway, Neon, EAS Build/Update, GitHub Actions                                                                                                                                                  |
+| Layer              | Technologies                                                                                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                                                                   |
+| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                                                          |
+| Mobile UI          | React Native `StyleSheet`, Expo UI DateTimePicker/Picker, Expo Location, Reanimated, Gesture Handler, Keyboard Controller, Expo Image/Image Picker/Image Manipulator, Haptics, Safe Area Context, Lucide React Native, Manrope |
+| Mobile state/forms | TanStack Query, React Hook Form, Zod, React state first; Zustand only if a real cross-screen need appears                                                                                                                      |
+| API                | Express 5, Zod, Helmet, CORS, rate limiting, Pino, generated OpenAPI 3.1 with a protected Scalar reference                                                                                                                     |
+| Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                                                                      |
+| Integrations       | Clerk, Cloudinary, Socket.IO, Expo Notifications/Push, RevenueCat, Sentry                                                                                                                                                      |
+| Mobile tests       | Jest, `jest-expo`, React Native Testing Library, Maestro                                                                                                                                                                       |
+| API tests          | Vitest, Supertest, Testcontainers with real PostGIS                                                                                                                                                                            |
+| Delivery           | Docker, Railway, Neon, EAS Build/Update, GitHub Actions                                                                                                                                                                        |
 
 Intentionally deferred: Redis, the Socket.IO Redis adapter, Kubernetes, microservices, Elasticsearch, a large third-party UI kit, and speculative global-state infrastructure.
 
@@ -183,6 +185,9 @@ Intentionally deferred: Redis, the Socket.IO Redis adapter, Kubernetes, microser
 
 - Every user has an internal UUID. Clerk subject IDs are unique external references, not primary domain identifiers.
 - Profile birthdays are stored as normalized PostgreSQL `date` values rather than timestamps or JSON, preventing timezone drift in age calculations.
+- Identity and pronouns are bounded text rather than closed database enums, allowing inclusive self-description while retaining separate visibility controls.
+- Dating audiences use a constrained PostgreSQL text array, and relationship intent uses a finite transport contract suitable for filtering.
+- Height is stored canonically in centimeters and rendered in both metric and imperial units on the device.
 - Profile presentation is an ordered sequence of relational content items. Photo and prompt-answer tables specialize those items.
 - A like references the exact profile content item that received the like or comment.
 - A match stores a canonical low/high user pair protected by a unique constraint, preventing two concurrent likes from creating duplicate matches.
@@ -346,6 +351,21 @@ The pooled Neon URL is used by the long-running Express process; the direct URL 
 
 Implementation references: [Clerk Express quickstart](https://clerk.com/docs/expressjs/getting-started/quickstart), [Clerk Express SDK reference](https://clerk.com/docs/reference/express/overview), [Clerk Expo authenticated requests](https://clerk.com/docs/guides/development/access-clerk-outside-components), [Drizzle PostgreSQL setup](https://orm.drizzle.team/docs/get-started/postgresql-existing), and [Drizzle migrations](https://orm.drizzle.team/docs/migrations).
 
+## Profile foundation flow
+
+The implemented onboarding journey is intentionally resumable. Each primary action sends one strict section payload to `PATCH /v1/users/me/profile`; the API validates it, writes the profile fields, and advances the user checkpoint in the same database transaction before the client renders the next screen.
+
+1. Name and birthday establish the public label and enforce the server-side 18+ rule.
+2. Identity and pronouns provide inclusive presets, self-described values, and independent visibility controls.
+3. Discovery preferences capture one or more audiences plus the user's current relationship intent.
+4. Location asks for foreground permission only, captures one balanced-accuracy fix, reverse-geocodes a coarse label, and stores the point as `geography(Point, 4326)` behind a GiST index.
+5. Height uses the Expo UI universal picker, persists centimeters, and keeps public visibility optional.
+6. The server advances to `PHOTOS`; media and prompts are the next implementation slice.
+
+The location request sends exact latitude/longitude over the authenticated API because the future discovery query requires distance calculations. No profile response contains those coordinates, and the mobile UI explains the distinction between the private stored point and the public city/region label before requesting permission.
+
+Implementation references: [Expo Location for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/location/), [Expo UI universal Picker for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/ui/universal/picker/), and [Drizzle PostGIS geography points](https://orm.drizzle.team/docs/guides/postgis-geometry-point).
+
 ## Physical iPhone: Expo Go first run
 
 [Expo Go 57 is available on the iOS App Store](https://expo.dev/changelog/expo-go-57-login). The initial device workflow is:
@@ -416,7 +436,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 136 automated tests pass across shared contracts, database invariants, API integration behavior, bootstrap logic, authentication rules, resend timing, and mobile component behavior.
+- 174 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, resend timing, location handling, and accessible mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -472,9 +492,14 @@ Last architecture verification: **6 October 2026**
 | Authenticated internal-user bootstrap   | Implemented and live verified |
 | Profile intro and name checkpoint       | Verified on physical iPhone   |
 | Birthday and server-side 18+ checkpoint | Verified on physical iPhone   |
+| Inclusive identity and pronouns         | Implemented and tested        |
+| Dating preferences and intent           | Implemented and tested        |
+| Foreground location and PostGIS point   | Implemented and tested        |
+| Native height and visibility control    | Implemented and tested        |
+| Basic profile foundation compatibility  | Automated verification passed |
 | V0 vertical slice                       | In progress                   |
 
-The next checkpoint is the inclusive identity and pronouns step. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
+The next implementation checkpoint is photo upload and ordering. The newly completed identity-to-height journey still needs one physical-iPhone acceptance pass before it is marked live verified. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
