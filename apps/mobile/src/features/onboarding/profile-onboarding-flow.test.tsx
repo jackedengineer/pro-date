@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Keyboard, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
 import { ProfileOnboardingFlow } from './profile-onboarding-flow';
 
@@ -9,6 +10,10 @@ const newUser = {
 };
 
 describe('ProfileOnboardingFlow', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('introduces the profile journey and its signature language', async () => {
     const view = await render(
       <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={jest.fn()} />,
@@ -35,6 +40,50 @@ describe('ProfileOnboardingFlow', () => {
       'Your name must be between 2 and 40 characters.',
     );
     expect(saveDisplayName).not.toHaveBeenCalled();
+  });
+
+  it('keeps the field geometry stable when focus changes', async () => {
+    const view = await render(
+      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={jest.fn()} />,
+    );
+
+    await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
+    const input = view.getByLabelText('First name or chosen name');
+    const getBorderWidth = () => {
+      const inputStyle = (
+        view.getByLabelText('First name or chosen name').props as {
+          style: StyleProp<TextStyle>;
+        }
+      ).style;
+
+      return StyleSheet.flatten(inputStyle)?.borderWidth;
+    };
+    const borderWidthBeforeFocus = getBorderWidth();
+
+    await fireEvent(input, 'focus');
+
+    expect(getBorderWidth()).toBe(borderWidthBeforeFocus);
+  });
+
+  it('uses the keyboard Done action as a single smooth submission', async () => {
+    const dismissKeyboard = jest.spyOn(Keyboard, 'dismiss').mockImplementation();
+    const saveDisplayName = jest.fn().mockResolvedValue({
+      displayName: 'Ada',
+      onboardingStatus: 'IN_PROGRESS',
+      onboardingStep: 'BIRTHDAY',
+    });
+    const view = await render(
+      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={saveDisplayName} />,
+    );
+
+    await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
+    const input = view.getByLabelText('First name or chosen name');
+    await fireEvent.changeText(input, 'Ada');
+    await fireEvent(input, 'submitEditing');
+
+    expect(dismissKeyboard).toHaveBeenCalledTimes(1);
+    expect(saveDisplayName).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(view.getByText('Nice to meet you, Ada.')).toBeTruthy());
   });
 
   it('trims and saves the name before advancing to the next checkpoint', async () => {

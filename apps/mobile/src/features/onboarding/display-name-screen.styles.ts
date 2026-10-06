@@ -73,7 +73,6 @@ export const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: colors.plum,
-    borderWidth: 2,
   },
   keyboardView: {
     flex: 1,
@@ -84,6 +83,9 @@ export const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   supportingText: {
     color: colors.muted,
