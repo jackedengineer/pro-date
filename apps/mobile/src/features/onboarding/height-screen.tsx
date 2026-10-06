@@ -98,6 +98,7 @@ export function HeightScreen({ initialValue, onBack, onSave }: HeightScreenProps
           accessibilityLabel="Show my height on my profile"
           disabled={isSaving}
           onValueChange={setIsVisible}
+          style={styles.switch}
           thumbColor={colors.surface}
           trackColor={{ false: colors.border, true: colors.plum }}
           value={isVisible}
@@ -128,6 +129,9 @@ const styles = StyleSheet.create({
   supportingText: {
     color: colors.muted,
     maxWidth: 350,
+  },
+  switch: {
+    alignSelf: 'center',
   },
   visibilityCopy: {
     flex: 1,

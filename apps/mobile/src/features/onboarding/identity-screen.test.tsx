@@ -1,8 +1,18 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { IdentityScreen } from './identity-screen';
 
 describe('IdentityScreen', () => {
+  it('centers the native iOS switch inside its visibility row', async () => {
+    const view = await render(<IdentityScreen onSave={jest.fn()} />);
+    const toggle = view.getByRole('switch', { name: 'Show my gender on my profile' });
+    const toggleProps = toggle.props as { style: StyleProp<ViewStyle> };
+    const style = StyleSheet.flatten(toggleProps.style);
+
+    expect(style.alignSelf).toBe('center');
+  });
+
   it('supports self-described identity and pronouns', async () => {
     const onSave = jest.fn().mockResolvedValue(undefined);
     const view = await render(<IdentityScreen onSave={onSave} />);
