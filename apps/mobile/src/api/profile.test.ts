@@ -10,6 +10,7 @@ describe('saveProfileDisplayName', () => {
       new Response(
         JSON.stringify({
           data: {
+            birthDate: null,
             displayName: 'Ada',
             onboardingStatus: 'IN_PROGRESS',
             onboardingStep: 'BIRTHDAY',
@@ -29,6 +30,7 @@ describe('saveProfileDisplayName', () => {
         getToken,
       }),
     ).resolves.toEqual({
+      birthDate: null,
       displayName: 'Ada',
       onboardingStatus: 'IN_PROGRESS',
       onboardingStep: 'BIRTHDAY',

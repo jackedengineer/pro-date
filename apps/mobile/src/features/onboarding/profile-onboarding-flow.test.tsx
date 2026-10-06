@@ -68,6 +68,7 @@ describe('ProfileOnboardingFlow', () => {
   it('uses the keyboard Done action as a single smooth submission', async () => {
     const dismissKeyboard = jest.spyOn(Keyboard, 'dismiss').mockImplementation();
     const saveDisplayName = jest.fn().mockResolvedValue({
+      birthDate: null,
       displayName: 'Ada',
       onboardingStatus: 'IN_PROGRESS',
       onboardingStep: 'BIRTHDAY',
@@ -89,6 +90,7 @@ describe('ProfileOnboardingFlow', () => {
   it('trims and saves the name before advancing to the next checkpoint', async () => {
     let resolveSave:
       | ((value: {
+          birthDate: null;
           displayName: string;
           onboardingStatus: 'IN_PROGRESS';
           onboardingStep: 'BIRTHDAY';
@@ -97,6 +99,7 @@ describe('ProfileOnboardingFlow', () => {
     const saveDisplayName = jest.fn(
       () =>
         new Promise<{
+          birthDate: null;
           displayName: string;
           onboardingStatus: 'IN_PROGRESS';
           onboardingStep: 'BIRTHDAY';
@@ -116,6 +119,7 @@ describe('ProfileOnboardingFlow', () => {
     expect(saveDisplayName).toHaveBeenCalledWith('Ada');
 
     resolveSave?.({
+      birthDate: null,
       displayName: 'Ada',
       onboardingStatus: 'IN_PROGRESS',
       onboardingStep: 'BIRTHDAY',

@@ -40,7 +40,7 @@ export function ProfileOnboardingFlow({
         onBack={() => setVisibleStep('intro')}
         onSave={async (name) => {
           const checkpoint = await saveDisplayName(name);
-          setDisplayName(checkpoint.displayName);
+          setDisplayName(checkpoint.displayName ?? name);
           setVisibleStep('checkpoint');
         }}
       />

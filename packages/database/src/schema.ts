@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { date, pgEnum, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 export const onboardingStatus = pgEnum('onboarding_status', [
   'NOT_STARTED',
@@ -31,6 +31,7 @@ export const profiles = pgTable('profiles', {
   userId: uuid('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
+  birthDate: date('birth_date'),
   displayName: varchar('display_name', { length: 40 }),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),

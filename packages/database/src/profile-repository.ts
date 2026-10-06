@@ -8,7 +8,8 @@ type ProfileInsertDatabase = Pick<ProDateDatabase, 'insert'>;
 type ProfileUpdateDatabase = Pick<ProDateDatabase, 'update'>;
 
 export interface ProfileCheckpointRecord {
-  displayName: string;
+  birthDate: string | null;
+  displayName: string | null;
   onboardingStatus: OnboardingStatus;
   onboardingStep: OnboardingStep;
 }
@@ -25,15 +26,34 @@ export function buildProfileUpsertQuery(
       set: { displayName, updatedAt: sql`now()` },
       target: profiles.userId,
     })
-    .returning({ displayName: profiles.displayName });
+    .returning({ birthDate: profiles.birthDate, displayName: profiles.displayName });
 }
 
-export function buildOnboardingProgressQuery(database: ProfileUpdateDatabase, userId: string) {
+export function buildBirthDateUpsertQuery(
+  database: ProfileInsertDatabase,
+  userId: string,
+  birthDate: string,
+) {
+  return database
+    .insert(profiles)
+    .values({ birthDate, userId })
+    .onConflictDoUpdate({
+      set: { birthDate, updatedAt: sql`now()` },
+      target: profiles.userId,
+    })
+    .returning({ birthDate: profiles.birthDate, displayName: profiles.displayName });
+}
+
+export function buildOnboardingProgressQuery(
+  database: ProfileUpdateDatabase,
+  userId: string,
+  nextStep: OnboardingStep,
+) {
   return database
     .update(users)
     .set({
       onboardingStatus: 'IN_PROGRESS',
-      onboardingStep: 'BIRTHDAY',
+      onboardingStep: nextStep,
       updatedAt: sql`now()`,
     })
     .where(eq(users.id, userId))
@@ -48,7 +68,7 @@ export function createProfileRepository(database: ProDateDatabase) {
     async saveDisplayName(userId: string, displayName: string): Promise<ProfileCheckpointRecord> {
       return database.transaction(async (transaction) => {
         const [profile] = await buildProfileUpsertQuery(transaction, userId, displayName);
-        const [progress] = await buildOnboardingProgressQuery(transaction, userId);
+        const [progress] = await buildOnboardingProgressQuery(transaction, userId, 'BIRTHDAY');
 
         if (profile?.displayName === null || profile?.displayName === undefined) {
           throw new Error('The profile could not be persisted.');
@@ -59,6 +79,29 @@ export function createProfileRepository(database: ProDateDatabase) {
         }
 
         return {
+          birthDate: profile.birthDate,
+          displayName: profile.displayName,
+          onboardingStatus: progress.onboardingStatus,
+          onboardingStep: progress.onboardingStep,
+        };
+      });
+    },
+
+    async saveBirthDate(userId: string, birthDate: string): Promise<ProfileCheckpointRecord> {
+      return database.transaction(async (transaction) => {
+        const [profile] = await buildBirthDateUpsertQuery(transaction, userId, birthDate);
+        const [progress] = await buildOnboardingProgressQuery(transaction, userId, 'IDENTITY');
+
+        if (profile?.birthDate === null || profile?.birthDate === undefined) {
+          throw new Error('The birthday could not be persisted.');
+        }
+
+        if (progress === undefined) {
+          throw new Error('The onboarding checkpoint could not be persisted.');
+        }
+
+        return {
+          birthDate: profile.birthDate,
           displayName: profile.displayName,
           onboardingStatus: progress.onboardingStatus,
           onboardingStep: progress.onboardingStep,
