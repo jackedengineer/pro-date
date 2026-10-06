@@ -24,6 +24,19 @@ import { createLogger } from './logger.js';
 type ReadinessStatus = 'up' | 'down';
 type ReadinessChecks = Record<string, ReadinessStatus>;
 
+const onboardingStepRank: Record<OnboardingStep, number> = {
+  BIRTHDAY: 1,
+  COMPLETE: 9,
+  DETAILS: 5,
+  IDENTITY: 2,
+  LOCATION: 4,
+  NAME: 0,
+  PHOTOS: 6,
+  PREFERENCES: 3,
+  PROMPTS: 7,
+  REVIEW: 8,
+};
+
 export interface CurrentUserRecord {
   id: string;
   onboardingStep: OnboardingStep;
@@ -286,23 +299,51 @@ export function createApiApp(options: ApiAppOptions = {}) {
     }
 
     const currentUser = await findOrCreateCurrentUser(clerkSubject);
-    let profile: ProfileCheckpointRecord;
+    let requiredStep: OnboardingStep;
+    let saveProfileSection: () => Promise<ProfileCheckpointRecord>;
 
     if (input.data.displayName !== undefined) {
-      profile = await saveProfileDisplayName(currentUser.id, input.data.displayName);
+      const { displayName } = input.data;
+      requiredStep = 'NAME';
+      saveProfileSection = () => saveProfileDisplayName(currentUser.id, displayName);
     } else if (input.data.birthDate !== undefined) {
-      profile = await saveProfileBirthDate(currentUser.id, input.data.birthDate);
+      const { birthDate } = input.data;
+      requiredStep = 'BIRTHDAY';
+      saveProfileSection = () => saveProfileBirthDate(currentUser.id, birthDate);
     } else if (input.data.identity !== undefined) {
-      profile = await saveProfileIdentity(currentUser.id, input.data.identity);
+      const { identity } = input.data;
+      requiredStep = 'IDENTITY';
+      saveProfileSection = () => saveProfileIdentity(currentUser.id, identity);
     } else if (input.data.preferences !== undefined) {
-      profile = await saveProfilePreferences(currentUser.id, input.data.preferences);
+      const { preferences } = input.data;
+      requiredStep = 'PREFERENCES';
+      saveProfileSection = () => saveProfilePreferences(currentUser.id, preferences);
     } else if (input.data.location !== undefined) {
-      profile = await saveProfileLocation(currentUser.id, input.data.location);
+      const { location } = input.data;
+      requiredStep = 'LOCATION';
+      saveProfileSection = () => saveProfileLocation(currentUser.id, location);
     } else if (input.data.height !== undefined) {
-      profile = await saveProfileHeight(currentUser.id, input.data.height);
+      const { height } = input.data;
+      requiredStep = 'DETAILS';
+      saveProfileSection = () => saveProfileHeight(currentUser.id, height);
     } else {
       throw new Error('The validated profile update did not contain a supported field.');
     }
+
+    if (onboardingStepRank[currentUser.onboardingStep] < onboardingStepRank[requiredStep]) {
+      const body = {
+        error: {
+          code: 'ONBOARDING_STEP_REQUIRED',
+          message: 'Complete the earlier profile steps first.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
+      return;
+    }
+
+    const profile = await saveProfileSection();
     const body = {
       data: profile,
       requestId: getRequestId(request),

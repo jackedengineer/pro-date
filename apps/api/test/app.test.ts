@@ -363,6 +363,40 @@ describe('API application', () => {
     expect(profileResponseSchema.parse(response.body).data.onboardingStep).toBe('PREFERENCES');
   });
 
+  it('rejects a profile section when an earlier checkpoint is incomplete', async () => {
+    const saveProfileIdentity = vi.fn();
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser: vi.fn().mockResolvedValue({
+          id: '729438da-99b3-4d3d-b566-bfe94401829b',
+          onboardingStep: 'BIRTHDAY',
+          onboardingStatus: 'IN_PROGRESS',
+        }),
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfileIdentity,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({
+        identity: {
+          arePronounsVisible: true,
+          genderIdentity: 'Non-binary',
+          isGenderVisible: true,
+          pronouns: 'they/them',
+        },
+      })
+      .expect(409);
+
+    expect(apiErrorResponseSchema.parse(response.body)).toEqual({
+      error: {
+        code: 'ONBOARDING_STEP_REQUIRED',
+        message: 'Complete the earlier profile steps first.',
+      },
+      requestId,
+    });
+    expect(saveProfileIdentity).not.toHaveBeenCalled();
+  });
+
   it('persists dating preferences before advancing to location', async () => {
     const saveProfilePreferences = vi.fn().mockResolvedValue({
       ...emptyProfileDraft,
