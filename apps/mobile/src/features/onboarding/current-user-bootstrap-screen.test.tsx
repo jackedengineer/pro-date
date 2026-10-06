@@ -11,7 +11,9 @@ const currentUser = {
 const profileActions = {
   captureLocation: jest.fn(),
   completePhotos: jest.fn(),
+  completePrompts: jest.fn(),
   loadPhotos: jest.fn().mockResolvedValue([]),
+  loadPrompts: jest.fn().mockResolvedValue([]),
   pickPhoto: jest.fn(),
   saveBirthDate: jest.fn(),
   saveDisplayName: jest.fn(),

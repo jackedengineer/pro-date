@@ -1,9 +1,5 @@
 import type { LocalProfilePhoto } from '../../api/profile-photos';
-import {
-  ImageManipulator,
-  SaveFormat,
-  type ImageManipulatorContext,
-} from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat, type ImageManipulatorContext } from 'expo-image-manipulator';
 import {
   launchImageLibraryAsync,
   type ImagePickerOptions,

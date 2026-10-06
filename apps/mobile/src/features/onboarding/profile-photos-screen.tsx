@@ -207,7 +207,9 @@ export function ProfilePhotosScreen({
 
             return (
               <View
-                accessibilityLabel={index === 0 ? 'Lead profile photo' : `Profile photo ${index + 1}`}
+                accessibilityLabel={
+                  index === 0 ? 'Lead profile photo' : `Profile photo ${index + 1}`
+                }
                 accessible
                 key={currentPhoto.id}
                 style={styles.photoCard}
@@ -242,9 +244,7 @@ export function ProfilePhotosScreen({
                   <Pressable
                     accessibilityLabel={`Move photo ${index + 1} later`}
                     accessibilityRole="button"
-                    disabled={
-                      index === photos.length - 1 || activePosition !== null || isSaving
-                    }
+                    disabled={index === photos.length - 1 || activePosition !== null || isSaving}
                     hitSlop={4}
                     onPress={() => movePhoto(index, 1)}
                     style={[

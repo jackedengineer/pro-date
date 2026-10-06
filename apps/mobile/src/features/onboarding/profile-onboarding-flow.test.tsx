@@ -13,7 +13,9 @@ const newUser = {
 const foundationProps = {
   captureLocation: jest.fn(),
   completePhotos: jest.fn(),
+  completePrompts: jest.fn(),
   loadPhotos: jest.fn().mockResolvedValue([]),
+  loadPrompts: jest.fn().mockResolvedValue([]),
   pickPhoto: jest.fn(),
   saveHeight: jest.fn(),
   saveIdentity: jest.fn(),
@@ -337,6 +339,8 @@ describe('ProfileOnboardingFlow', () => {
     ['LOCATION', 'Set your discovery area.'],
     ['DETAILS', 'Add your height.'],
     ['PHOTOS', 'Show the build, not just the bio.'],
+    ['PROMPTS', 'Give them something to reply to.'],
+    ['REVIEW', 'The profile has a point of view.'],
   ] as const)('resumes %s at its dedicated screen', async (onboardingStep, heading) => {
     const view = await render(
       <ProfileOnboardingFlow

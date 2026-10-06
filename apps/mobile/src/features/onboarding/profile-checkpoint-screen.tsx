@@ -8,22 +8,21 @@ import { OnboardingProgress } from './onboarding-progress';
 export function ProfileCheckpointScreen() {
   return (
     <Screen style={styles.screen}>
-      <OnboardingProgress current={8} total={9} />
+      <OnboardingProgress current={9} total={9} />
       <View style={styles.content}>
         <View accessibilityElementsHidden style={styles.statusMark}>
           <AppText style={styles.statusIcon} variant="title">
             ✓
           </AppText>
         </View>
-        <AppText variant="eyebrow">Visuals committed</AppText>
-        <AppText variant="display">Photos shipped. Voice is next.</AppText>
+        <AppText variant="eyebrow">Prompts committed</AppText>
+        <AppText variant="display">The profile has a point of view.</AppText>
         <AppText style={styles.supportingText}>
-          Your grid is synced. Next, add the prompts that make someone want to open a pull
-          request.
+          Your basics, photos, and conversation hooks are synced. One complete card review is next.
         </AppText>
         <View style={styles.nextStep}>
           <AppText style={styles.nextStepText} variant="button">
-            Next: prompts
+            Next: profile review
           </AppText>
         </View>
       </View>

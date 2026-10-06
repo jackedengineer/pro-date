@@ -101,7 +101,9 @@ describe('ProfilePhotosScreen', () => {
   });
 
   it('shows a recoverable API error without clearing selected photos', async () => {
-    const loadPhotos = jest.fn().mockRejectedValue(new Error('Photo uploads are not configured yet.'));
+    const loadPhotos = jest
+      .fn()
+      .mockRejectedValue(new Error('Photo uploads are not configured yet.'));
     const view = await render(
       <ProfilePhotosScreen
         completePhotos={jest.fn()}

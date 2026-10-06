@@ -4,12 +4,15 @@ import type {
   LocationUpdate,
   PreferencesUpdate,
   ProfilePhoto,
+  ProfilePromptAnswer,
+  ProfilePromptAnswerInput,
 } from '@pro-date/contracts';
 import { useState } from 'react';
 
 import type { CurrentUser } from '../../api/current-user';
 import type { ProfileCheckpoint } from '../../api/profile';
 import type { CompletedProfilePhotos, LocalProfilePhoto } from '../../api/profile-photos';
+import type { CompletedProfilePrompts } from '../../api/profile-prompts';
 import { BirthdayScreen } from './birthday-screen';
 import { DisplayNameScreen } from './display-name-screen';
 import { HeightScreen } from './height-screen';
@@ -19,12 +22,15 @@ import { PreferencesScreen } from './preferences-screen';
 import { ProfileCheckpointScreen } from './profile-checkpoint-screen';
 import { ProfileOnboardingIntroScreen } from './profile-onboarding-intro-screen';
 import { ProfilePhotosScreen } from './profile-photos-screen';
+import { ProfilePromptsScreen } from './profile-prompts-screen';
 
 export interface ProfileOnboardingFlowProps {
   captureLocation: () => Promise<LocationUpdate>;
   completePhotos: (photoIds: string[]) => Promise<CompletedProfilePhotos>;
+  completePrompts: (prompts: ProfilePromptAnswerInput[]) => Promise<CompletedProfilePrompts>;
   initialUser: CurrentUser;
   loadPhotos: () => Promise<ProfilePhoto[]>;
+  loadPrompts: () => Promise<ProfilePromptAnswer[]>;
   pickPhoto: () => Promise<LocalProfilePhoto | null>;
   saveBirthDate: (birthDate: string) => Promise<ProfileCheckpoint>;
   saveDisplayName: (displayName: string) => Promise<ProfileCheckpoint>;
@@ -44,6 +50,7 @@ type VisibleStep =
   | 'location'
   | 'name'
   | 'photos'
+  | 'prompts'
   | 'preferences';
 
 function getInitialVisibleStep(user: CurrentUser): VisibleStep {
@@ -64,7 +71,7 @@ function getInitialVisibleStep(user: CurrentUser): VisibleStep {
     NAME: 'name',
     PHOTOS: 'photos',
     PREFERENCES: 'preferences',
-    PROMPTS: 'foundation',
+    PROMPTS: 'prompts',
     REVIEW: 'foundation',
   };
 
@@ -74,8 +81,10 @@ function getInitialVisibleStep(user: CurrentUser): VisibleStep {
 export function ProfileOnboardingFlow({
   captureLocation,
   completePhotos,
+  completePrompts,
   initialUser,
   loadPhotos,
+  loadPrompts,
   pickPhoto,
   saveBirthDate,
   saveDisplayName,
@@ -206,12 +215,25 @@ export function ProfileOnboardingFlow({
       <ProfilePhotosScreen
         completePhotos={async (photoIds) => {
           await completePhotos(photoIds);
-          setVisibleStep('foundation');
+          setVisibleStep('prompts');
         }}
         loadPhotos={loadPhotos}
         onBack={profile?.heightCm == null ? undefined : () => setVisibleStep('height')}
         pickPhoto={pickPhoto}
         uploadPhoto={uploadPhoto}
+      />
+    );
+  }
+
+  if (visibleStep === 'prompts') {
+    return (
+      <ProfilePromptsScreen
+        completePrompts={async (prompts) => {
+          await completePrompts(prompts);
+          setVisibleStep('foundation');
+        }}
+        loadPrompts={loadPrompts}
+        onBack={() => setVisibleStep('photos')}
       />
     );
   }

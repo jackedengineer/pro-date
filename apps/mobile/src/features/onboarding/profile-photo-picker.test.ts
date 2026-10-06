@@ -15,9 +15,9 @@ describe('pickProfilePhoto', () => {
       canceled: false,
     });
 
-    await expect(
-      pickProfilePhoto({ launchImageLibrary, manipulate: jest.fn() }),
-    ).rejects.toThrow('Choose a photo with both edges at least 600 px.');
+    await expect(pickProfilePhoto({ launchImageLibrary, manipulate: jest.fn() })).rejects.toThrow(
+      'Choose a photo with both edges at least 600 px.',
+    );
   });
 
   it('normalizes a large library image to an upload-ready JPEG', async () => {

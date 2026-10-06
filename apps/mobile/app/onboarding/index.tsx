@@ -4,6 +4,7 @@ import type {
   IdentityUpdate,
   LocationUpdate,
   PreferencesUpdate,
+  ProfilePromptAnswerInput,
 } from '@pro-date/contracts';
 import { Redirect } from 'expo-router';
 import { useCallback } from 'react';
@@ -23,6 +24,7 @@ import {
   listProfilePhotos,
   type LocalProfilePhoto,
 } from '../../src/api/profile-photos';
+import { completeProfilePrompts, listProfilePrompts } from '../../src/api/profile-prompts';
 import { apiBaseUrl, isClerkConfigured } from '../../src/config/public-env';
 import { AuthCompleteScreen } from '../../src/features/auth/auth-complete-screen';
 import { CurrentUserBootstrapScreen } from '../../src/features/onboarding/current-user-bootstrap-screen';
@@ -133,6 +135,23 @@ function ConfiguredOnboardingRoute() {
     },
     [getToken],
   );
+  const loadPrompts = useCallback(() => {
+    if (apiBaseUrl === null) {
+      return Promise.reject(new Error('The ProDate API is not configured.'));
+    }
+
+    return listProfilePrompts({ apiBaseUrl, getToken });
+  }, [getToken]);
+  const completePrompts = useCallback(
+    (prompts: ProfilePromptAnswerInput[]) => {
+      if (apiBaseUrl === null) {
+        return Promise.reject(new Error('The ProDate API is not configured.'));
+      }
+
+      return completeProfilePrompts({ apiBaseUrl, getToken, prompts });
+    },
+    [getToken],
+  );
 
   if (!isLoaded) {
     return null;
@@ -149,7 +168,9 @@ function ConfiguredOnboardingRoute() {
       bootstrap={bootstrap}
       captureLocation={captureProfileLocation}
       completePhotos={completePhotos}
+      completePrompts={completePrompts}
       loadPhotos={loadPhotos}
+      loadPrompts={loadPrompts}
       pickPhoto={pickProfilePhoto}
       saveBirthDate={saveBirthDate}
       saveDisplayName={saveDisplayName}

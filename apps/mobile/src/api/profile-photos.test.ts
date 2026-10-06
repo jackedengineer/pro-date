@@ -39,23 +39,20 @@ describe('profile photo API', () => {
   });
 
   it('loads the authenticated profile photo draft', async () => {
-    const fetchImplementation = jest.fn().mockResolvedValue(
-      response({ data: [profilePhoto], onboardingStep: 'PHOTOS', requestId }),
-    );
+    const fetchImplementation = jest
+      .fn()
+      .mockResolvedValue(response({ data: [profilePhoto], onboardingStep: 'PHOTOS', requestId }));
 
-    await expect(
-      listProfilePhotos({ apiBaseUrl, fetchImplementation, getToken }),
-    ).resolves.toEqual([profilePhoto]);
-    expect(fetchImplementation).toHaveBeenCalledWith(
-      `${apiBaseUrl}/v1/users/me/profile-photos`,
-      {
-        headers: {
-          Accept: 'application/json',
-          Authorization: 'Bearer session-token',
-        },
-        method: 'GET',
-      },
+    await expect(listProfilePhotos({ apiBaseUrl, fetchImplementation, getToken })).resolves.toEqual(
+      [profilePhoto],
     );
+    expect(fetchImplementation).toHaveBeenCalledWith(`${apiBaseUrl}/v1/users/me/profile-photos`, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: 'Bearer session-token',
+      },
+      method: 'GET',
+    });
   });
 
   it('uploads directly with the public intent and confirms the proof with our API', async () => {
@@ -184,9 +181,9 @@ describe('profile photo API', () => {
       '9e303c3d-30d5-4e07-b918-2f3fbf5935db',
       'd55d404d-d27e-431f-b708-b0274ea9b1ed',
     ];
-    const fetchImplementation = jest.fn().mockResolvedValue(
-      response({ data: [profilePhoto], onboardingStep: 'PROMPTS', requestId }),
-    );
+    const fetchImplementation = jest
+      .fn()
+      .mockResolvedValue(response({ data: [profilePhoto], onboardingStep: 'PROMPTS', requestId }));
 
     await expect(
       completeProfilePhotos({ apiBaseUrl, fetchImplementation, getToken, photoIds }),
@@ -216,8 +213,8 @@ describe('profile photo API', () => {
       ),
     );
 
-    await expect(
-      listProfilePhotos({ apiBaseUrl, fetchImplementation, getToken }),
-    ).rejects.toThrow('Photo uploads are not configured yet.');
+    await expect(listProfilePhotos({ apiBaseUrl, fetchImplementation, getToken })).rejects.toThrow(
+      'Photo uploads are not configured yet.',
+    );
   });
 });

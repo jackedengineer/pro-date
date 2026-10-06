@@ -40,7 +40,10 @@ export interface CompletedProfilePhotos {
 
 const cloudinaryUploadResponseSchema = z.object({
   public_id: z.string().trim().min(1).max(255),
-  signature: z.string().trim().regex(/^[a-f0-9]{40,64}$/),
+  signature: z
+    .string()
+    .trim()
+    .regex(/^[a-f0-9]{40,64}$/),
   version: z.number().int().positive(),
 });
 
@@ -141,14 +144,11 @@ export async function addProfilePhoto({
 
   const intent = parsedIntent.data.data;
   const formData = formDataFactory();
-  formData.append(
-    'file',
-    {
-      name: 'profile.jpg',
-      type: photo.mimeType,
-      uri: photo.uri,
-    } as unknown as Blob,
-  );
+  formData.append('file', {
+    name: 'profile.jpg',
+    type: photo.mimeType,
+    uri: photo.uri,
+  } as unknown as Blob);
   formData.append('api_key', intent.apiKey);
   formData.append('timestamp', intent.timestamp.toString());
   formData.append('signature', intent.signature);
