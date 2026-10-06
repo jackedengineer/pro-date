@@ -13,7 +13,7 @@ CREATE TABLE "profile_photos" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "profile_photos_provider_asset_id_unique" UNIQUE("provider_asset_id"),
 	CONSTRAINT "profile_photos_provider_public_id_unique" UNIQUE("provider_public_id"),
-	CONSTRAINT "profile_photos_user_position_unique" UNIQUE("user_id","position"),
+	CONSTRAINT "profile_photos_user_position_unique" UNIQUE("user_id","position") DEFERRABLE INITIALLY IMMEDIATE,
 	CONSTRAINT "profile_photos_position_check" CHECK ("profile_photos"."position" >= 0 and "profile_photos"."position" < 6),
 	CONSTRAINT "profile_photos_bytes_check" CHECK ("profile_photos"."bytes" > 0 and "profile_photos"."bytes" <= 10485760),
 	CONSTRAINT "profile_photos_dimensions_check" CHECK ("profile_photos"."width" >= 600 and "profile_photos"."height" >= 600),

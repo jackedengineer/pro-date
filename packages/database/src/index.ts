@@ -10,6 +10,14 @@ export {
   type CurrentUserRecord,
 } from './current-user-repository.js';
 export {
+  buildProfilePhotoInsertQuery,
+  buildProfilePhotoListQuery,
+  buildProfilePhotoOrderUpdateQuery,
+  createProfilePhotoRepository,
+  type NewProfilePhotoRecord,
+  type ProfilePhotoRecord,
+} from './profile-photo-repository.js';
+export {
   buildOnboardingProgressQuery,
   buildHeightUpsertQuery,
   buildIdentityUpsertQuery,
