@@ -470,11 +470,11 @@ Last architecture verification: **6 October 2026**
 | Live Clerk email verification           | Verified on physical iPhone   |
 | Neon/PostGIS and Drizzle foundation     | Implemented and tested        |
 | Authenticated internal-user bootstrap   | Implemented and live verified |
-| Profile intro and name checkpoint       | Implemented and tested        |
-| Birthday and server-side 18+ checkpoint | Implemented and tested        |
+| Profile intro and name checkpoint       | Verified on physical iPhone   |
+| Birthday and server-side 18+ checkpoint | Verified on physical iPhone   |
 | V0 vertical slice                       | In progress                   |
 
-The next checkpoint is physical-device review of the native birthday picker and persisted 18+ flow, followed by the inclusive identity and pronouns step. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
+The next checkpoint is the inclusive identity and pronouns step. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
