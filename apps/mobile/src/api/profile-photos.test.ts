@@ -69,9 +69,15 @@ describe('profile photo API', () => {
       timestamp: 1_800_000_000,
       uploadUrl,
     };
-    const appendedFields: [string, unknown][] = [];
+    const photoFile = {
+      bytes: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+      name: 'profile.jpg',
+      type: 'image/jpeg',
+    };
+    const appendedFields: [string, unknown, string | undefined][] = [];
     const formData = {
-      append: (key: string, value: unknown) => appendedFields.push([key, value]),
+      append: (key: string, value: unknown, fileName?: string) =>
+        appendedFields.push([key, value, fileName]),
     };
     const fetchImplementation = jest
       .fn()
@@ -87,6 +93,7 @@ describe('profile photo API', () => {
       addProfilePhoto({
         apiBaseUrl,
         fetchImplementation,
+        fileFactory: () => photoFile as unknown as Blob,
         formDataFactory: () => formData as unknown as FormData,
         getToken,
         photo: localPhoto,
@@ -110,13 +117,13 @@ describe('profile photo API', () => {
       method: 'POST',
     });
     expect(appendedFields).toEqual([
-      ['file', { name: 'profile.jpg', type: 'image/jpeg', uri: localPhoto.uri }],
-      ['api_key', 'public-api-key'],
-      ['timestamp', '1800000000'],
-      ['signature', 'a'.repeat(40)],
-      ['public_id', publicId],
-      ['format', 'jpg'],
-      ['overwrite', 'false'],
+      ['file', photoFile, 'profile.jpg'],
+      ['api_key', 'public-api-key', undefined],
+      ['timestamp', '1800000000', undefined],
+      ['signature', 'a'.repeat(40), undefined],
+      ['public_id', publicId, undefined],
+      ['format', 'jpg', undefined],
+      ['overwrite', 'false', undefined],
     ]);
     expect(JSON.stringify(appendedFields)).not.toContain('api_secret');
     expect(fetchImplementation).toHaveBeenNthCalledWith(
@@ -167,6 +174,7 @@ describe('profile photo API', () => {
       addProfilePhoto({
         apiBaseUrl,
         fetchImplementation,
+        fileFactory: () => new Blob(['photo'], { type: 'image/jpeg' }),
         getToken,
         photo: localPhoto,
         position: 0,

@@ -6,6 +6,7 @@ import {
   type OnboardingStep,
   type ProfilePhoto,
 } from '@pro-date/contracts';
+import { File } from 'expo-file-system';
 import { z } from 'zod';
 
 import type { GetSessionToken } from './current-user';
@@ -24,6 +25,7 @@ interface ProfilePhotoApiOptions {
 }
 
 interface AddProfilePhotoOptions extends ProfilePhotoApiOptions {
+  fileFactory?: (uri: string) => Blob;
   formDataFactory?: () => FormData;
   photo: LocalProfilePhoto;
   position: number;
@@ -120,6 +122,7 @@ export async function listProfilePhotos({
 export async function addProfilePhoto({
   apiBaseUrl,
   fetchImplementation = fetch,
+  fileFactory = (uri) => new File(uri),
   formDataFactory = () => new FormData(),
   getToken,
   photo,
@@ -148,11 +151,7 @@ export async function addProfilePhoto({
 
   const intent = parsedIntent.data.data;
   const formData = formDataFactory();
-  formData.append('file', {
-    name: 'profile.jpg',
-    type: photo.mimeType,
-    uri: photo.uri,
-  } as unknown as Blob);
+  formData.append('file', fileFactory(photo.uri), 'profile.jpg');
   formData.append('api_key', intent.apiKey);
   formData.append('timestamp', intent.timestamp.toString());
   formData.append('signature', intent.signature);

@@ -5,7 +5,15 @@ import {
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  type LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import type { LocalProfilePhoto } from '../../api/profile-photos';
 import { AppButton } from '../../components/app-button';
@@ -21,6 +29,17 @@ interface ProfilePhotosScreenProps {
   pickPhoto: () => Promise<LocalProfilePhoto | null>;
   removePhoto: (photoId: string) => Promise<ProfilePhoto[]>;
   uploadPhoto: (photo: LocalProfilePhoto, position: number) => Promise<ProfilePhoto[]>;
+}
+
+const PHOTO_CARD_ASPECT_RATIO = 4 / 5;
+
+function getPhotoCardSize(gridWidth: number) {
+  const width = Math.max(0, (gridWidth - spacing.md) / 2);
+
+  return {
+    height: width / PHOTO_CARD_ASPECT_RATIO,
+    width,
+  };
 }
 
 function sortPhotos(photos: ProfilePhoto[]): ProfilePhoto[] {
@@ -39,12 +58,25 @@ export function ProfilePhotosScreen({
   removePhoto,
   uploadPhoto,
 }: ProfilePhotosScreenProps) {
+  const { width: viewportWidth } = useWindowDimensions();
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activePosition, setActivePosition] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [measuredGridWidth, setMeasuredGridWidth] = useState<number | null>(null);
+  const photosByPosition = new Map(photos.map((photo) => [photo.position, photo]));
+  const gridWidth = measuredGridWidth ?? Math.max(0, viewportWidth - spacing.lg * 2);
+  const photoCardSize = getPhotoCardSize(gridWidth);
+
+  const measureGrid = useCallback((event: LayoutChangeEvent) => {
+    const nextWidth = event.nativeEvent.layout.width;
+
+    setMeasuredGridWidth((currentWidth) =>
+      currentWidth === null || Math.abs(currentWidth - nextWidth) >= 0.5 ? nextWidth : currentWidth,
+    );
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -115,7 +147,7 @@ export function ProfilePhotosScreen({
       next[index] = destinationPhoto;
       next[destination] = currentPhoto;
 
-      return next;
+      return next.map((photo, position) => ({ ...photo, position }));
     });
   };
 
@@ -197,9 +229,9 @@ export function ProfilePhotosScreen({
           <AppText style={styles.supportingText}>Fetching your photo draft…</AppText>
         </View>
       ) : loadError === null ? (
-        <View style={styles.grid}>
+        <View onLayout={measureGrid} style={styles.grid} testID="profile-photo-grid">
           {Array.from({ length: PROFILE_PHOTO_MAX_COUNT }, (_, index) => {
-            const currentPhoto = photos[index];
+            const currentPhoto = photosByPosition.get(index);
 
             if (currentPhoto === undefined) {
               const isUploading = activePosition === index;
@@ -208,30 +240,48 @@ export function ProfilePhotosScreen({
                 <Pressable
                   accessibilityLabel={`Add photo ${index + 1}`}
                   accessibilityRole="button"
+                  accessibilityState={{
+                    busy: isUploading,
+                    disabled: activePosition !== null || isSaving,
+                  }}
                   disabled={activePosition !== null || isSaving}
                   key={`empty-${index}`}
                   onPress={() => void addPhoto(index)}
                   style={({ pressed }) => [
                     styles.photoCard,
+                    photoCardSize,
                     styles.emptyCard,
                     pressed && styles.cardPressed,
                   ]}
                 >
-                  {isUploading ? (
-                    <ActivityIndicator color={colors.plum} />
-                  ) : (
-                    <>
-                      <View style={styles.addIcon}>
-                        <AppText style={styles.addIconText}>+</AppText>
-                      </View>
-                      <AppText style={styles.addLabel} variant="caption">
-                        {index === 0 ? 'Add lead photo' : `Add photo ${index + 1}`}
-                      </AppText>
-                    </>
-                  )}
+                  <View
+                    pointerEvents="none"
+                    style={styles.emptyContent}
+                    testID={`empty-photo-content-${index}`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <ActivityIndicator color={colors.plum} />
+                        <AppText style={styles.addLabel} variant="caption">
+                          Uploading…
+                        </AppText>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.addIcon}>
+                          <AppText style={styles.addIconText}>+</AppText>
+                        </View>
+                        <AppText style={styles.addLabel} variant="caption">
+                          {index === 0 ? 'Add lead photo' : `Add photo ${index + 1}`}
+                        </AppText>
+                      </>
+                    )}
+                  </View>
                 </Pressable>
               );
             }
+
+            const photoOrderIndex = photos.findIndex((photo) => photo.id === currentPhoto.id);
 
             return (
               <View
@@ -240,17 +290,19 @@ export function ProfilePhotosScreen({
                 }
                 accessible
                 key={currentPhoto.id}
-                style={styles.photoCard}
+                style={[styles.photoCard, photoCardSize]}
               >
                 <Image
                   accessibilityIgnoresInvertColors
-                  cachePolicy="disk"
+                  cachePolicy="memory-disk"
                   contentFit="cover"
+                  contentPosition="center"
                   source={{ uri: currentPhoto.deliveryUrl }}
                   style={StyleSheet.absoluteFill}
+                  testID={`profile-photo-image-${index}`}
                   transition={180}
                 />
-                <View style={styles.photoShade} />
+                <View pointerEvents="none" style={styles.imageOutline} />
                 <View style={styles.photoHeader}>
                   <View style={styles.positionBadge}>
                     <AppText style={styles.positionText} variant="caption">
@@ -276,22 +328,27 @@ export function ProfilePhotosScreen({
                   <Pressable
                     accessibilityLabel={`Move photo ${index + 1} earlier`}
                     accessibilityRole="button"
-                    disabled={index === 0 || activePosition !== null || isSaving}
+                    disabled={photoOrderIndex === 0 || activePosition !== null || isSaving}
                     hitSlop={4}
-                    onPress={() => movePhoto(index, -1)}
-                    style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+                    onPress={() => movePhoto(photoOrderIndex, -1)}
+                    style={[
+                      styles.reorderButton,
+                      photoOrderIndex === 0 && styles.reorderButtonDisabled,
+                    ]}
                   >
                     <AppText style={styles.reorderText}>←</AppText>
                   </Pressable>
                   <Pressable
                     accessibilityLabel={`Move photo ${index + 1} later`}
                     accessibilityRole="button"
-                    disabled={index === photos.length - 1 || activePosition !== null || isSaving}
+                    disabled={
+                      photoOrderIndex === photos.length - 1 || activePosition !== null || isSaving
+                    }
                     hitSlop={4}
-                    onPress={() => movePhoto(index, 1)}
+                    onPress={() => movePhoto(photoOrderIndex, 1)}
                     style={[
                       styles.reorderButton,
-                      index === photos.length - 1 && styles.reorderButtonDisabled,
+                      photoOrderIndex === photos.length - 1 && styles.reorderButtonDisabled,
                     ]}
                   >
                     <AppText style={styles.reorderText}>→</AppText>
@@ -332,10 +389,11 @@ const styles = StyleSheet.create({
   addLabel: {
     color: colors.plum,
     fontFamily: typography.family.medium,
+    textAlign: 'center',
   },
   cardPressed: {
     backgroundColor: colors.plumSoft,
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.96 }],
   },
   countPill: {
     backgroundColor: colors.sand,
@@ -348,13 +406,21 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.medium,
   },
   emptyCard: {
-    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderStyle: 'dashed',
-    borderWidth: 1.5,
+    borderWidth: 1,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    bottom: 0,
     gap: spacing.sm,
     justifyContent: 'center',
+    left: 0,
+    padding: spacing.md,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   errorCard: {
     backgroundColor: colors.dangerSoft,
@@ -395,26 +461,25 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   photoCard: {
-    aspectRatio: 0.78,
+    backgroundColor: colors.border,
     borderRadius: radii.md,
-    flexBasis: '47%',
-    flexGrow: 1,
-    maxWidth: '48%',
     overflow: 'hidden',
+  },
+  imageOutline: {
+    bottom: 0,
+    borderColor: 'rgba(33, 26, 31, 0.12)',
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   photoHeader: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: spacing.sm,
-  },
-  photoShade: {
-    backgroundColor: 'rgba(33, 26, 31, 0.14)',
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   positionBadge: {
     backgroundColor: 'rgba(33, 26, 31, 0.72)',

@@ -19,6 +19,12 @@ const photo = {
   providerVersion: 1_790_000_001,
   width: 1200,
 };
+const upload = {
+  position: 0,
+  publicId: photo.providerPublicId,
+  signature: 'a'.repeat(40),
+  version: photo.providerVersion,
+};
 
 function provider(overrides: Partial<ProfilePhotoProvider> = {}): ProfilePhotoProvider {
   return {
@@ -68,5 +74,44 @@ describe('profile photo service removal', () => {
     await expect(service.remove(userId, photoId)).resolves.toBeNull();
     expect(deleteUpload).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
+  });
+});
+
+describe('profile photo service upload cleanup', () => {
+  it('removes the new provider asset instead of overwriting an occupied slot', async () => {
+    const deleteUpload = vi.fn().mockResolvedValue(undefined);
+    const save = vi.fn();
+    const service = createProfilePhotoService(
+      provider({
+        confirmUpload: vi.fn().mockResolvedValue(photo),
+        deleteUpload,
+      }),
+      repository({ list: vi.fn().mockResolvedValue([photo]), save }),
+    );
+
+    await expect(service.add(userId, upload)).rejects.toMatchObject({
+      code: 'PHOTO_SLOT_OCCUPIED',
+      name: 'ProfilePhotoSlotConflictError',
+    });
+    expect(deleteUpload).toHaveBeenCalledWith(userId, photo.providerPublicId);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('removes the new provider asset when database persistence fails', async () => {
+    const databaseError = new Error('Database write failed.');
+    const deleteUpload = vi.fn().mockResolvedValue(undefined);
+    const service = createProfilePhotoService(
+      provider({
+        confirmUpload: vi.fn().mockResolvedValue(photo),
+        deleteUpload,
+      }),
+      repository({
+        list: vi.fn().mockResolvedValue([]),
+        save: vi.fn().mockRejectedValue(databaseError),
+      }),
+    );
+
+    await expect(service.add(userId, upload)).rejects.toBe(databaseError);
+    expect(deleteUpload).toHaveBeenCalledWith(userId, photo.providerPublicId);
   });
 });

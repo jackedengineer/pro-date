@@ -39,7 +39,10 @@ import pinoHttp from 'pino-http';
 
 import { createLogger } from './logger.js';
 import { ProfilePhotoProviderError } from './media/profile-photo-provider.js';
-import type { ProfilePhotoService } from './media/profile-photo-service.js';
+import {
+  ProfilePhotoSlotConflictError,
+  type ProfilePhotoService,
+} from './media/profile-photo-service.js';
 import type { ProfilePromptService } from './profile/profile-prompt-service.js';
 
 type ReadinessStatus = 'up' | 'down';
@@ -691,6 +694,19 @@ export function createApiApp(options: ApiAppOptions = {}) {
       } satisfies ApiErrorResponse;
 
       response.status(422).json(body);
+      return;
+    }
+
+    if (error instanceof ProfilePhotoSlotConflictError) {
+      const body = {
+        error: {
+          code: 'CONFLICT',
+          message: 'That photo slot changed. Reload your draft and try again.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
       return;
     }
 
