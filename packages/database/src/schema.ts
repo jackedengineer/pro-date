@@ -126,6 +126,11 @@ export const profilePromptAnswers = pgTable(
       'profile_prompt_answers_position_check',
       sql`${table.position} >= 0 and ${table.position} < 3`,
     ),
+    check(
+      'profile_prompt_answers_prompt_id_check',
+      sql`${table.promptId} in ('green_flag_release_notes', 'weekend_build', 'founder_mode_off', 'life_feature_request', 'hot_take_ship', 'debug_bad_day', 'first_date_energy', 'meet_cute', 'unexpected_plot_twist', 'current_side_quest', 'keynote_hyperfixation', 'group_chat_role', 'low_stakes_hill', 'good_taste_signal', 'after_hours', 'cofounder_for_a_day', 'personal_roadmap', 'merge_criteria', 'best_self_offline', 'personal_user_manual')`,
+    ),
+    check('profile_prompt_answers_answer_length_check', sql`char_length(${table.answer}) >= 30`),
   ],
 );
 

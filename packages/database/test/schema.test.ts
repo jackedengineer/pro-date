@@ -131,5 +131,11 @@ describe('profile prompt answers schema', () => {
     expect(table.checks.map((constraint) => constraint.name)).toContain(
       'profile_prompt_answers_position_check',
     );
+    expect(table.checks.map((constraint) => constraint.name)).toEqual(
+      expect.arrayContaining([
+        'profile_prompt_answers_answer_length_check',
+        'profile_prompt_answers_prompt_id_check',
+      ]),
+    );
   });
 });
