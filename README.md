@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, Expo SDK 57 onboarding shell, and Clerk-backed phone/email OTP client flows are implemented. Email OTP is the current development path while India SMS enablement is pending with Clerk support. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
+> **Project status:** the repository foundation, shared transport contracts, hardened API health surface, Expo SDK 57 shell, Clerk-backed phone/email OTP flows, Neon-backed internal users, and the first persisted profile-onboarding checkpoint are implemented. Email OTP is the current development path while India SMS enablement is pending with Clerk support. The full V0 product loop remains in development; features below are planned unless explicitly shown as implemented.
 
 ## Product preview
 
@@ -85,6 +85,16 @@ The interface will be original—not a traced or pixel-identical Hinge UI.
 | Theme         | Light V0 theme with semantic tokens ready for a future dark theme                                                 |
 
 The initial internal component set includes `AppText`, `Button`, `IconButton`, `TextField`, `PhoneField`, `OtpField`, `Avatar`, `Badge`, `PhotoTile`, `PromptCard`, `ProfileCard`, `BottomSheet`, `ProgressBar`, `Screen`, `EmptyState`, `ErrorState`, `OfflineBanner`, `Toast`, and `Skeleton`.
+
+ProDate is tech-native, not tech-exclusive. Developer and startup language gives key interaction states a distinctive voice, while authentication, personal questions, consent, safety, and payment language remains direct. A first-use explanation always accompanies a branded term.
+
+| Familiar action       | ProDate language | First-use meaning                     |
+| --------------------- | ---------------- | ------------------------------------- |
+| Send a like or reply  | Open a PR        | Send a thoughtful like or response    |
+| Review incoming likes | Review PR        | See who wants to connect              |
+| Mutual match          | Merged           | You matched and can start a thread    |
+| Pass                  | Pass             | Kept neutral rather than “rejected”   |
+| Safety actions        | Block / report   | Never renamed or softened with jargon |
 
 ## System architecture
 
@@ -404,7 +414,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 95 automated tests pass across shared contracts, database invariants, API integration behavior, bootstrap logic, authentication rules, resend timing, and mobile component behavior.
+- 119 automated tests pass across shared contracts, database invariants, API integration behavior, bootstrap logic, authentication rules, resend timing, and mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -435,32 +445,33 @@ Git push
 
 ## Current status
 
-Last architecture verification: **5 October 2026**
+Last architecture verification: **6 October 2026**
 
-| Milestone                              | Status                       |
-| -------------------------------------- | ---------------------------- |
-| Product boundary and V0 journey        | Approved                     |
-| Capability map                         | Approved                     |
-| Core architecture and provider choices | Approved baseline            |
-| Expo SDK/App Store compatibility       | Verified for SDK 57          |
-| Exact dependency manifest              | Verified and locked          |
-| Installed dependency lock              | Implemented                  |
-| Shared API contracts                   | Implemented and tested       |
-| Express health/startup foundation      | Implemented and tested       |
-| Mobile shell specification             | Approved                     |
-| Repository scaffold                    | Implemented                  |
-| Expo welcome and OTP entry shell       | Implemented and tested       |
-| Expo Doctor / iOS Hermes export        | Verified                     |
-| First physical-device run              | Verified                     |
-| Clerk phone OTP client flow            | Implemented and tested       |
-| Clerk email OTP client flow            | Implemented and tested       |
-| Live Clerk SMS verification            | Awaiting provider setup      |
-| Live Clerk email verification          | Verified on physical iPhone  |
-| Neon/PostGIS and Drizzle foundation    | Implemented and tested       |
-| Authenticated internal-user bootstrap  | Implemented; live setup next |
-| V0 vertical slice                      | In progress                  |
+| Milestone                              | Status                        |
+| -------------------------------------- | ----------------------------- |
+| Product boundary and V0 journey        | Approved                      |
+| Capability map                         | Approved                      |
+| Core architecture and provider choices | Approved baseline             |
+| Expo SDK/App Store compatibility       | Verified for SDK 57           |
+| Exact dependency manifest              | Verified and locked           |
+| Installed dependency lock              | Implemented                   |
+| Shared API contracts                   | Implemented and tested        |
+| Express health/startup foundation      | Implemented and tested        |
+| Mobile shell specification             | Approved                      |
+| Repository scaffold                    | Implemented                   |
+| Expo welcome and OTP entry shell       | Implemented and tested        |
+| Expo Doctor / iOS Hermes export        | Verified                      |
+| First physical-device run              | Verified                      |
+| Clerk phone OTP client flow            | Implemented and tested        |
+| Clerk email OTP client flow            | Implemented and tested        |
+| Live Clerk SMS verification            | Awaiting provider setup       |
+| Live Clerk email verification          | Verified on physical iPhone   |
+| Neon/PostGIS and Drizzle foundation    | Implemented and tested        |
+| Authenticated internal-user bootstrap  | Implemented and live verified |
+| Profile intro and name checkpoint      | Implemented and tested        |
+| V0 vertical slice                      | In progress                   |
 
-The next checkpoint is live Neon migration plus physical-device verification of the authenticated bootstrap request. Profile onboarding data collection follows once that durable account boundary is confirmed. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
+The next checkpoint is physical-device review of the profile introduction and persisted display-name step, followed by birthday and 18+ validation. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 

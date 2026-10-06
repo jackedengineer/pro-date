@@ -2,20 +2,27 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { CurrentUser } from '../../api/current-user';
+import type { ProfileCheckpoint } from '../../api/profile';
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
 import { colors, spacing } from '../../theme/tokens';
-import { AuthCompleteScreen } from '../auth/auth-complete-screen';
+import { ProfileOnboardingFlow } from './profile-onboarding-flow';
 
 interface CurrentUserBootstrapScreenProps {
   bootstrap: () => Promise<CurrentUser>;
+  saveDisplayName: (displayName: string) => Promise<ProfileCheckpoint>;
 }
 
 type BootstrapState =
-  { status: 'loading' } | { status: 'ready' } | { message: string; status: 'error' };
+  | { status: 'loading' }
+  | { currentUser: CurrentUser; status: 'ready' }
+  | { message: string; status: 'error' };
 
-export function CurrentUserBootstrapScreen({ bootstrap }: CurrentUserBootstrapScreenProps) {
+export function CurrentUserBootstrapScreen({
+  bootstrap,
+  saveDisplayName,
+}: CurrentUserBootstrapScreenProps) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<BootstrapState>({ status: 'loading' });
 
@@ -23,9 +30,9 @@ export function CurrentUserBootstrapScreen({ bootstrap }: CurrentUserBootstrapSc
     let isActive = true;
 
     void bootstrap()
-      .then((_currentUser) => {
+      .then((currentUser) => {
         if (isActive) {
-          setState({ status: 'ready' });
+          setState({ currentUser, status: 'ready' });
         }
       })
       .catch((error: unknown) => {
@@ -46,7 +53,9 @@ export function CurrentUserBootstrapScreen({ bootstrap }: CurrentUserBootstrapSc
   }, [attempt, bootstrap]);
 
   if (state.status === 'ready') {
-    return <AuthCompleteScreen />;
+    return (
+      <ProfileOnboardingFlow initialUser={state.currentUser} saveDisplayName={saveDisplayName} />
+    );
   }
 
   if (state.status === 'error') {

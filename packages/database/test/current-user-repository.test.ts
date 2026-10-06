@@ -13,7 +13,7 @@ describe('current-user repository', () => {
 
     expect(sql).toContain('insert into "users"');
     expect(sql).toContain('on conflict ("clerk_subject") do update');
-    expect(sql).toContain('returning "id", "onboarding_status"');
+    expect(sql).toContain('returning "id", "onboarding_status", "onboarding_step"');
     expect(params).toEqual(['user_clerk_subject', 'user_clerk_subject']);
     expect(sql).not.toContain('email');
     expect(sql).not.toContain('phone');

@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     backgroundColor: colors.coralPressed,
-    transform: [{ scale: 0.985 }],
+    transform: [{ scale: 0.96 }],
   },
 });

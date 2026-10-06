@@ -9,5 +9,11 @@ export {
   createCurrentUserRepository,
   type CurrentUserRecord,
 } from './current-user-repository.js';
-export { onboardingStatus, users } from './schema.js';
-export type { NewUser, User } from './schema.js';
+export {
+  buildOnboardingProgressQuery,
+  buildProfileUpsertQuery,
+  createProfileRepository,
+  type ProfileCheckpointRecord,
+} from './profile-repository.js';
+export { onboardingStatus, onboardingStep, profiles, users } from './schema.js';
+export type { NewUser, Profile, User } from './schema.js';

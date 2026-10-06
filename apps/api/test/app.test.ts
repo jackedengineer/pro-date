@@ -2,6 +2,7 @@ import {
   apiErrorResponseSchema,
   currentUserResponseSchema,
   healthResponseSchema,
+  profileResponseSchema,
 } from '@pro-date/contracts';
 import pino from 'pino';
 import request from 'supertest';
@@ -114,6 +115,7 @@ describe('API application', () => {
   it('creates or retrieves the current internal user without exposing the Clerk subject', async () => {
     const findOrCreateCurrentUser = vi.fn().mockResolvedValue({
       id: '729438da-99b3-4d3d-b566-bfe94401829b',
+      onboardingStep: 'NAME',
       onboardingStatus: 'NOT_STARTED',
     });
 
@@ -131,6 +133,7 @@ describe('API application', () => {
     expect(currentUserResponseSchema.parse(response.body)).toEqual({
       data: {
         id: '729438da-99b3-4d3d-b566-bfe94401829b',
+        onboardingStep: 'NAME',
         onboardingStatus: 'NOT_STARTED',
       },
       requestId,
@@ -141,6 +144,7 @@ describe('API application', () => {
   it('returns the same current user when bootstrap is repeated', async () => {
     const currentUser = {
       id: '729438da-99b3-4d3d-b566-bfe94401829b',
+      onboardingStep: 'BIRTHDAY' as const,
       onboardingStatus: 'IN_PROGRESS' as const,
     };
     const findOrCreateCurrentUser = vi.fn().mockResolvedValue(currentUser);
@@ -155,5 +159,83 @@ describe('API application', () => {
     expect(currentUserResponseSchema.parse(firstResponse.body).data).toEqual(currentUser);
     expect(currentUserResponseSchema.parse(secondResponse.body).data).toEqual(currentUser);
     expect(findOrCreateCurrentUser).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects an unauthenticated profile update', async () => {
+    const response = await request(createTestApp())
+      .patch('/v1/users/me/profile')
+      .send({ displayName: 'Ada' })
+      .expect(401);
+
+    expect(apiErrorResponseSchema.parse(response.body)).toEqual({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Authentication is required.',
+      },
+      requestId,
+    });
+  });
+
+  it('returns field-level details for an invalid profile update', async () => {
+    const response = await request(
+      createTestApp({ resolveClerkSubject: () => 'user_private_clerk_subject' }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({ displayName: 'A' })
+      .expect(422);
+
+    expect(apiErrorResponseSchema.parse(response.body)).toEqual({
+      error: {
+        code: 'VALIDATION_ERROR',
+        details: [
+          {
+            code: 'too_small',
+            message: 'Your name must be between 2 and 40 characters.',
+            path: 'displayName',
+          },
+        ],
+        message: 'Check the highlighted profile fields.',
+      },
+      requestId,
+    });
+  });
+
+  it('persists a trimmed display name and advances onboarding', async () => {
+    const findOrCreateCurrentUser = vi.fn().mockResolvedValue({
+      id: '729438da-99b3-4d3d-b566-bfe94401829b',
+      onboardingStep: 'NAME',
+      onboardingStatus: 'NOT_STARTED',
+    });
+    const saveProfileDisplayName = vi.fn().mockResolvedValue({
+      displayName: 'Ada',
+      onboardingStatus: 'IN_PROGRESS',
+      onboardingStep: 'BIRTHDAY',
+    });
+
+    const response = await request(
+      createTestApp({
+        findOrCreateCurrentUser,
+        resolveClerkSubject: () => 'user_private_clerk_subject',
+        saveProfileDisplayName,
+      }),
+    )
+      .patch('/v1/users/me/profile')
+      .send({ displayName: '  Ada  ' })
+      .expect(200);
+
+    expect(findOrCreateCurrentUser).toHaveBeenCalledWith('user_private_clerk_subject');
+    expect(saveProfileDisplayName).toHaveBeenCalledWith(
+      '729438da-99b3-4d3d-b566-bfe94401829b',
+      'Ada',
+    );
+    expect(profileResponseSchema.parse(response.body)).toEqual({
+      data: {
+        displayName: 'Ada',
+        onboardingStatus: 'IN_PROGRESS',
+        onboardingStep: 'BIRTHDAY',
+      },
+      requestId,
+    });
+    expect(JSON.stringify(response.body)).not.toContain('user_private_clerk_subject');
   });
 });

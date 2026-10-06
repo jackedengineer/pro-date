@@ -1,10 +1,11 @@
-import type { OnboardingStatus } from '@pro-date/contracts';
+import type { OnboardingStatus, OnboardingStep } from '@pro-date/contracts';
 
 import type { ProDateDatabase } from './client.js';
 import { users } from './schema.js';
 
 export interface CurrentUserRecord {
   id: string;
+  onboardingStep: OnboardingStep;
   onboardingStatus: OnboardingStatus;
 }
 
@@ -19,6 +20,7 @@ export function buildCurrentUserUpsertQuery(database: ProDateDatabase, clerkSubj
     .returning({
       id: users.id,
       onboardingStatus: users.onboardingStatus,
+      onboardingStep: users.onboardingStep,
     });
 }
 

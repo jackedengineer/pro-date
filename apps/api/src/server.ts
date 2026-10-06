@@ -1,5 +1,9 @@
 import { clerkMiddleware, getAuth } from '@clerk/express';
-import { createCurrentUserRepository, createDatabaseResources } from '@pro-date/database';
+import {
+  createCurrentUserRepository,
+  createDatabaseResources,
+  createProfileRepository,
+} from '@pro-date/database';
 
 import { createApiApp } from './app.js';
 import { readApiServiceEnvironment } from './env.js';
@@ -9,6 +13,7 @@ const environment = readApiServiceEnvironment();
 const logger = createLogger(environment.logLevel);
 const { database, pool } = createDatabaseResources(environment.databaseUrl);
 const currentUserRepository = createCurrentUserRepository(database);
+const profileRepository = createProfileRepository(database);
 const app = createApiApp({
   authenticationMiddleware: clerkMiddleware({
     publishableKey: environment.clerkPublishableKey,
@@ -27,6 +32,8 @@ const app = createApiApp({
 
     return auth.isAuthenticated ? auth.userId : null;
   },
+  saveProfileDisplayName: (userId, displayName) =>
+    profileRepository.saveDisplayName(userId, displayName),
 });
 
 const server = app.listen(environment.port, environment.host, () => {
