@@ -61,8 +61,11 @@ describe('BirthdayScreen', () => {
       <BirthdayScreen onBack={jest.fn()} onSave={onSave} today={new Date(2026, 9, 6)} />,
     );
 
-    expect(view.getByText('When’s your birthday?')).toBeTruthy();
-    expect(view.getByText('Your birthday stays private. We only show your age.')).toBeTruthy();
+    expect(view.getByText('One quick age check.')).toBeTruthy();
+    expect(view.getByText('ProDate is 18+. We verify that rule on our servers.')).toBeTruthy();
+    expect(
+      view.getByText('Your full birthday stays private. Only your age appears on your profile.'),
+    ).toBeTruthy();
 
     await fireEvent.press(view.getByTestId('birthday-picker'));
     expect(view.getByText('February 29, 2000')).toBeTruthy();

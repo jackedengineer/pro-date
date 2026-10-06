@@ -19,18 +19,18 @@ export function ProfileCheckpointScreen({ displayName }: ProfileCheckpointScreen
             ✓
           </AppText>
         </View>
-        <AppText variant="eyebrow">Checkpoint saved</AppText>
+        <AppText variant="eyebrow">Commit successful</AppText>
         <AppText variant="display">
           {displayName === undefined
-            ? 'Profile draft restored'
-            : `Core details saved, ${displayName}.`}
+            ? 'Draft restored. No lost work.'
+            : `Basics shipped, ${displayName}.`}
         </AppText>
         <AppText style={styles.supportingText}>
-          Your progress is safely stored. We’ll continue from exactly here.
+          Your profile draft is synced. Identity &amp; pronouns are next.
         </AppText>
         <View style={styles.nextStep}>
           <AppText style={styles.nextStepText} variant="button">
-            Next: identity
+            Next: identity &amp; pronouns
           </AppText>
         </View>
       </View>

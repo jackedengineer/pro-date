@@ -24,6 +24,8 @@ describe('ProfileOnboardingFlow', () => {
     );
 
     expect(view.getByText('Build a profile worth replying to.')).toBeTruthy();
+    expect(view.getByText('Draft sync: on')).toBeTruthy();
+    expect(view.getByText('The interaction model')).toBeTruthy();
     expect(view.getByText('Open a PR')).toBeTruthy();
     expect(view.getByText('Review PR')).toBeTruthy();
     expect(view.getByText('Merged')).toBeTruthy();
@@ -41,6 +43,8 @@ describe('ProfileOnboardingFlow', () => {
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
+    expect(view.getByText('What name are we shipping?')).toBeTruthy();
+    expect(view.getByText('First name or chosen name—whatever feels most you.')).toBeTruthy();
     await fireEvent.changeText(view.getByLabelText('First name or chosen name'), 'A');
     await fireEvent.press(view.getByRole('button', { name: 'Save and continue' }));
 
@@ -100,7 +104,7 @@ describe('ProfileOnboardingFlow', () => {
 
     expect(dismissKeyboard).toHaveBeenCalledTimes(1);
     expect(saveDisplayName).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(view.getByText('When’s your birthday?')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('One quick age check.')).toBeTruthy());
   });
 
   it('trims and saves the name before advancing to the next checkpoint', async () => {
@@ -145,7 +149,7 @@ describe('ProfileOnboardingFlow', () => {
       onboardingStep: 'BIRTHDAY',
     });
 
-    await waitFor(() => expect(view.getByText('When’s your birthday?')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('One quick age check.')).toBeTruthy());
   });
 
   it('preserves the name and shows a recoverable save error', async () => {
@@ -182,7 +186,7 @@ describe('ProfileOnboardingFlow', () => {
       />,
     );
 
-    expect(view.getByText('When’s your birthday?')).toBeTruthy();
+    expect(view.getByText('One quick age check.')).toBeTruthy();
   });
 
   it('saves the birthday before advancing to the identity checkpoint', async () => {
@@ -213,7 +217,7 @@ describe('ProfileOnboardingFlow', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Save birthday and continue' }));
 
     expect(saveBirthDate).toHaveBeenCalledWith('2000-02-29');
-    await waitFor(() => expect(view.getByText('Core details saved, Ada.')).toBeTruthy());
-    expect(view.getByText('Next: identity')).toBeTruthy();
+    await waitFor(() => expect(view.getByText('Basics shipped, Ada.')).toBeTruthy());
+    expect(view.getByText('Next: identity & pronouns')).toBeTruthy();
   });
 });

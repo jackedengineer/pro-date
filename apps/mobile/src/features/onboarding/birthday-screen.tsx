@@ -97,21 +97,23 @@ export function BirthdayScreen({ onBack, onSave, today = new Date() }: BirthdayS
         </View>
 
         <View style={styles.content}>
-          <AppText variant="eyebrow">The basics</AppText>
-          <AppText variant="display">When’s your birthday?</AppText>
+          <AppText variant="eyebrow">Profile config</AppText>
+          <AppText variant="display">One quick age check.</AppText>
           <AppText style={styles.supportingText}>
-            You need to be at least 18 to use ProDate.
+            ProDate is 18+. We verify that rule on our servers.
           </AppText>
 
           <View style={styles.privacyCard}>
             <AppText style={styles.privacyTitle} variant="caption">
-              Private by default
+              Private field
             </AppText>
-            <AppText>Your birthday stays private. We only show your age.</AppText>
+            <AppText>
+              Your full birthday stays private. Only your age appears on your profile.
+            </AppText>
           </View>
 
           <View style={styles.dateCard}>
-            <AppText variant="caption">Selected date</AppText>
+            <AppText variant="caption">Birthday input</AppText>
             <AppText
               accessibilityLabel={`Selected birthday ${formattedBirthDate}`}
               style={styles.dateValue}
@@ -156,7 +158,7 @@ export function BirthdayScreen({ onBack, onSave, today = new Date() }: BirthdayS
                 ]}
               >
                 <AppText style={styles.pickerButtonText} variant="button">
-                  Choose birthday
+                  Pick a date
                 </AppText>
               </Pressable>
             )}
@@ -171,12 +173,12 @@ export function BirthdayScreen({ onBack, onSave, today = new Date() }: BirthdayS
 
         <View style={styles.footer}>
           <AppText style={styles.supportingText} variant="caption">
-            Saved automatically after each step
+            Draft sync is on
           </AppText>
           <AppButton
             accessibilityLabel={isSaving ? 'Saving birthday' : 'Save birthday and continue'}
             disabled={!hasSelectedDate || isSaving}
-            label={isSaving ? 'Saving…' : 'Save & continue'}
+            label={isSaving ? 'Committing…' : 'Commit & continue'}
             onPress={() => void save()}
           />
         </View>
