@@ -436,7 +436,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 174 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, resend timing, location handling, and accessible mobile component behavior.
+- 175 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, resend timing, location handling, and accessible mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
