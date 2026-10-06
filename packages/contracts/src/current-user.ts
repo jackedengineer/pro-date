@@ -7,6 +7,7 @@ export const onboardingStepSchema = z.enum([
   'IDENTITY',
   'PREFERENCES',
   'LOCATION',
+  'DETAILS',
   'PHOTOS',
   'PROMPTS',
   'REVIEW',

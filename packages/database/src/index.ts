@@ -11,6 +11,10 @@ export {
 } from './current-user-repository.js';
 export {
   buildOnboardingProgressQuery,
+  buildHeightUpsertQuery,
+  buildIdentityUpsertQuery,
+  buildLocationUpsertQuery,
+  buildPreferencesUpsertQuery,
   buildProfileUpsertQuery,
   createProfileRepository,
   type ProfileCheckpointRecord,

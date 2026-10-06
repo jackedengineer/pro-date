@@ -5,32 +5,24 @@ import { Screen } from '../../components/screen';
 import { colors, radii, spacing } from '../../theme/tokens';
 import { OnboardingProgress } from './onboarding-progress';
 
-interface ProfileCheckpointScreenProps {
-  displayName?: string | undefined;
-}
-
-export function ProfileCheckpointScreen({ displayName }: ProfileCheckpointScreenProps) {
+export function ProfileCheckpointScreen() {
   return (
     <Screen style={styles.screen}>
-      <OnboardingProgress current={3} total={8} />
+      <OnboardingProgress current={7} total={9} />
       <View style={styles.content}>
         <View accessibilityElementsHidden style={styles.statusMark}>
           <AppText style={styles.statusIcon} variant="title">
             ✓
           </AppText>
         </View>
-        <AppText variant="eyebrow">Commit successful</AppText>
-        <AppText variant="display">
-          {displayName === undefined
-            ? 'Draft restored. No lost work.'
-            : `Basics shipped, ${displayName}.`}
-        </AppText>
+        <AppText variant="eyebrow">Foundation committed</AppText>
+        <AppText variant="display">Core profile shipped.</AppText>
         <AppText style={styles.supportingText}>
-          Your profile draft is synced. Identity &amp; pronouns are next.
+          Your basics are synced. Next, give the profile some visual signal.
         </AppText>
         <View style={styles.nextStep}>
           <AppText style={styles.nextStepText} variant="button">
-            Next: identity &amp; pronouns
+            Next: photos
           </AppText>
         </View>
       </View>

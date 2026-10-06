@@ -35,6 +35,11 @@ const app = createApiApp({
   saveProfileBirthDate: (userId, birthDate) => profileRepository.saveBirthDate(userId, birthDate),
   saveProfileDisplayName: (userId, displayName) =>
     profileRepository.saveDisplayName(userId, displayName),
+  saveProfileHeight: (userId, height) => profileRepository.saveHeight(userId, height),
+  saveProfileIdentity: (userId, identity) => profileRepository.saveIdentity(userId, identity),
+  saveProfileLocation: (userId, location) => profileRepository.saveLocation(userId, location),
+  saveProfilePreferences: (userId, preferences) =>
+    profileRepository.savePreferences(userId, preferences),
 });
 
 const server = app.listen(environment.port, environment.host, () => {

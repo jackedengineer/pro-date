@@ -24,6 +24,15 @@ describe('currentUserResponseSchema', () => {
     },
   );
 
+  it('accepts the independently resumable profile-details checkpoint', () => {
+    expect(
+      currentUserResponseSchema.parse({
+        ...baseResponse,
+        data: { ...baseResponse.data, onboardingStep: 'DETAILS' },
+      }).data.onboardingStep,
+    ).toBe('DETAILS');
+  });
+
   it('rejects provider identifiers outside the public user contract', () => {
     const response = {
       ...baseResponse,

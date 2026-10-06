@@ -82,7 +82,7 @@ export function DisplayNameScreen({ onBack, onSave }: DisplayNameScreenProps) {
               </AppText>
             </Pressable>
             <View style={styles.progress}>
-              <OnboardingProgress current={1} total={8} />
+              <OnboardingProgress current={1} total={9} />
             </View>
           </View>
 

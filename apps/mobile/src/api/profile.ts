@@ -1,7 +1,12 @@
 import {
   apiErrorResponseSchema,
   profileResponseSchema,
+  type HeightUpdate,
+  type IdentityUpdate,
+  type LocationUpdate,
+  type PreferencesUpdate,
   type ProfileResponse,
+  type UpdateProfileRequest,
 } from '@pro-date/contracts';
 
 import type { GetSessionToken } from './current-user';
@@ -20,7 +25,12 @@ interface SaveProfileDisplayNameOptions extends SaveProfileOptions {
   displayName: string;
 }
 
-type ProfileUpdate = { birthDate: string } | { displayName: string };
+type SaveProfileHeightOptions = SaveProfileOptions & HeightUpdate;
+type SaveProfileIdentityOptions = SaveProfileOptions & IdentityUpdate;
+type SaveProfileLocationOptions = SaveProfileOptions & LocationUpdate;
+type SaveProfilePreferencesOptions = SaveProfileOptions & PreferencesUpdate;
+
+type ProfileUpdate = UpdateProfileRequest;
 
 export type ProfileCheckpoint = ProfileResponse['data'];
 
@@ -86,4 +96,50 @@ export function saveProfileDisplayName({
   ...options
 }: SaveProfileDisplayNameOptions): Promise<ProfileCheckpoint> {
   return saveProfileUpdate({ ...options, body: { displayName } });
+}
+
+export function saveProfileIdentity({
+  arePronounsVisible,
+  genderIdentity,
+  isGenderVisible,
+  pronouns,
+  ...options
+}: SaveProfileIdentityOptions): Promise<ProfileCheckpoint> {
+  return saveProfileUpdate({
+    ...options,
+    body: { identity: { arePronounsVisible, genderIdentity, isGenderVisible, pronouns } },
+  });
+}
+
+export function saveProfilePreferences({
+  interestedIn,
+  relationshipIntent,
+  ...options
+}: SaveProfilePreferencesOptions): Promise<ProfileCheckpoint> {
+  return saveProfileUpdate({
+    ...options,
+    body: { preferences: { interestedIn, relationshipIntent } },
+  });
+}
+
+export function saveProfileLocation({
+  countryCode,
+  latitude,
+  locality,
+  longitude,
+  region,
+  ...options
+}: SaveProfileLocationOptions): Promise<ProfileCheckpoint> {
+  return saveProfileUpdate({
+    ...options,
+    body: { location: { countryCode, latitude, locality, longitude, region } },
+  });
+}
+
+export function saveProfileHeight({
+  centimeters,
+  isVisible,
+  ...options
+}: SaveProfileHeightOptions): Promise<ProfileCheckpoint> {
+  return saveProfileUpdate({ ...options, body: { height: { centimeters, isVisible } } });
 }

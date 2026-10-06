@@ -8,6 +8,16 @@ const currentUser = {
   onboardingStatus: 'NOT_STARTED' as const,
 };
 
+const profileActions = {
+  captureLocation: jest.fn(),
+  saveBirthDate: jest.fn(),
+  saveDisplayName: jest.fn(),
+  saveHeight: jest.fn(),
+  saveIdentity: jest.fn(),
+  saveLocation: jest.fn(),
+  savePreferences: jest.fn(),
+};
+
 describe('CurrentUserBootstrapScreen', () => {
   it('shows progress and then the profile onboarding introduction', async () => {
     let resolveBootstrap: ((value: typeof currentUser) => void) | undefined;
@@ -18,11 +28,7 @@ describe('CurrentUserBootstrapScreen', () => {
         }),
     );
     const view = await render(
-      <CurrentUserBootstrapScreen
-        bootstrap={bootstrap}
-        saveBirthDate={jest.fn()}
-        saveDisplayName={jest.fn()}
-      />,
+      <CurrentUserBootstrapScreen {...profileActions} bootstrap={bootstrap} />,
     );
 
     expect(view.getByText('Preparing your profile')).toBeTruthy();
@@ -39,11 +45,7 @@ describe('CurrentUserBootstrapScreen', () => {
       .mockRejectedValueOnce(new Error('The API is temporarily unavailable.'))
       .mockResolvedValueOnce(currentUser);
     const view = await render(
-      <CurrentUserBootstrapScreen
-        bootstrap={bootstrap}
-        saveBirthDate={jest.fn()}
-        saveDisplayName={jest.fn()}
-      />,
+      <CurrentUserBootstrapScreen {...profileActions} bootstrap={bootstrap} />,
     );
 
     await waitFor(() => expect(view.getByText('The API is temporarily unavailable.')).toBeTruthy());
