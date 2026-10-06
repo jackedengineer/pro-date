@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Keyboard, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
+import type { ProfileCheckpoint } from '../../api/profile';
 import { ProfileOnboardingFlow } from './profile-onboarding-flow';
 
 const newUser = {
@@ -8,6 +9,26 @@ const newUser = {
   onboardingStep: 'NAME' as const,
   onboardingStatus: 'NOT_STARTED' as const,
 };
+
+function profileCheckpoint(overrides: Partial<ProfileCheckpoint> = {}): ProfileCheckpoint {
+  return {
+    arePronounsVisible: true,
+    birthDate: null,
+    displayName: null,
+    genderIdentity: null,
+    hasLocation: false,
+    heightCm: null,
+    interestedIn: [],
+    isGenderVisible: true,
+    isHeightVisible: true,
+    locationLabel: null,
+    onboardingStatus: 'IN_PROGRESS',
+    onboardingStep: 'IDENTITY',
+    pronouns: null,
+    relationshipIntent: null,
+    ...overrides,
+  };
+}
 
 describe('ProfileOnboardingFlow', () => {
   afterEach(() => {
@@ -83,12 +104,12 @@ describe('ProfileOnboardingFlow', () => {
 
   it('uses the keyboard Done action as a single smooth submission', async () => {
     const dismissKeyboard = jest.spyOn(Keyboard, 'dismiss').mockImplementation();
-    const saveDisplayName = jest.fn().mockResolvedValue({
-      birthDate: null,
-      displayName: 'Ada',
-      onboardingStatus: 'IN_PROGRESS',
-      onboardingStep: 'BIRTHDAY',
-    });
+    const saveDisplayName = jest.fn().mockResolvedValue(
+      profileCheckpoint({
+        displayName: 'Ada',
+        onboardingStep: 'BIRTHDAY',
+      }),
+    );
     const view = await render(
       <ProfileOnboardingFlow
         initialUser={newUser}
@@ -108,22 +129,10 @@ describe('ProfileOnboardingFlow', () => {
   });
 
   it('trims and saves the name before advancing to the next checkpoint', async () => {
-    let resolveSave:
-      | ((value: {
-          birthDate: null;
-          displayName: string;
-          onboardingStatus: 'IN_PROGRESS';
-          onboardingStep: 'BIRTHDAY';
-        }) => void)
-      | undefined;
+    let resolveSave: ((value: ProfileCheckpoint) => void) | undefined;
     const saveDisplayName = jest.fn(
       () =>
-        new Promise<{
-          birthDate: null;
-          displayName: string;
-          onboardingStatus: 'IN_PROGRESS';
-          onboardingStep: 'BIRTHDAY';
-        }>((resolve) => {
+        new Promise<ProfileCheckpoint>((resolve) => {
           resolveSave = resolve;
         }),
     );
@@ -142,12 +151,12 @@ describe('ProfileOnboardingFlow', () => {
     expect(view.getByRole('button', { name: 'Saving name' })).toBeDisabled();
     expect(saveDisplayName).toHaveBeenCalledWith('Ada');
 
-    resolveSave?.({
-      birthDate: null,
-      displayName: 'Ada',
-      onboardingStatus: 'IN_PROGRESS',
-      onboardingStep: 'BIRTHDAY',
-    });
+    resolveSave?.(
+      profileCheckpoint({
+        displayName: 'Ada',
+        onboardingStep: 'BIRTHDAY',
+      }),
+    );
 
     await waitFor(() => expect(view.getByText('One quick age check.')).toBeTruthy());
   });
@@ -190,12 +199,12 @@ describe('ProfileOnboardingFlow', () => {
   });
 
   it('saves the birthday before advancing to the identity checkpoint', async () => {
-    const saveBirthDate = jest.fn().mockResolvedValue({
-      birthDate: '2000-02-29',
-      displayName: 'Ada',
-      onboardingStatus: 'IN_PROGRESS',
-      onboardingStep: 'IDENTITY',
-    });
+    const saveBirthDate = jest.fn().mockResolvedValue(
+      profileCheckpoint({
+        birthDate: '2000-02-29',
+        displayName: 'Ada',
+      }),
+    );
     const view = await render(
       <ProfileOnboardingFlow
         initialUser={{
