@@ -56,7 +56,8 @@ describe('ProfilePhotosScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(view.getByTestId('empty-photo-content-0')).toBeTruthy());
+    const firstCard = await view.findByRole('button', { name: 'Add photo 1' });
+    expect(firstCard).toHaveStyle({ aspectRatio: 0.78, width: '47%' });
     expect(view.getByTestId('empty-photo-content-0')).toHaveStyle({
       alignItems: 'center',
       bottom: 0,
@@ -66,6 +67,24 @@ describe('ProfilePhotosScreen', () => {
       right: 0,
       top: 0,
     });
+  });
+
+  it('keeps sparse server positions in their actual grid slots', async () => {
+    const uploadPhoto = jest.fn().mockResolvedValue([photo(0), photo(1)]);
+    const view = await render(
+      <ProfilePhotosScreen
+        completePhotos={jest.fn()}
+        loadPhotos={jest.fn().mockResolvedValue([photo(1)])}
+        pickPhoto={jest.fn().mockResolvedValue(localPhoto)}
+        removePhoto={jest.fn()}
+        uploadPhoto={uploadPhoto}
+      />,
+    );
+
+    await waitFor(() => expect(view.getByLabelText('Profile photo 2')).toBeTruthy());
+    expect(view.queryByLabelText('Lead profile photo')).toBeNull();
+    await fireEvent.press(view.getByRole('button', { name: 'Add photo 1' }));
+    await waitFor(() => expect(uploadPhoto).toHaveBeenCalledWith(localPhoto, 0));
   });
 
   it('renders uploaded photos as a centered cover crop', async () => {

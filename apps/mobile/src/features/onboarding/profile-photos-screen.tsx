@@ -45,6 +45,7 @@ export function ProfilePhotosScreen({
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const photosByPosition = new Map(photos.map((photo) => [photo.position, photo]));
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -115,7 +116,7 @@ export function ProfilePhotosScreen({
       next[index] = destinationPhoto;
       next[destination] = currentPhoto;
 
-      return next;
+      return next.map((photo, position) => ({ ...photo, position }));
     });
   };
 
@@ -199,7 +200,7 @@ export function ProfilePhotosScreen({
       ) : loadError === null ? (
         <View style={styles.grid}>
           {Array.from({ length: PROFILE_PHOTO_MAX_COUNT }, (_, index) => {
-            const currentPhoto = photos[index];
+            const currentPhoto = photosByPosition.get(index);
 
             if (currentPhoto === undefined) {
               const isUploading = activePosition === index;
@@ -248,6 +249,8 @@ export function ProfilePhotosScreen({
               );
             }
 
+            const photoOrderIndex = photos.findIndex((photo) => photo.id === currentPhoto.id);
+
             return (
               <View
                 accessibilityLabel={
@@ -293,22 +296,27 @@ export function ProfilePhotosScreen({
                   <Pressable
                     accessibilityLabel={`Move photo ${index + 1} earlier`}
                     accessibilityRole="button"
-                    disabled={index === 0 || activePosition !== null || isSaving}
+                    disabled={photoOrderIndex === 0 || activePosition !== null || isSaving}
                     hitSlop={4}
-                    onPress={() => movePhoto(index, -1)}
-                    style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+                    onPress={() => movePhoto(photoOrderIndex, -1)}
+                    style={[
+                      styles.reorderButton,
+                      photoOrderIndex === 0 && styles.reorderButtonDisabled,
+                    ]}
                   >
                     <AppText style={styles.reorderText}>←</AppText>
                   </Pressable>
                   <Pressable
                     accessibilityLabel={`Move photo ${index + 1} later`}
                     accessibilityRole="button"
-                    disabled={index === photos.length - 1 || activePosition !== null || isSaving}
+                    disabled={
+                      photoOrderIndex === photos.length - 1 || activePosition !== null || isSaving
+                    }
                     hitSlop={4}
-                    onPress={() => movePhoto(index, 1)}
+                    onPress={() => movePhoto(photoOrderIndex, 1)}
                     style={[
                       styles.reorderButton,
-                      index === photos.length - 1 && styles.reorderButtonDisabled,
+                      photoOrderIndex === photos.length - 1 && styles.reorderButtonDisabled,
                     ]}
                   >
                     <AppText style={styles.reorderText}>→</AppText>
@@ -424,10 +432,8 @@ const styles = StyleSheet.create({
     aspectRatio: 0.78,
     backgroundColor: colors.border,
     borderRadius: radii.md,
-    flexBasis: '47%',
-    flexGrow: 1,
-    maxWidth: '48%',
     overflow: 'hidden',
+    width: '47%',
   },
   imageOutline: {
     bottom: 0,
