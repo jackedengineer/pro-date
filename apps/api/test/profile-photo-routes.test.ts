@@ -9,6 +9,7 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApiApp, type ApiAppOptions } from '../src/app.js';
+import { ProfilePhotoSlotConflictError } from '../src/media/profile-photo-service.js';
 
 const requestId = '59a2c4a6-110e-470e-bcab-c762c18dec45';
 const userId = '729438da-99b3-4d3d-b566-bfe94401829b';
@@ -178,6 +179,33 @@ describe('profile photo routes', () => {
       publicId,
       signature: 'a'.repeat(40),
       version: 1_790_000_001,
+    });
+  });
+
+  it('returns a recoverable conflict when the selected photo slot is occupied', async () => {
+    const response = await request(
+      createTestApp(
+        authenticatedOptions({
+          profilePhotoService: {
+            add: vi.fn().mockRejectedValue(new ProfilePhotoSlotConflictError()),
+            complete: vi.fn(),
+            createUploadIntent: vi.fn(),
+            list: vi.fn(),
+            remove: vi.fn(),
+          },
+        }),
+      ),
+    )
+      .post('/v1/users/me/profile-photos')
+      .send({ position: 1, publicId, signature: 'a'.repeat(40), version: 1_790_000_001 })
+      .expect(409);
+
+    expect(apiErrorResponseSchema.parse(response.body)).toEqual({
+      error: {
+        code: 'CONFLICT',
+        message: 'That photo slot changed. Reload your draft and try again.',
+      },
+      requestId,
     });
   });
 

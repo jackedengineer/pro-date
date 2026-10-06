@@ -45,6 +45,15 @@ export interface ProfilePhotoService {
   remove: (userId: string, photoId: string) => Promise<ProfilePhoto[] | null>;
 }
 
+export class ProfilePhotoSlotConflictError extends Error {
+  readonly code = 'PHOTO_SLOT_OCCUPIED';
+
+  constructor() {
+    super('That profile photo slot is already occupied.');
+    this.name = 'ProfilePhotoSlotConflictError';
+  }
+}
+
 function toProfilePhoto(photo: ProfilePhotoRecord, provider: ProfilePhotoProvider): ProfilePhoto {
   return {
     deliveryUrl: provider.getDeliveryUrl(photo.providerPublicId, photo.providerVersion),
@@ -65,16 +74,33 @@ export function createProfilePhotoService(
   return {
     async add(userId, upload) {
       const confirmed = await provider.confirmUpload(userId, upload);
-      await repository.save(userId, {
-        bytes: confirmed.bytes,
-        format: confirmed.format,
-        height: confirmed.height,
-        position: confirmed.position,
-        providerAssetId: confirmed.providerAssetId,
-        providerPublicId: confirmed.providerPublicId,
-        providerVersion: confirmed.providerVersion,
-        width: confirmed.width,
-      });
+
+      try {
+        const existingPhotos = await repository.list(userId);
+
+        if (existingPhotos.some((photo) => photo.position === confirmed.position)) {
+          throw new ProfilePhotoSlotConflictError();
+        }
+
+        await repository.save(userId, {
+          bytes: confirmed.bytes,
+          format: confirmed.format,
+          height: confirmed.height,
+          position: confirmed.position,
+          providerAssetId: confirmed.providerAssetId,
+          providerPublicId: confirmed.providerPublicId,
+          providerVersion: confirmed.providerVersion,
+          width: confirmed.width,
+        });
+      } catch (error: unknown) {
+        try {
+          await provider.deleteUpload(userId, confirmed.providerPublicId);
+        } catch {
+          // Preserve the persistence failure; orphan reconciliation can retry provider cleanup.
+        }
+
+        throw error;
+      }
 
       return list(userId);
     },
