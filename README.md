@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** authentication and the complete non-media profile foundation are implemented end to end. A user can verify by Clerk email/phone OTP, create the internal account, and persist name, birthday, self-described identity, pronouns, dating preferences, relationship intent, location, and height through the Expo app, Express API, Drizzle, and Neon/PostGIS. Exact coordinates remain server-private; the app receives only a coarse location label. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Photos, prompts, discovery, engagement, messaging, safety workflows, and subscriptions remain in development.
+> **Project status:** passwordless authentication and profile onboarding through curated prompts are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add and order four to six photos through signed direct uploads; and answer three of twenty curated prompts before reaching profile review. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 241 automated tests. Live photo upload remains intentionally unavailable until a complete backend-only Cloudinary credential set is present. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Profile review, discovery, engagement, messaging, safety workflows, and subscriptions remain in development.
 
 ## Product preview
 
@@ -166,18 +166,18 @@ The backend is a modular monolith deployed as two processes from one codebase: a
 
 Exact package versions are pinned in the workspace lockfile. Expo-native versions are checked against Expo SDK 57 with Expo CLI and Expo Doctor rather than inferred from semver alone.
 
-| Layer              | Technologies                                                                                                                                                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                                                                   |
-| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                                                          |
-| Mobile UI          | React Native `StyleSheet`, Expo UI DateTimePicker/Picker, Expo Location, Reanimated, Gesture Handler, Keyboard Controller, Expo Image/Image Picker/Image Manipulator, Haptics, Safe Area Context, Lucide React Native, Manrope |
-| Mobile state/forms | TanStack Query, React Hook Form, Zod, React state first; Zustand only if a real cross-screen need appears                                                                                                                      |
-| API                | Express 5, Zod, Helmet, CORS, rate limiting, Pino, generated OpenAPI 3.1 with a protected Scalar reference                                                                                                                     |
-| Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                                                                      |
-| Integrations       | Clerk, Cloudinary, Socket.IO, Expo Notifications/Push, RevenueCat, Sentry                                                                                                                                                      |
-| Mobile tests       | Jest, `jest-expo`, React Native Testing Library, Maestro                                                                                                                                                                       |
-| API tests          | Vitest, Supertest, Testcontainers with real PostGIS                                                                                                                                                                            |
-| Delivery           | Docker, Railway, Neon, EAS Build/Update, GitHub Actions                                                                                                                                                                        |
+| Layer              | Technologies                                                                                                                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                            |
+| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                   |
+| Mobile UI          | React Native `StyleSheet`, Expo UI DateTimePicker/Picker, Expo Location, Expo Image, Expo Image Picker, Expo Image Manipulator, Reanimated, Gesture Handler, Safe Area Context, Manrope |
+| Mobile state/forms | TanStack Query, React Hook Form, Zod, React state first; Zustand only if a real cross-screen need appears                                                                               |
+| API                | Express 5, Zod, Helmet, CORS, rate limiting, Pino, generated OpenAPI 3.1 with a protected Scalar reference                                                                              |
+| Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                               |
+| Integrations       | Clerk, Cloudinary, Socket.IO, Expo Notifications/Push, RevenueCat, Sentry                                                                                                               |
+| Mobile tests       | Jest, `jest-expo`, React Native Testing Library, Maestro                                                                                                                                |
+| API tests          | Vitest, Supertest, Testcontainers with real PostGIS                                                                                                                                     |
+| Delivery           | Docker, Railway, Neon, EAS Build/Update, GitHub Actions                                                                                                                                 |
 
 Intentionally deferred: Redis, the Socket.IO Redis adapter, Kubernetes, microservices, Elasticsearch, a large third-party UI kit, and speculative global-state infrastructure.
 
@@ -351,7 +351,27 @@ The pooled Neon URL is used by the long-running Express process; the direct URL 
 
 Implementation references: [Clerk Express quickstart](https://clerk.com/docs/expressjs/getting-started/quickstart), [Clerk Express SDK reference](https://clerk.com/docs/reference/express/overview), [Clerk Expo authenticated requests](https://clerk.com/docs/guides/development/access-clerk-outside-components), [Drizzle PostgreSQL setup](https://orm.drizzle.team/docs/get-started/postgresql-existing), and [Drizzle migrations](https://orm.drizzle.team/docs/migrations).
 
-## Profile foundation flow
+## Configure Cloudinary media
+
+Photos use Cloudinary object storage and CDN delivery. The device never receives `CLOUDINARY_API_SECRET`: Express creates a short-lived signed upload intent, the device uploads the normalized JPEG directly to Cloudinary, and Express verifies the signed response plus canonical provider metadata before persisting the asset.
+
+In the local, ignored `apps/api/.env`, set all three backend variables:
+
+```dotenv
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+The secret is available in the Cloudinary Console under **Settings → API Keys**. Reveal an existing secret with the eye control and account password, or generate a new access key if no usable secret is shown. Cloudinary restricts this view to sufficiently privileged product-environment roles. Do not place any of these values in `apps/mobile/.env`, an `EXPO_PUBLIC_*` variable, a screenshot, chat, issue, commit, or README.
+
+If any Cloudinary variable is absent, the API still starts, logs a safe configuration warning, and returns `MEDIA_UNAVAILABLE` from photo endpoints. This keeps authentication, database work, and non-media development available without silently enabling an insecure mock upload path. After adding the missing secret, restart the API; Metro does not need a credential because uploads are authorized by the backend-issued intent.
+
+The current policy accepts JPEG assets under 10 MB with both edges at least 600 px. Expo Image Picker selects from the system library, and Expo Image Manipulator removes format ambiguity, compresses to JPEG, and bounds the longest edge at 2048 px. Cloudinary delivery uses immutable versioned URLs and server-defined crop/quality transformations. Four photos are required to continue and six are allowed.
+
+Implementation references: [Cloudinary credential guide](https://cloudinary.com/documentation/developer_onboarding_faq_find_credentials), [Cloudinary signed uploads](https://cloudinary.com/documentation/client_side_uploading), [Cloudinary upload response signatures](https://cloudinary.com/documentation/response_signatures), [Expo Image Picker for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/), and [Expo Image Manipulator](https://docs.expo.dev/versions/latest/sdk/imagemanipulator/).
+
+## Profile onboarding flow
 
 The implemented onboarding journey is intentionally resumable. Each primary action sends one strict section payload to `PATCH /v1/users/me/profile`; the API validates it, writes the profile fields, and advances the user checkpoint in the same database transaction before the client renders the next screen.
 
@@ -360,7 +380,9 @@ The implemented onboarding journey is intentionally resumable. Each primary acti
 3. Discovery preferences capture one or more audiences plus the user's current relationship intent.
 4. Location asks for foreground permission only, captures one balanced-accuracy fix, reverse-geocodes a coarse label, and stores the point as `geography(Point, 4326)` behind a GiST index.
 5. Height uses the Expo UI universal picker, persists centimeters, and keeps public visibility optional.
-6. The server advances to `PHOTOS`; media and prompts are the next implementation slice.
+6. Photos use six ordered slots, require four completed assets, normalize device images before upload, and advance atomically to `PROMPTS` only after the server verifies ownership and ordering.
+7. Prompts offer twenty curated founder-, developer-, design-, and Gen-Z-aware conversation starters without turning safety or validation copy into jargon. A profile requires three distinct answers, each 30–280 characters and at least five words.
+8. Completing the three answers stores normalized relational rows and advances to `REVIEW`; the full discovery-card review is the next profile slice.
 
 The location request sends exact latitude/longitude over the authenticated API because the future discovery query requires distance calculations. No profile response contains those coordinates, and the mobile UI explains the distinction between the private stored point and the public city/region label before requesting permission.
 
@@ -436,7 +458,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 178 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, resend timing, location handling, and accessible mobile component behavior.
+- 241 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -469,37 +491,42 @@ Git push
 
 Last architecture verification: **6 October 2026**
 
-| Milestone                               | Status                        |
-| --------------------------------------- | ----------------------------- |
-| Product boundary and V0 journey         | Approved                      |
-| Capability map                          | Approved                      |
-| Core architecture and provider choices  | Approved baseline             |
-| Expo SDK/App Store compatibility        | Verified for SDK 57           |
-| Exact dependency manifest               | Verified and locked           |
-| Installed dependency lock               | Implemented                   |
-| Shared API contracts                    | Implemented and tested        |
-| Express health/startup foundation       | Implemented and tested        |
-| Mobile shell specification              | Approved                      |
-| Repository scaffold                     | Implemented                   |
-| Expo welcome and OTP entry shell        | Implemented and tested        |
-| Expo Doctor / iOS Hermes export         | Verified                      |
-| First physical-device run               | Verified                      |
-| Clerk phone OTP client flow             | Implemented and tested        |
-| Clerk email OTP client flow             | Implemented and tested        |
-| Live Clerk SMS verification             | Awaiting provider setup       |
-| Live Clerk email verification           | Verified on physical iPhone   |
-| Neon/PostGIS and Drizzle foundation     | Implemented and tested        |
-| Authenticated internal-user bootstrap   | Implemented and live verified |
-| Profile intro and name checkpoint       | Verified on physical iPhone   |
-| Birthday and server-side 18+ checkpoint | Verified on physical iPhone   |
-| Inclusive identity and pronouns         | Implemented and tested        |
-| Dating preferences and intent           | Implemented and tested        |
-| Foreground location and PostGIS point   | Implemented and tested        |
-| Native height and visibility control    | Implemented and tested        |
-| Basic profile foundation compatibility  | Automated verification passed |
-| V0 vertical slice                       | In progress                   |
+| Milestone                                | Status                        |
+| ---------------------------------------- | ----------------------------- |
+| Product boundary and V0 journey          | Approved                      |
+| Capability map                           | Approved                      |
+| Core architecture and provider choices   | Approved baseline             |
+| Expo SDK/App Store compatibility         | Verified for SDK 57           |
+| Exact dependency manifest                | Verified and locked           |
+| Installed dependency lock                | Implemented                   |
+| Shared API contracts                     | Implemented and tested        |
+| Express health/startup foundation        | Implemented and tested        |
+| Mobile shell specification               | Approved                      |
+| Repository scaffold                      | Implemented                   |
+| Expo welcome and OTP entry shell         | Implemented and tested        |
+| Expo Doctor / iOS Hermes export          | Verified                      |
+| First physical-device run                | Verified                      |
+| Clerk phone OTP client flow              | Implemented and tested        |
+| Clerk email OTP client flow              | Implemented and tested        |
+| Live Clerk SMS verification              | Awaiting provider setup       |
+| Live Clerk email verification            | Verified on physical iPhone   |
+| Neon/PostGIS and Drizzle foundation      | Implemented and tested        |
+| Authenticated internal-user bootstrap    | Implemented and live verified |
+| Profile intro and name checkpoint        | Verified on physical iPhone   |
+| Birthday and server-side 18+ checkpoint  | Verified on physical iPhone   |
+| Inclusive identity and pronouns          | Implemented and tested        |
+| Dating preferences and intent            | Implemented and tested        |
+| Foreground location and PostGIS point    | Implemented and tested        |
+| Native height and visibility control     | Implemented and tested        |
+| Signed photo contracts and persistence   | Implemented and tested        |
+| Expo photo picker and ordered grid       | Implemented and tested        |
+| Live Cloudinary upload                   | Awaiting API secret           |
+| Curated three-prompt editor              | Implemented and tested        |
+| Prompt persistence and review checkpoint | Implemented and tested        |
+| Basic profile foundation compatibility   | Automated verification passed |
+| V0 vertical slice                        | In progress                   |
 
-The next implementation checkpoint is photo upload and ordering. The newly completed identity-to-height journey still needs one physical-iPhone acceptance pass before it is marked live verified. Verified screenshots will be added only with a fictional test account so private identifiers never appear in repository assets.
+The next implementation checkpoint is the complete profile-card review and publish transition. The new photo and prompt screens need a physical-iPhone acceptance pass; live photo transfer additionally requires the missing Cloudinary API secret. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
