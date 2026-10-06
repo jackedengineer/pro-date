@@ -29,6 +29,13 @@
       "when": 1791274002102,
       "tag": "0003_huge_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791281785387,
+      "tag": "0004_thin_katie_power",
+      "breakpoints": true
     }
   ]
 }
