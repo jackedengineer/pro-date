@@ -45,6 +45,46 @@ describe('ProfilePhotosScreen', () => {
     expect(view.getByRole('button', { name: 'Commit photos and continue' })).toBeDisabled();
   });
 
+  it('centers the empty-slot affordance within the full photo card', async () => {
+    const view = await render(
+      <ProfilePhotosScreen
+        completePhotos={jest.fn()}
+        loadPhotos={jest.fn().mockResolvedValue([])}
+        pickPhoto={jest.fn()}
+        removePhoto={jest.fn()}
+        uploadPhoto={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(view.getByTestId('empty-photo-content-0')).toBeTruthy());
+    expect(view.getByTestId('empty-photo-content-0')).toHaveStyle({
+      alignItems: 'center',
+      bottom: 0,
+      justifyContent: 'center',
+      left: 0,
+      position: 'absolute',
+      right: 0,
+      top: 0,
+    });
+  });
+
+  it('renders uploaded photos as a centered cover crop', async () => {
+    const view = await render(
+      <ProfilePhotosScreen
+        completePhotos={jest.fn()}
+        loadPhotos={jest.fn().mockResolvedValue([photo(0)])}
+        pickPhoto={jest.fn()}
+        removePhoto={jest.fn()}
+        uploadPhoto={jest.fn()}
+      />,
+    );
+
+    const image = await view.findByTestId('profile-photo-image-0');
+    expect(image).toHaveProp('cachePolicy', 'memory-disk');
+    expect(image).toHaveProp('contentFit', 'cover');
+    expect(image).toHaveProp('contentPosition', { left: '50%', top: '50%' });
+  });
+
   it('picks, normalizes, and uploads into the selected slot', async () => {
     const pickPhoto = jest.fn().mockResolvedValue(localPhoto);
     const uploadPhoto = jest.fn().mockResolvedValue([photo(0)]);

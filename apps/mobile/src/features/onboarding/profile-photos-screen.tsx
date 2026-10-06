@@ -208,6 +208,10 @@ export function ProfilePhotosScreen({
                 <Pressable
                   accessibilityLabel={`Add photo ${index + 1}`}
                   accessibilityRole="button"
+                  accessibilityState={{
+                    busy: isUploading,
+                    disabled: activePosition !== null || isSaving,
+                  }}
                   disabled={activePosition !== null || isSaving}
                   key={`empty-${index}`}
                   onPress={() => void addPhoto(index)}
@@ -217,18 +221,29 @@ export function ProfilePhotosScreen({
                     pressed && styles.cardPressed,
                   ]}
                 >
-                  {isUploading ? (
-                    <ActivityIndicator color={colors.plum} />
-                  ) : (
-                    <>
-                      <View style={styles.addIcon}>
-                        <AppText style={styles.addIconText}>+</AppText>
-                      </View>
-                      <AppText style={styles.addLabel} variant="caption">
-                        {index === 0 ? 'Add lead photo' : `Add photo ${index + 1}`}
-                      </AppText>
-                    </>
-                  )}
+                  <View
+                    pointerEvents="none"
+                    style={styles.emptyContent}
+                    testID={`empty-photo-content-${index}`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <ActivityIndicator color={colors.plum} />
+                        <AppText style={styles.addLabel} variant="caption">
+                          Uploading…
+                        </AppText>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.addIcon}>
+                          <AppText style={styles.addIconText}>+</AppText>
+                        </View>
+                        <AppText style={styles.addLabel} variant="caption">
+                          {index === 0 ? 'Add lead photo' : `Add photo ${index + 1}`}
+                        </AppText>
+                      </>
+                    )}
+                  </View>
                 </Pressable>
               );
             }
@@ -244,13 +259,15 @@ export function ProfilePhotosScreen({
               >
                 <Image
                   accessibilityIgnoresInvertColors
-                  cachePolicy="disk"
+                  cachePolicy="memory-disk"
                   contentFit="cover"
+                  contentPosition="center"
                   source={{ uri: currentPhoto.deliveryUrl }}
                   style={StyleSheet.absoluteFill}
+                  testID={`profile-photo-image-${index}`}
                   transition={180}
                 />
-                <View style={styles.photoShade} />
+                <View pointerEvents="none" style={styles.imageOutline} />
                 <View style={styles.photoHeader}>
                   <View style={styles.positionBadge}>
                     <AppText style={styles.positionText} variant="caption">
@@ -332,10 +349,11 @@ const styles = StyleSheet.create({
   addLabel: {
     color: colors.plum,
     fontFamily: typography.family.medium,
+    textAlign: 'center',
   },
   cardPressed: {
     backgroundColor: colors.plumSoft,
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.96 }],
   },
   countPill: {
     backgroundColor: colors.sand,
@@ -348,13 +366,21 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.medium,
   },
   emptyCard: {
-    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderStyle: 'dashed',
-    borderWidth: 1.5,
+    borderWidth: 1,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    bottom: 0,
     gap: spacing.sm,
     justifyContent: 'center',
+    left: 0,
+    padding: spacing.md,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   errorCard: {
     backgroundColor: colors.dangerSoft,
@@ -396,25 +422,28 @@ const styles = StyleSheet.create({
   },
   photoCard: {
     aspectRatio: 0.78,
+    backgroundColor: colors.border,
     borderRadius: radii.md,
     flexBasis: '47%',
     flexGrow: 1,
     maxWidth: '48%',
     overflow: 'hidden',
   },
+  imageOutline: {
+    bottom: 0,
+    borderColor: 'rgba(33, 26, 31, 0.12)',
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   photoHeader: {
     alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: spacing.sm,
-  },
-  photoShade: {
-    backgroundColor: 'rgba(33, 26, 31, 0.14)',
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   positionBadge: {
     backgroundColor: 'rgba(33, 26, 31, 0.72)',
