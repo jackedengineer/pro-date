@@ -254,6 +254,9 @@ importers:
       '@expo-google-fonts/manrope':
         specifier: 0.4.2
         version: 0.4.2
+      '@expo/ui':
+        specifier: ~57.0.21
+        version: 57.0.21(@babel/core@7.29.7(supports-color@7.2.0))(@types/react@19.2.4)(expo@57.0.26)(react-dom@19.2.3(react@19.2.3))(react-native-worklets@0.10.1(@babel/core@7.29.7(supports-color@7.2.0))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(react-native@0.86.3(@babel/core@7.29.7(supports-color@7.2.0))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@7.2.0))(react@19.2.3)(supports-color@7.2.0))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(@types/react@19.2.4)(react@19.2.3)(supports-color@7.2.0))(react@19.2.3)(supports-color@7.2.0))(react-native@0.86.3(@babel/core@7.29.7(supports-color@7.2.0))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@7.2.0))(react@19.2.3)(supports-color@7.2.0))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(@types/react@19.2.4)(react@19.2.3)(supports-color@7.2.0))(react@19.2.3)
       expo:
         specifier: 57.0.26
         version: 57.0.26(daef0e352ac2ffd019011dd76a569c9f)

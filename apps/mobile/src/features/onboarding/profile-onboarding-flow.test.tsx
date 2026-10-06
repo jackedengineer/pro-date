@@ -16,7 +16,11 @@ describe('ProfileOnboardingFlow', () => {
 
   it('introduces the profile journey and its signature language', async () => {
     const view = await render(
-      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={jest.fn()} />,
+      <ProfileOnboardingFlow
+        initialUser={newUser}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={jest.fn()}
+      />,
     );
 
     expect(view.getByText('Build a profile worth replying to.')).toBeTruthy();
@@ -29,7 +33,11 @@ describe('ProfileOnboardingFlow', () => {
   it('keeps the name question clear and validates before saving', async () => {
     const saveDisplayName = jest.fn();
     const view = await render(
-      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={saveDisplayName} />,
+      <ProfileOnboardingFlow
+        initialUser={newUser}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={saveDisplayName}
+      />,
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
@@ -44,7 +52,11 @@ describe('ProfileOnboardingFlow', () => {
 
   it('keeps the field geometry stable when focus changes', async () => {
     const view = await render(
-      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={jest.fn()} />,
+      <ProfileOnboardingFlow
+        initialUser={newUser}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={jest.fn()}
+      />,
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
@@ -74,7 +86,11 @@ describe('ProfileOnboardingFlow', () => {
       onboardingStep: 'BIRTHDAY',
     });
     const view = await render(
-      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={saveDisplayName} />,
+      <ProfileOnboardingFlow
+        initialUser={newUser}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={saveDisplayName}
+      />,
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
@@ -84,7 +100,7 @@ describe('ProfileOnboardingFlow', () => {
 
     expect(dismissKeyboard).toHaveBeenCalledTimes(1);
     expect(saveDisplayName).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(view.getByText('Nice to meet you, Ada.')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('When’s your birthday?')).toBeTruthy());
   });
 
   it('trims and saves the name before advancing to the next checkpoint', async () => {
@@ -108,7 +124,11 @@ describe('ProfileOnboardingFlow', () => {
         }),
     );
     const view = await render(
-      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={saveDisplayName} />,
+      <ProfileOnboardingFlow
+        initialUser={newUser}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={saveDisplayName}
+      />,
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
@@ -125,14 +145,17 @@ describe('ProfileOnboardingFlow', () => {
       onboardingStep: 'BIRTHDAY',
     });
 
-    await waitFor(() => expect(view.getByText('Nice to meet you, Ada.')).toBeTruthy());
-    expect(view.getByText('Next: birthday')).toBeTruthy();
+    await waitFor(() => expect(view.getByText('When’s your birthday?')).toBeTruthy());
   });
 
   it('preserves the name and shows a recoverable save error', async () => {
     const saveDisplayName = jest.fn().mockRejectedValue(new Error('The API is unavailable.'));
     const view = await render(
-      <ProfileOnboardingFlow initialUser={newUser} saveDisplayName={saveDisplayName} />,
+      <ProfileOnboardingFlow
+        initialUser={newUser}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={saveDisplayName}
+      />,
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
@@ -154,11 +177,43 @@ describe('ProfileOnboardingFlow', () => {
           onboardingStatus: 'IN_PROGRESS',
           onboardingStep: 'BIRTHDAY',
         }}
+        saveBirthDate={jest.fn()}
         saveDisplayName={jest.fn()}
       />,
     );
 
-    expect(view.getByText('Profile draft restored')).toBeTruthy();
-    expect(view.getByText('Next: birthday')).toBeTruthy();
+    expect(view.getByText('When’s your birthday?')).toBeTruthy();
+  });
+
+  it('saves the birthday before advancing to the identity checkpoint', async () => {
+    const saveBirthDate = jest.fn().mockResolvedValue({
+      birthDate: '2000-02-29',
+      displayName: 'Ada',
+      onboardingStatus: 'IN_PROGRESS',
+      onboardingStep: 'IDENTITY',
+    });
+    const view = await render(
+      <ProfileOnboardingFlow
+        initialUser={{
+          ...newUser,
+          onboardingStatus: 'IN_PROGRESS',
+          onboardingStep: 'BIRTHDAY',
+        }}
+        saveBirthDate={saveBirthDate}
+        saveDisplayName={jest.fn()}
+      />,
+    );
+
+    await fireEvent(
+      view.getByTestId('birthday-picker'),
+      'valueChange',
+      { nativeEvent: { timestamp: new Date(2000, 1, 29).getTime(), utcOffset: 0 } },
+      new Date(2000, 1, 29),
+    );
+    await fireEvent.press(view.getByRole('button', { name: 'Save birthday and continue' }));
+
+    expect(saveBirthDate).toHaveBeenCalledWith('2000-02-29');
+    await waitFor(() => expect(view.getByText('Core details saved, Ada.')).toBeTruthy());
+    expect(view.getByText('Next: identity')).toBeTruthy();
   });
 });

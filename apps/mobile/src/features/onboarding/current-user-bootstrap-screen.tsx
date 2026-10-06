@@ -11,6 +11,7 @@ import { ProfileOnboardingFlow } from './profile-onboarding-flow';
 
 interface CurrentUserBootstrapScreenProps {
   bootstrap: () => Promise<CurrentUser>;
+  saveBirthDate: (birthDate: string) => Promise<ProfileCheckpoint>;
   saveDisplayName: (displayName: string) => Promise<ProfileCheckpoint>;
 }
 
@@ -21,6 +22,7 @@ type BootstrapState =
 
 export function CurrentUserBootstrapScreen({
   bootstrap,
+  saveBirthDate,
   saveDisplayName,
 }: CurrentUserBootstrapScreenProps) {
   const [attempt, setAttempt] = useState(0);
@@ -54,7 +56,11 @@ export function CurrentUserBootstrapScreen({
 
   if (state.status === 'ready') {
     return (
-      <ProfileOnboardingFlow initialUser={state.currentUser} saveDisplayName={saveDisplayName} />
+      <ProfileOnboardingFlow
+        initialUser={state.currentUser}
+        saveBirthDate={saveBirthDate}
+        saveDisplayName={saveDisplayName}
+      />
     );
   }
 

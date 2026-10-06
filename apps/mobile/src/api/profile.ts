@@ -6,12 +6,21 @@ import {
 
 import type { GetSessionToken } from './current-user';
 
-interface SaveProfileDisplayNameOptions {
+interface SaveProfileOptions {
   apiBaseUrl: string;
-  displayName: string;
   fetchImplementation?: typeof fetch;
   getToken: GetSessionToken;
 }
+
+interface SaveProfileBirthDateOptions extends SaveProfileOptions {
+  birthDate: string;
+}
+
+interface SaveProfileDisplayNameOptions extends SaveProfileOptions {
+  displayName: string;
+}
+
+type ProfileUpdate = { birthDate: string } | { displayName: string };
 
 export type ProfileCheckpoint = ProfileResponse['data'];
 
@@ -23,12 +32,12 @@ async function readJsonResponse(response: Response): Promise<unknown> {
   }
 }
 
-export async function saveProfileDisplayName({
+async function saveProfileUpdate({
   apiBaseUrl,
-  displayName,
+  body,
   fetchImplementation = fetch,
   getToken,
-}: SaveProfileDisplayNameOptions): Promise<ProfileCheckpoint> {
+}: SaveProfileOptions & { body: ProfileUpdate }): Promise<ProfileCheckpoint> {
   const token = await getToken();
 
   if (token === null) {
@@ -36,7 +45,7 @@ export async function saveProfileDisplayName({
   }
 
   const response = await fetchImplementation(`${apiBaseUrl}/v1/users/me/profile`, {
-    body: JSON.stringify({ displayName }),
+    body: JSON.stringify(body),
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${token}`,
@@ -63,4 +72,18 @@ export async function saveProfileDisplayName({
   }
 
   return profileResponse.data.data;
+}
+
+export function saveProfileBirthDate({
+  birthDate,
+  ...options
+}: SaveProfileBirthDateOptions): Promise<ProfileCheckpoint> {
+  return saveProfileUpdate({ ...options, body: { birthDate } });
+}
+
+export function saveProfileDisplayName({
+  displayName,
+  ...options
+}: SaveProfileDisplayNameOptions): Promise<ProfileCheckpoint> {
+  return saveProfileUpdate({ ...options, body: { displayName } });
 }

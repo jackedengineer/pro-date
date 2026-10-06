@@ -3,7 +3,7 @@ import { Redirect } from 'expo-router';
 import { useCallback } from 'react';
 
 import { bootstrapCurrentUser } from '../../src/api/current-user';
-import { saveProfileDisplayName } from '../../src/api/profile';
+import { saveProfileBirthDate, saveProfileDisplayName } from '../../src/api/profile';
 import { apiBaseUrl, isClerkConfigured } from '../../src/config/public-env';
 import { AuthCompleteScreen } from '../../src/features/auth/auth-complete-screen';
 import { CurrentUserBootstrapScreen } from '../../src/features/onboarding/current-user-bootstrap-screen';
@@ -35,6 +35,16 @@ function ConfiguredOnboardingRoute() {
     },
     [getToken],
   );
+  const saveBirthDate = useCallback(
+    (birthDate: string) => {
+      if (apiBaseUrl === null) {
+        return Promise.reject(new Error('The ProDate API is not configured.'));
+      }
+
+      return saveProfileBirthDate({ apiBaseUrl, birthDate, getToken });
+    },
+    [getToken],
+  );
 
   if (!isLoaded) {
     return null;
@@ -47,6 +57,10 @@ function ConfiguredOnboardingRoute() {
   return apiBaseUrl === null ? (
     <AuthCompleteScreen />
   ) : (
-    <CurrentUserBootstrapScreen bootstrap={bootstrap} saveDisplayName={saveDisplayName} />
+    <CurrentUserBootstrapScreen
+      bootstrap={bootstrap}
+      saveBirthDate={saveBirthDate}
+      saveDisplayName={saveDisplayName}
+    />
   );
 }
