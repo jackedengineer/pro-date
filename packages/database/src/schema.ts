@@ -1,13 +1,17 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
+  check,
   customType,
   date,
   index,
+  integer,
   pgEnum,
   pgTable,
   smallint,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -75,6 +79,43 @@ export const profiles = pgTable(
   (table) => [index('profiles_location_gist').using('gist', table.location)],
 );
 
+export const profilePhotos = pgTable(
+  'profile_photos',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    providerAssetId: varchar('provider_asset_id', { length: 255 }).notNull().unique(),
+    providerPublicId: varchar('provider_public_id', { length: 255 }).notNull().unique(),
+    providerVersion: bigint('provider_version', { mode: 'number' }).notNull(),
+    format: varchar('format', { length: 10 }).notNull(),
+    bytes: integer('bytes').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    position: smallint('position').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique('profile_photos_user_position_unique').on(table.userId, table.position),
+    check(
+      'profile_photos_position_check',
+      sql`${table.position} >= 0 and ${table.position} < 6`,
+    ),
+    check(
+      'profile_photos_bytes_check',
+      sql`${table.bytes} > 0 and ${table.bytes} <= 10485760`,
+    ),
+    check(
+      'profile_photos_dimensions_check',
+      sql`${table.width} >= 600 and ${table.height} >= 600`,
+    ),
+    check('profile_photos_format_check', sql`${table.format} in ('jpg', 'jpeg')`),
+  ],
+);
+
 export type NewUser = typeof users.$inferInsert;
 export type Profile = typeof profiles.$inferSelect;
+export type ProfilePhoto = typeof profilePhotos.$inferSelect;
 export type User = typeof users.$inferSelect;

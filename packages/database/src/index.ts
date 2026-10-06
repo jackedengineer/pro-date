@@ -19,5 +19,5 @@ export {
   createProfileRepository,
   type ProfileCheckpointRecord,
 } from './profile-repository.js';
-export { onboardingStatus, onboardingStep, profiles, users } from './schema.js';
-export type { NewUser, Profile, User } from './schema.js';
+export { onboardingStatus, onboardingStep, profilePhotos, profiles, users } from './schema.js';
+export type { NewUser, Profile, ProfilePhoto, User } from './schema.js';
