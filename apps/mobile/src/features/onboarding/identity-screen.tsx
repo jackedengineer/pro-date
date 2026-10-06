@@ -206,6 +206,7 @@ function VisibilityRow({
         accessibilityLabel={label}
         disabled={disabled}
         onValueChange={onValueChange}
+        style={styles.switch}
         thumbColor={colors.surface}
         trackColor={{ false: colors.border, true: colors.plum }}
         value={value}
@@ -238,6 +239,9 @@ const styles = StyleSheet.create({
   supportingText: {
     color: colors.muted,
     maxWidth: 350,
+  },
+  switch: {
+    alignSelf: 'center',
   },
   visibilityLabel: {
     flex: 1,
