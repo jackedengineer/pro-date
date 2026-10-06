@@ -1,17 +1,18 @@
-import { bootstrapCurrentUser, type GetSessionToken } from './current-user';
+import { saveProfileDisplayName } from './profile';
+import type { GetSessionToken } from './current-user';
 
 const apiBaseUrl = 'https://api.prodate.example';
 const requestId = '59a2c4a6-110e-470e-bcab-c762c18dec45';
 
-describe('bootstrapCurrentUser', () => {
-  it('sends the Clerk session as a bearer token and parses the contract', async () => {
+describe('saveProfileDisplayName', () => {
+  it('sends an authenticated profile patch and parses the checkpoint', async () => {
     const fetchImplementation = jest.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
           data: {
-            id: '729438da-99b3-4d3d-b566-bfe94401829b',
-            onboardingStep: 'NAME',
-            onboardingStatus: 'NOT_STARTED',
+            displayName: 'Ada',
+            onboardingStatus: 'IN_PROGRESS',
+            onboardingStep: 'BIRTHDAY',
           },
           requestId,
         }),
@@ -21,33 +22,45 @@ describe('bootstrapCurrentUser', () => {
     const getToken = jest.fn().mockResolvedValue('session-token') as GetSessionToken;
 
     await expect(
-      bootstrapCurrentUser({ apiBaseUrl, fetchImplementation, getToken }),
+      saveProfileDisplayName({
+        apiBaseUrl,
+        displayName: 'Ada',
+        fetchImplementation,
+        getToken,
+      }),
     ).resolves.toEqual({
-      id: '729438da-99b3-4d3d-b566-bfe94401829b',
-      onboardingStep: 'NAME',
-      onboardingStatus: 'NOT_STARTED',
+      displayName: 'Ada',
+      onboardingStatus: 'IN_PROGRESS',
+      onboardingStep: 'BIRTHDAY',
     });
 
-    expect(fetchImplementation).toHaveBeenCalledWith(`${apiBaseUrl}/v1/users/me`, {
+    expect(fetchImplementation).toHaveBeenCalledWith(`${apiBaseUrl}/v1/users/me/profile`, {
+      body: JSON.stringify({ displayName: 'Ada' }),
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer session-token',
+        'Content-Type': 'application/json',
       },
-      method: 'PUT',
+      method: 'PATCH',
     });
   });
 
-  it('fails before making a request when no active session token exists', async () => {
+  it('fails before making a request when the session has expired', async () => {
     const fetchImplementation = jest.fn();
     const getToken = jest.fn().mockResolvedValue(null) as GetSessionToken;
 
     await expect(
-      bootstrapCurrentUser({ apiBaseUrl, fetchImplementation, getToken }),
+      saveProfileDisplayName({
+        apiBaseUrl,
+        displayName: 'Ada',
+        fetchImplementation,
+        getToken,
+      }),
     ).rejects.toThrow('Your session expired. Please sign in again.');
     expect(fetchImplementation).not.toHaveBeenCalled();
   });
 
-  it('returns a safe message for an API failure', async () => {
+  it('uses the safe API message when persistence fails', async () => {
     const fetchImplementation = jest.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -60,18 +73,28 @@ describe('bootstrapCurrentUser', () => {
     const getToken = jest.fn().mockResolvedValue('session-token') as GetSessionToken;
 
     await expect(
-      bootstrapCurrentUser({ apiBaseUrl, fetchImplementation, getToken }),
+      saveProfileDisplayName({
+        apiBaseUrl,
+        displayName: 'Ada',
+        fetchImplementation,
+        getToken,
+      }),
     ).rejects.toThrow('Something went wrong.');
   });
 
-  it('rejects a successful response that violates the shared contract', async () => {
+  it('rejects a successful response that violates the profile contract', async () => {
     const fetchImplementation = jest
       .fn()
       .mockResolvedValue(new Response(JSON.stringify({ data: {} }), { status: 200 }));
     const getToken = jest.fn().mockResolvedValue('session-token') as GetSessionToken;
 
     await expect(
-      bootstrapCurrentUser({ apiBaseUrl, fetchImplementation, getToken }),
+      saveProfileDisplayName({
+        apiBaseUrl,
+        displayName: 'Ada',
+        fetchImplementation,
+        getToken,
+      }),
     ).rejects.toThrow('The server returned an unexpected response.');
   });
 });

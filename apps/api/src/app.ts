@@ -4,8 +4,11 @@ import type {
   ApiErrorResponse,
   CurrentUserResponse,
   HealthResponse,
+  ProfileResponse,
   OnboardingStatus,
+  OnboardingStep,
 } from '@pro-date/contracts';
+import { updateProfileRequestSchema } from '@pro-date/contracts';
 import cors from 'cors';
 import express, { type ErrorRequestHandler, type Request, type RequestHandler } from 'express';
 import helmet from 'helmet';
@@ -19,7 +22,14 @@ type ReadinessChecks = Record<string, ReadinessStatus>;
 
 export interface CurrentUserRecord {
   id: string;
+  onboardingStep: OnboardingStep;
   onboardingStatus: OnboardingStatus;
+}
+
+export interface ProfileCheckpointRecord {
+  displayName: string;
+  onboardingStatus: OnboardingStatus;
+  onboardingStep: OnboardingStep;
 }
 
 export interface ApiAppOptions {
@@ -30,6 +40,10 @@ export interface ApiAppOptions {
   readinessCheck?: () => Promise<ReadinessChecks>;
   requestId?: () => string;
   resolveClerkSubject?: (request: Request) => string | null;
+  saveProfileDisplayName?: (
+    userId: string,
+    displayName: string,
+  ) => Promise<ProfileCheckpointRecord>;
 }
 
 function areChecksHealthy(checks: ReadinessChecks): checks is Record<string, 'up'> {
@@ -66,6 +80,9 @@ export function createApiApp(options: ApiAppOptions = {}) {
   const readinessCheck = options.readinessCheck ?? (() => Promise.resolve({ application: 'up' }));
   const requestId = options.requestId ?? randomUUID;
   const resolveClerkSubject = options.resolveClerkSubject ?? (() => null);
+  const saveProfileDisplayName =
+    options.saveProfileDisplayName ??
+    (() => Promise.reject(new Error('Profile persistence is not configured.')));
   const app = express();
 
   app.disable('x-powered-by');
@@ -163,6 +180,55 @@ export function createApiApp(options: ApiAppOptions = {}) {
       data: currentUser,
       requestId: getRequestId(request),
     } satisfies CurrentUserResponse;
+
+    response.status(200).json(body);
+  });
+
+  app.patch('/v1/users/me/profile', async (request, response) => {
+    const clerkSubject = resolveClerkSubject(request);
+
+    if (clerkSubject === null || clerkSubject.length === 0) {
+      const body = {
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication is required.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(401).json(body);
+      return;
+    }
+
+    const input = updateProfileRequestSchema.safeParse(request.body);
+
+    if (!input.success) {
+      const body = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          details: input.error.issues.map((issue) => ({
+            code: issue.code,
+            message:
+              issue.path[0] === 'displayName'
+                ? 'Your name must be between 2 and 40 characters.'
+                : 'This profile field is not supported.',
+            path: issue.path.join('.') || 'profile',
+          })),
+          message: 'Check the highlighted profile fields.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(422).json(body);
+      return;
+    }
+
+    const currentUser = await findOrCreateCurrentUser(clerkSubject);
+    const profile = await saveProfileDisplayName(currentUser.id, input.data.displayName);
+    const body = {
+      data: profile,
+      requestId: getRequestId(request),
+    } satisfies ProfileResponse;
 
     response.status(200).json(body);
   });

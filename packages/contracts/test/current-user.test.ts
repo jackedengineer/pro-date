@@ -5,6 +5,7 @@ import { currentUserResponseSchema } from '../src/current-user.js';
 const baseResponse = {
   data: {
     id: '91f16792-62c5-4b98-8292-10763e72db7d',
+    onboardingStep: 'NAME',
     onboardingStatus: 'NOT_STARTED',
   },
   requestId: 'a537e843-0100-489f-9719-fc2123a53810',
@@ -37,6 +38,7 @@ describe('currentUserResponseSchema', () => {
 
   it.each([
     { field: 'id', value: 'not-a-uuid' },
+    { field: 'onboardingStep', value: 'UNKNOWN' },
     { field: 'onboardingStatus', value: 'UNKNOWN' },
   ])('rejects an invalid user $field', ({ field, value }) => {
     const response = {
