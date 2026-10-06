@@ -97,7 +97,11 @@ describe('profile photos schema', () => {
     expect(providerPublicId).toMatchObject({ isUnique: true, notNull: true });
     expect(position).toMatchObject({ dataType: 'number', notNull: true });
     expect(table.foreignKeys).toHaveLength(1);
-    expect(table.uniqueConstraints.some((constraint) => constraint.name === 'profile_photos_user_position_unique')).toBe(true);
+    expect(
+      table.uniqueConstraints.some(
+        (constraint) => constraint.name === 'profile_photos_user_position_unique',
+      ),
+    ).toBe(true);
     expect(table.checks.map((check) => check.name)).toEqual(
       expect.arrayContaining([
         'profile_photos_bytes_check',

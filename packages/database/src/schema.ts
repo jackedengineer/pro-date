@@ -99,18 +99,9 @@ export const profilePhotos = pgTable(
   },
   (table) => [
     unique('profile_photos_user_position_unique').on(table.userId, table.position),
-    check(
-      'profile_photos_position_check',
-      sql`${table.position} >= 0 and ${table.position} < 6`,
-    ),
-    check(
-      'profile_photos_bytes_check',
-      sql`${table.bytes} > 0 and ${table.bytes} <= 10485760`,
-    ),
-    check(
-      'profile_photos_dimensions_check',
-      sql`${table.width} >= 600 and ${table.height} >= 600`,
-    ),
+    check('profile_photos_position_check', sql`${table.position} >= 0 and ${table.position} < 6`),
+    check('profile_photos_bytes_check', sql`${table.bytes} > 0 and ${table.bytes} <= 10485760`),
+    check('profile_photos_dimensions_check', sql`${table.width} >= 600 and ${table.height} >= 600`),
     check('profile_photos_format_check', sql`${table.format} in ('jpg', 'jpeg')`),
   ],
 );

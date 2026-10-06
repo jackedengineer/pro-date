@@ -102,9 +102,7 @@ describe('profile prompt routes', () => {
   it('rejects generic or duplicate prompt answers', async () => {
     const complete = vi.fn();
     const response = await request(
-      createTestApp(
-        authenticatedOptions({ profilePromptService: { complete, list: vi.fn() } }),
-      ),
+      createTestApp(authenticatedOptions({ profilePromptService: { complete, list: vi.fn() } })),
     )
       .put('/v1/users/me/profile-prompts')
       .send({
@@ -126,9 +124,7 @@ describe('profile prompt routes', () => {
       onboardingStep: 'REVIEW',
     });
     const response = await request(
-      createTestApp(
-        authenticatedOptions({ profilePromptService: { complete, list: vi.fn() } }),
-      ),
+      createTestApp(authenticatedOptions({ profilePromptService: { complete, list: vi.fn() } })),
     )
       .put('/v1/users/me/profile-prompts')
       .send({ prompts })

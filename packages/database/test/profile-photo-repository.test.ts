@@ -61,8 +61,6 @@ describe('profile photo repository', () => {
     expect(sql).toContain('case "profile_photos"."id"');
     expect(sql).toContain('"profile_photos"."user_id" =');
     expect(sql).toContain('"profile_photos"."id" in');
-    expect(params).toEqual(
-      expect.arrayContaining([secondPhotoId, 0, firstPhotoId, 1, userId]),
-    );
+    expect(params).toEqual(expect.arrayContaining([secondPhotoId, 0, firstPhotoId, 1, userId]));
   });
 });

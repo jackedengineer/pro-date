@@ -53,7 +53,11 @@ describe('profile prompt contracts', () => {
     ).toBe(false);
     expect(
       completeProfilePromptsRequestSchema.safeParse({
-        prompts: [validPrompts[0], { ...validPrompts[1], promptId: 'weekend_build' }, validPrompts[2]],
+        prompts: [
+          validPrompts[0],
+          { ...validPrompts[1], promptId: 'weekend_build' },
+          validPrompts[2],
+        ],
       }).success,
     ).toBe(false);
     expect(

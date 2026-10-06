@@ -90,12 +90,8 @@
           "name": "profile_photos_user_id_users_id_fk",
           "tableFrom": "profile_photos",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -105,24 +101,17 @@
         "profile_photos_provider_asset_id_unique": {
           "name": "profile_photos_provider_asset_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "provider_asset_id"
-          ]
+          "columns": ["provider_asset_id"]
         },
         "profile_photos_provider_public_id_unique": {
           "name": "profile_photos_provider_public_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "provider_public_id"
-          ]
+          "columns": ["provider_public_id"]
         },
         "profile_photos_user_position_unique": {
           "name": "profile_photos_user_position_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "position"
-          ]
+          "columns": ["user_id", "position"]
         }
       },
       "policies": {},
@@ -281,12 +270,8 @@
           "name": "profiles_user_id_users_id_fk",
           "tableFrom": "profiles",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -352,9 +337,7 @@
         "users_clerk_subject_unique": {
           "name": "users_clerk_subject_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "clerk_subject"
-          ]
+          "columns": ["clerk_subject"]
         }
       },
       "policies": {},
@@ -366,11 +349,7 @@
     "public.onboarding_status": {
       "name": "onboarding_status",
       "schema": "public",
-      "values": [
-        "NOT_STARTED",
-        "IN_PROGRESS",
-        "COMPLETE"
-      ]
+      "values": ["NOT_STARTED", "IN_PROGRESS", "COMPLETE"]
     },
     "public.onboarding_step": {
       "name": "onboarding_step",

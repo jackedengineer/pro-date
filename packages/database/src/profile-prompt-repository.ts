@@ -38,10 +38,7 @@ export function buildProfilePromptInsertQuery(
     .returning(profilePromptSelection);
 }
 
-export function buildProfilePromptListQuery(
-  database: ProfilePromptReadDatabase,
-  userId: string,
-) {
+export function buildProfilePromptListQuery(database: ProfilePromptReadDatabase, userId: string) {
   return database
     .select(profilePromptSelection)
     .from(profilePromptAnswers)

@@ -145,11 +145,18 @@ export const profilePromptAnswerTextSchema = z
   .trim()
   .min(PROFILE_PROMPT_ANSWER_MIN_CHARACTERS)
   .max(PROFILE_PROMPT_ANSWER_MAX_CHARACTERS)
-  .refine((answer) => answer.split(/\s+/).filter(Boolean).length >= PROFILE_PROMPT_ANSWER_MIN_WORDS, {
-    message: `Write at least ${PROFILE_PROMPT_ANSWER_MIN_WORDS} words.`,
-  });
+  .refine(
+    (answer) => answer.split(/\s+/).filter(Boolean).length >= PROFILE_PROMPT_ANSWER_MIN_WORDS,
+    {
+      message: `Write at least ${PROFILE_PROMPT_ANSWER_MIN_WORDS} words.`,
+    },
+  );
 
-export const profilePromptPositionSchema = z.number().int().min(0).max(PROFILE_PROMPT_COUNT - 1);
+export const profilePromptPositionSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(PROFILE_PROMPT_COUNT - 1);
 
 export const profilePromptAnswerInputSchema = z.strictObject({
   answer: profilePromptAnswerTextSchema,
@@ -165,14 +172,22 @@ export const completeProfilePromptsRequestSchema = z
   .strictObject({
     prompts: z.array(profilePromptAnswerInputSchema).length(PROFILE_PROMPT_COUNT),
   })
-  .refine((value) => new Set(value.prompts.map((prompt) => prompt.promptId)).size === value.prompts.length, {
-    message: 'Choose three different prompts.',
-    path: ['prompts'],
-  })
-  .refine((value) => new Set(value.prompts.map((prompt) => prompt.position)).size === value.prompts.length, {
-    message: 'Choose each prompt position once.',
-    path: ['prompts'],
-  });
+  .refine(
+    (value) =>
+      new Set(value.prompts.map((prompt) => prompt.promptId)).size === value.prompts.length,
+    {
+      message: 'Choose three different prompts.',
+      path: ['prompts'],
+    },
+  )
+  .refine(
+    (value) =>
+      new Set(value.prompts.map((prompt) => prompt.position)).size === value.prompts.length,
+    {
+      message: 'Choose each prompt position once.',
+      path: ['prompts'],
+    },
+  );
 
 export const profilePromptListResponseSchema = z.strictObject({
   data: z.array(profilePromptAnswerSchema).max(PROFILE_PROMPT_COUNT),
