@@ -2,17 +2,14 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { CurrentUser } from '../../api/current-user';
-import type { ProfileCheckpoint } from '../../api/profile';
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
 import { colors, spacing } from '../../theme/tokens';
-import { ProfileOnboardingFlow } from './profile-onboarding-flow';
+import { ProfileOnboardingFlow, type ProfileOnboardingFlowProps } from './profile-onboarding-flow';
 
-interface CurrentUserBootstrapScreenProps {
+interface CurrentUserBootstrapScreenProps extends Omit<ProfileOnboardingFlowProps, 'initialUser'> {
   bootstrap: () => Promise<CurrentUser>;
-  saveBirthDate: (birthDate: string) => Promise<ProfileCheckpoint>;
-  saveDisplayName: (displayName: string) => Promise<ProfileCheckpoint>;
 }
 
 type BootstrapState =
@@ -22,8 +19,7 @@ type BootstrapState =
 
 export function CurrentUserBootstrapScreen({
   bootstrap,
-  saveBirthDate,
-  saveDisplayName,
+  ...profileActions
 }: CurrentUserBootstrapScreenProps) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<BootstrapState>({ status: 'loading' });
@@ -55,13 +51,7 @@ export function CurrentUserBootstrapScreen({
   }, [attempt, bootstrap]);
 
   if (state.status === 'ready') {
-    return (
-      <ProfileOnboardingFlow
-        initialUser={state.currentUser}
-        saveBirthDate={saveBirthDate}
-        saveDisplayName={saveDisplayName}
-      />
-    );
+    return <ProfileOnboardingFlow {...profileActions} initialUser={state.currentUser} />;
   }
 
   if (state.status === 'error') {

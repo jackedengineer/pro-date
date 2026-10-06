@@ -92,7 +92,7 @@ export function BirthdayScreen({ onBack, onSave, today = new Date() }: BirthdayS
             </Pressable>
           )}
           <View style={styles.progress}>
-            <OnboardingProgress current={2} total={8} />
+            <OnboardingProgress current={2} total={9} />
           </View>
         </View>
 
