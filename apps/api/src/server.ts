@@ -9,6 +9,7 @@ import {
 } from '@pro-date/database';
 
 import { createApiApp } from './app.js';
+import { registerDatabasePoolErrorHandler } from './database-pool.js';
 import { readApiServiceEnvironment } from './env.js';
 import { createLogger } from './logger.js';
 import {
@@ -22,6 +23,7 @@ import { createProfilePublicationService } from './profile/profile-publication-s
 const environment = readApiServiceEnvironment();
 const logger = createLogger(environment.logLevel);
 const { database, pool } = createDatabaseResources(environment.databaseUrl);
+registerDatabasePoolErrorHandler(pool, logger);
 const currentUserRepository = createCurrentUserRepository(database);
 const profilePhotoRepository = createProfilePhotoRepository(database);
 const profilePublicationRepository = createProfilePublicationRepository(database);
