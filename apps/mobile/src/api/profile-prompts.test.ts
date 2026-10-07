@@ -79,7 +79,9 @@ describe('profile prompt API', () => {
           index === 0 ? { ...prompt, answer: 'Coffee.' } : prompt,
         ),
       }),
-    ).rejects.toThrow('Write three distinct answers with at least five words each.');
+    ).rejects.toThrow(
+      'Write three distinct answers with at least five words or 30 characters each.',
+    );
     expect(fetchImplementation).not.toHaveBeenCalled();
   });
 });

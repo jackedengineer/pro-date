@@ -1,6 +1,8 @@
 import {
   completeProfilePromptsRequestSchema,
   PROFILE_PROMPT_ANSWER_MAX_CHARACTERS,
+  PROFILE_PROMPT_ANSWER_MIN_CHARACTERS,
+  PROFILE_PROMPT_ANSWER_MIN_WORDS,
   PROFILE_PROMPT_CATALOGUE,
   PROFILE_PROMPT_COUNT,
   profilePromptAnswerInputSchema,
@@ -184,7 +186,7 @@ export function ProfilePromptsScreen({
           </View>
         </View>
         <AppText style={styles.supportingText}>
-          Choose three. Specific beats polished, and a real sentence beats a one-word flex.
+          Choose three. Each answer needs five words or 30 characters—specific beats polished.
         </AppText>
 
         {isLoading ? (
@@ -196,6 +198,7 @@ export function ProfilePromptsScreen({
           <View style={styles.promptList}>
             {draft.map((item, position) => {
               const prompt = getPrompt(item.promptId);
+              const characterCount = item.answer.trim().length;
               const wordCount = getWordCount(item.answer);
               const isAnswerValid =
                 item.promptId !== null &&
@@ -257,11 +260,13 @@ export function ProfilePromptsScreen({
                         value={item.answer}
                       />
                       <AppText
+                        accessibilityLiveRegion="polite"
                         style={isAnswerValid ? styles.validGuidance : styles.guidance}
                         variant="caption"
                       >
-                        {item.answer.length} / {PROFILE_PROMPT_ANSWER_MAX_CHARACTERS} · {wordCount}{' '}
-                        / 5 words
+                        {wordCount} / {PROFILE_PROMPT_ANSWER_MIN_WORDS} words or {characterCount} /{' '}
+                        {PROFILE_PROMPT_ANSWER_MIN_CHARACTERS} characters · {item.answer.length} /{' '}
+                        {PROFILE_PROMPT_ANSWER_MAX_CHARACTERS} max
                       </AppText>
                     </>
                   )}

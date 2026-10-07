@@ -60,8 +60,70 @@ describe('ProfilePromptsScreen', () => {
     await waitFor(() => expect(view.getByLabelText('Answer prompt 1')).toBeTruthy());
     await fireEvent.changeText(view.getByLabelText('Answer prompt 1'), 'Coffee.');
 
-    expect(view.getByText('7 / 280 · 1 / 5 words')).toBeTruthy();
+    expect(view.getByText('1 / 5 words or 7 / 30 characters · 7 / 280 max')).toBeTruthy();
     expect(view.getByRole('button', { name: 'Commit prompts and continue' })).toBeDisabled();
+  });
+
+  it('lets a new user select three prompts and continue with five-word answers', async () => {
+    const view = await render(
+      <ProfilePromptsScreen
+        completePrompts={jest.fn()}
+        loadPrompts={jest.fn().mockResolvedValue([])}
+      />,
+    );
+
+    await fireEvent.press(await view.findByRole('button', { name: 'Choose prompt 1' }));
+    await fireEvent.press(
+      view.getByRole('button', {
+        name: 'The fastest way to debug my bad day is…',
+      }),
+    );
+    await fireEvent.changeText(view.getByLabelText('Answer prompt 1'), 'I like tea and dogs.');
+
+    await fireEvent.press(view.getByRole('button', { name: 'Choose prompt 2' }));
+    await fireEvent.press(
+      view.getByRole('button', {
+        name: 'The thing I would happily spend a weekend building is…',
+      }),
+    );
+    await fireEvent.changeText(
+      view.getByLabelText('Answer prompt 2'),
+      'Small tools make creative work lighter.',
+    );
+
+    await fireEvent.press(view.getByRole('button', { name: 'Choose prompt 3' }));
+    await fireEvent.press(
+      view.getByRole('button', {
+        name: 'A connection gets merged when both people…',
+      }),
+    );
+    await fireEvent.changeText(
+      view.getByLabelText('Answer prompt 3'),
+      'Both people stay curious and kind.',
+    );
+
+    expect(view.getByText('3 / 3 ready')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Commit prompts and continue' })).toBeEnabled();
+  });
+
+  it('counts a thirty-character answer as ready even with fewer than five words', async () => {
+    const longAnswer = 'Delightfully overengineered weekends.';
+    const view = await render(
+      <ProfilePromptsScreen
+        completePrompts={jest.fn()}
+        loadPrompts={jest
+          .fn()
+          .mockResolvedValue([
+            { ...savedPrompts[0], answer: longAnswer },
+            savedPrompts[1],
+            savedPrompts[2],
+          ])}
+      />,
+    );
+
+    expect(longAnswer.length).toBeGreaterThanOrEqual(30);
+    await waitFor(() => expect(view.getByText('3 / 3 ready')).toBeTruthy());
+    expect(view.getByRole('button', { name: 'Commit prompts and continue' })).toBeEnabled();
   });
 
   it('commits the trimmed visible answers in order', async () => {

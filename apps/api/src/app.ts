@@ -638,7 +638,8 @@ export function createApiApp(options: ApiAppOptions = {}) {
       const body = {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Choose three different prompts and answer each with at least five words.',
+          message:
+            'Choose three different prompts and answer each with at least five words or 30 characters.',
         },
         requestId: getRequestId(request),
       } satisfies ApiErrorResponse;

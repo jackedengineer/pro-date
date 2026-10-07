@@ -44,6 +44,28 @@ describe('profile prompt contracts', () => {
     expect(profilePromptAnswerInputSchema.parse(validPrompts[0])).toEqual(validPrompts[0]);
   });
 
+  it('accepts a clear five-word sentence even when it is under thirty characters', () => {
+    const answer = {
+      answer: 'I like tea and dogs.',
+      position: 0,
+      promptId: 'debug_bad_day',
+    } as const;
+
+    expect(profilePromptAnswerInputSchema.parse(answer)).toEqual(answer);
+  });
+
+  it('accepts a substantial thirty-character answer even when it has fewer than five words', () => {
+    const answer = {
+      answer: 'Delightfully overengineered weekends.',
+      position: 0,
+      promptId: 'weekend_build',
+    } as const;
+
+    expect(answer.answer.length).toBeGreaterThanOrEqual(30);
+    expect(answer.answer.split(/\s+/)).toHaveLength(3);
+    expect(profilePromptAnswerInputSchema.parse(answer)).toEqual(answer);
+  });
+
   it('requires exactly three unique prompts in a unique order', () => {
     expect(completeProfilePromptsRequestSchema.parse({ prompts: validPrompts })).toEqual({
       prompts: validPrompts,
