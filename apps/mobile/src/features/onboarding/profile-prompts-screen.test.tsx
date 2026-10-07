@@ -1,5 +1,6 @@
 import type { ProfilePromptAnswer } from '@pro-date/contracts';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 
 import { ProfilePromptsScreen } from './profile-prompts-screen';
 
@@ -25,6 +26,10 @@ const savedPrompts: ProfilePromptAnswer[] = [
 ];
 
 describe('ProfilePromptsScreen', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('offers the focused catalogue and prevents duplicate selections', async () => {
     const view = await render(
       <ProfilePromptsScreen
@@ -124,6 +129,22 @@ describe('ProfilePromptsScreen', () => {
     expect(longAnswer.length).toBeGreaterThanOrEqual(30);
     await waitFor(() => expect(view.getByText('3 / 3 ready')).toBeTruthy());
     expect(view.getByRole('button', { name: 'Commit prompts and continue' })).toBeEnabled();
+  });
+
+  it('dismisses the keyboard from the prompt answer Done key', async () => {
+    const dismissKeyboard = jest.spyOn(Keyboard, 'dismiss').mockImplementation();
+    const view = await render(
+      <ProfilePromptsScreen
+        completePrompts={jest.fn()}
+        loadPrompts={jest.fn().mockResolvedValue(savedPrompts)}
+      />,
+    );
+    const thirdAnswer = await view.findByLabelText('Answer prompt 3');
+
+    expect(thirdAnswer.props.returnKeyType).toBe('done');
+    expect(thirdAnswer.props.submitBehavior).toBe('blurAndSubmit');
+    await fireEvent(thirdAnswer, 'submitEditing');
+    expect(dismissKeyboard).toHaveBeenCalledTimes(1);
   });
 
   it('commits the trimmed visible answers in order', async () => {

@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** passwordless authentication and the complete profile-onboarding journey are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add, order, and remove four to six photos through signed direct Cloudinary uploads; answer three of twenty curated prompts; preview the real discovery card with visibility controls; return directly to any section for edits; and publish only after the server atomically revalidates completeness. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 283 automated tests. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Discovery, engagement, messaging, App Review-gated safety workflows, account lifecycle controls, and subscriptions remain in development.
+> **Project status:** passwordless authentication and the complete profile-onboarding journey are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add, order, and remove four to six photos through signed direct Cloudinary uploads; answer three of twenty curated prompts; preview the real discovery card with visibility controls; return directly to any section for edits; and publish only after the server atomically revalidates completeness. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 285 automated tests. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Discovery, engagement, messaging, App Review-gated safety workflows, account lifecycle controls, and subscriptions remain in development.
 
 ## Product preview
 
@@ -464,7 +464,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 283 automated tests pass across shared contracts, database invariants, atomic profile publication, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
+- 285 automated tests pass across shared contracts, database invariants, atomic profile publication, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.

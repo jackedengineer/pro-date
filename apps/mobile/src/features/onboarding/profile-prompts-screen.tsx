@@ -13,6 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
@@ -239,6 +240,7 @@ export function ProfilePromptsScreen({
                   {prompt === undefined ? null : (
                     <>
                       <TextInput
+                        accessibilityHint="Enter at least five words or 30 characters. Use Done to close the keyboard."
                         accessibilityLabel={`Answer prompt ${position + 1}`}
                         editable={!isSaving}
                         maxLength={PROFILE_PROMPT_ANSWER_MAX_CHARACTERS}
@@ -250,12 +252,14 @@ export function ProfilePromptsScreen({
                             ),
                           )
                         }
+                        onSubmitEditing={Keyboard.dismiss}
                         placeholder="Write the answer only you could write…"
                         placeholderTextColor={colors.muted}
-                        returnKeyType="default"
+                        returnKeyType="done"
                         scrollEnabled
                         selectionColor={colors.plum}
                         style={styles.answerInput}
+                        submitBehavior="blurAndSubmit"
                         textAlignVertical="top"
                         value={item.answer}
                       />
