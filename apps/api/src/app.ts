@@ -16,6 +16,7 @@ import type {
   ProfilePhotoListResponse,
   ProfilePhotoUploadIntentResponse,
   ProfilePromptListResponse,
+  ProfileReviewResponse,
   ProfileResponse,
 } from '@pro-date/contracts';
 import {
@@ -26,6 +27,7 @@ import {
   profilePhotoIdSchema,
   updateProfileRequestSchema,
 } from '@pro-date/contracts';
+import { ProfileIncompleteError } from '@pro-date/database';
 import cors from 'cors';
 import express, {
   type ErrorRequestHandler,
@@ -44,6 +46,7 @@ import {
   type ProfilePhotoService,
 } from './media/profile-photo-service.js';
 import type { ProfilePromptService } from './profile/profile-prompt-service.js';
+import type { ProfilePublicationService } from './profile/profile-publication-service.js';
 
 type ReadinessStatus = 'up' | 'down';
 type ReadinessChecks = Record<string, ReadinessStatus>;
@@ -75,6 +78,7 @@ export interface ApiAppOptions {
   findOrCreateCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord>;
   logger?: Logger;
   profilePhotoService?: ProfilePhotoService;
+  profilePublicationService?: ProfilePublicationService;
   profilePromptService?: ProfilePromptService;
   readinessCheck?: () => Promise<ReadinessChecks>;
   requestId?: () => string;
@@ -131,6 +135,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
     (() => Promise.reject(new Error('Current-user persistence is not configured.')));
   const logger = options.logger ?? createLogger();
   const profilePhotoService = options.profilePhotoService;
+  const profilePublicationService = options.profilePublicationService;
   const profilePromptService = options.profilePromptService;
   const readinessCheck = options.readinessCheck ?? (() => Promise.resolve({ application: 'up' }));
   const requestId = options.requestId ?? randomUUID;
@@ -633,7 +638,8 @@ export function createApiApp(options: ApiAppOptions = {}) {
       const body = {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Choose three different prompts and answer each with at least five words.',
+          message:
+            'Choose three different prompts and answer each with at least five words or 30 characters.',
         },
         requestId: getRequestId(request),
       } satisfies ApiErrorResponse;
@@ -649,6 +655,79 @@ export function createApiApp(options: ApiAppOptions = {}) {
       onboardingStep: result.onboardingStep,
       requestId: getRequestId(request),
     } satisfies ProfilePromptListResponse;
+
+    response.status(200).json(body);
+  });
+
+  async function resolveProfilePublicationUser(
+    request: Request,
+    response: Response,
+  ): Promise<CurrentUserRecord | null> {
+    const clerkSubject = resolveClerkSubject(request);
+
+    if (clerkSubject === null || clerkSubject.length === 0) {
+      const body = {
+        error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(401).json(body);
+      return null;
+    }
+
+    const currentUser = await findOrCreateCurrentUser(clerkSubject);
+
+    if (onboardingStepRank[currentUser.onboardingStep] < onboardingStepRank.REVIEW) {
+      const body = {
+        error: {
+          code: 'ONBOARDING_STEP_REQUIRED',
+          message: 'Complete the earlier profile steps first.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
+      return null;
+    }
+
+    if (profilePublicationService === undefined) {
+      const body = {
+        error: {
+          code: 'PROFILE_UNAVAILABLE',
+          message: 'Profile review is not configured yet.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(503).json(body);
+      return null;
+    }
+
+    return currentUser;
+  }
+
+  app.get('/v1/users/me/profile-review', async (request, response) => {
+    const currentUser = await resolveProfilePublicationUser(request, response);
+
+    if (currentUser === null || profilePublicationService === undefined) return;
+
+    const body = {
+      data: await profilePublicationService.get(currentUser.id),
+      requestId: getRequestId(request),
+    } satisfies ProfileReviewResponse;
+
+    response.status(200).json(body);
+  });
+
+  app.put('/v1/users/me/profile-publication', async (request, response) => {
+    const currentUser = await resolveProfilePublicationUser(request, response);
+
+    if (currentUser === null || profilePublicationService === undefined) return;
+
+    const body = {
+      data: await profilePublicationService.publish(currentUser.id),
+      requestId: getRequestId(request),
+    } satisfies ProfileReviewResponse;
 
     response.status(200).json(body);
   });
@@ -702,6 +781,29 @@ export function createApiApp(options: ApiAppOptions = {}) {
         error: {
           code: 'CONFLICT',
           message: 'That photo slot changed. Reload your draft and try again.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
+      return;
+    }
+
+    if (error instanceof ProfileIncompleteError) {
+      const sectionMessages = {
+        BASICS: 'Complete your profile basics before publishing.',
+        PHOTOS: 'Complete your profile photos before publishing.',
+        PROMPTS: 'Complete your profile prompts before publishing.',
+      } as const;
+      const body = {
+        error: {
+          code: 'PROFILE_INCOMPLETE',
+          details: error.missingSections.map((section) => ({
+            code: 'missing_section',
+            message: sectionMessages[section],
+            path: section,
+          })),
+          message: 'Complete the missing profile sections before publishing.',
         },
         requestId: getRequestId(request),
       } satisfies ApiErrorResponse;

@@ -28,6 +28,15 @@ export {
   type ProfilePromptAnswerRecord,
 } from './profile-prompt-repository.js';
 export {
+  buildProfileCompletionQuery,
+  buildProfilePublicationQuery,
+  buildProfilePublicationStateQuery,
+  createProfilePublicationRepository,
+  findMissingProfileSections,
+  ProfileIncompleteError,
+  type ProfilePublicationRecord,
+} from './profile-publication-repository.js';
+export {
   buildOnboardingProgressQuery,
   buildHeightUpsertQuery,
   buildIdentityUpsertQuery,

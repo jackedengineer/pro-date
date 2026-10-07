@@ -6,6 +6,7 @@ import type {
   ProfilePhoto,
   ProfilePromptAnswer,
   ProfilePromptAnswerInput,
+  ProfileReview,
 } from '@pro-date/contracts';
 import { useState } from 'react';
 
@@ -19,10 +20,10 @@ import { HeightScreen } from './height-screen';
 import { IdentityScreen } from './identity-screen';
 import { LocationScreen } from './location-screen';
 import { PreferencesScreen } from './preferences-screen';
-import { ProfileCheckpointScreen } from './profile-checkpoint-screen';
 import { ProfileOnboardingIntroScreen } from './profile-onboarding-intro-screen';
 import { ProfilePhotosScreen } from './profile-photos-screen';
 import { ProfilePromptsScreen } from './profile-prompts-screen';
+import { ProfileReviewScreen } from './profile-review-screen';
 
 export interface ProfileOnboardingFlowProps {
   captureLocation: () => Promise<LocationUpdate>;
@@ -30,9 +31,11 @@ export interface ProfileOnboardingFlowProps {
   completePrompts: (prompts: ProfilePromptAnswerInput[]) => Promise<CompletedProfilePrompts>;
   initialUser: CurrentUser;
   loadPhotos: () => Promise<ProfilePhoto[]>;
+  loadProfileReview: () => Promise<ProfileReview>;
   loadPrompts: () => Promise<ProfilePromptAnswer[]>;
   pickPhoto: () => Promise<LocalProfilePhoto | null>;
   removePhoto: (photoId: string) => Promise<ProfilePhoto[]>;
+  publishProfile: () => Promise<ProfileReview>;
   saveBirthDate: (birthDate: string) => Promise<ProfileCheckpoint>;
   saveDisplayName: (displayName: string) => Promise<ProfileCheckpoint>;
   saveHeight: (height: HeightUpdate) => Promise<ProfileCheckpoint>;
@@ -44,7 +47,6 @@ export interface ProfileOnboardingFlowProps {
 
 type VisibleStep =
   | 'birthday'
-  | 'foundation'
   | 'height'
   | 'identity'
   | 'intro'
@@ -52,7 +54,8 @@ type VisibleStep =
   | 'name'
   | 'photos'
   | 'prompts'
-  | 'preferences';
+  | 'preferences'
+  | 'review';
 
 function getInitialVisibleStep(user: CurrentUser): VisibleStep {
   if (user.onboardingStatus === 'NOT_STARTED') {
@@ -65,7 +68,7 @@ function getInitialVisibleStep(user: CurrentUser): VisibleStep {
 
   const checkpointSteps: Record<CurrentUser['onboardingStep'], VisibleStep> = {
     BIRTHDAY: 'birthday',
-    COMPLETE: 'foundation',
+    COMPLETE: 'review',
     DETAILS: 'height',
     IDENTITY: 'identity',
     LOCATION: 'location',
@@ -73,7 +76,7 @@ function getInitialVisibleStep(user: CurrentUser): VisibleStep {
     PHOTOS: 'photos',
     PREFERENCES: 'preferences',
     PROMPTS: 'prompts',
-    REVIEW: 'foundation',
+    REVIEW: 'review',
   };
 
   return checkpointSteps[user.onboardingStep];
@@ -85,9 +88,11 @@ export function ProfileOnboardingFlow({
   completePrompts,
   initialUser,
   loadPhotos,
+  loadProfileReview,
   loadPrompts,
   pickPhoto,
   removePhoto,
+  publishProfile,
   saveBirthDate,
   saveDisplayName,
   saveHeight,
@@ -97,9 +102,33 @@ export function ProfileOnboardingFlow({
   uploadPhoto,
 }: ProfileOnboardingFlowProps) {
   const [profile, setProfile] = useState<ProfileCheckpoint>();
+  const [isEditingFromReview, setIsEditingFromReview] = useState(false);
   const [visibleStep, setVisibleStep] = useState<VisibleStep>(() =>
     getInitialVisibleStep(initialUser),
   );
+  const completeStep = (nextStep: VisibleStep) => {
+    if (isEditingFromReview) {
+      setIsEditingFromReview(false);
+      setVisibleStep('review');
+      return;
+    }
+
+    setVisibleStep(nextStep);
+  };
+  const backFromEdit = (fallback: VisibleStep) => () => {
+    if (isEditingFromReview) {
+      setIsEditingFromReview(false);
+      setVisibleStep('review');
+      return;
+    }
+
+    setVisibleStep(fallback);
+  };
+  const editFromReview = (step: VisibleStep, reviewProfile: ProfileCheckpoint) => {
+    setProfile(reviewProfile);
+    setIsEditingFromReview(true);
+    setVisibleStep(step);
+  };
 
   if (visibleStep === 'intro') {
     return <ProfileOnboardingIntroScreen onContinue={() => setVisibleStep('name')} />;
@@ -108,11 +137,12 @@ export function ProfileOnboardingFlow({
   if (visibleStep === 'name') {
     return (
       <DisplayNameScreen
-        onBack={() => setVisibleStep('intro')}
+        initialValue={profile?.displayName ?? undefined}
+        onBack={backFromEdit('intro')}
         onSave={async (name) => {
           const checkpoint = await saveDisplayName(name);
           setProfile(checkpoint);
-          setVisibleStep('birthday');
+          completeStep('birthday');
         }}
       />
     );
@@ -121,11 +151,18 @@ export function ProfileOnboardingFlow({
   if (visibleStep === 'birthday') {
     return (
       <BirthdayScreen
-        onBack={profile?.displayName == null ? undefined : () => setVisibleStep('name')}
+        initialValue={profile?.birthDate ?? undefined}
+        onBack={
+          isEditingFromReview
+            ? backFromEdit('name')
+            : profile?.displayName == null
+              ? undefined
+              : () => setVisibleStep('name')
+        }
         onSave={async (birthDate) => {
           const checkpoint = await saveBirthDate(birthDate);
           setProfile(checkpoint);
-          setVisibleStep('identity');
+          completeStep('identity');
         }}
       />
     );
@@ -145,11 +182,17 @@ export function ProfileOnboardingFlow({
     return (
       <IdentityScreen
         initialValue={initialValue}
-        onBack={profile?.birthDate == null ? undefined : () => setVisibleStep('birthday')}
+        onBack={
+          isEditingFromReview
+            ? backFromEdit('birthday')
+            : profile?.birthDate == null
+              ? undefined
+              : () => setVisibleStep('birthday')
+        }
         onSave={async (identity) => {
           const checkpoint = await saveIdentity(identity);
           setProfile(checkpoint);
-          setVisibleStep('preferences');
+          completeStep('preferences');
         }}
       />
     );
@@ -167,11 +210,17 @@ export function ProfileOnboardingFlow({
     return (
       <PreferencesScreen
         initialValue={initialValue}
-        onBack={profile?.genderIdentity == null ? undefined : () => setVisibleStep('identity')}
+        onBack={
+          isEditingFromReview
+            ? backFromEdit('identity')
+            : profile?.genderIdentity == null
+              ? undefined
+              : () => setVisibleStep('identity')
+        }
         onSave={async (preferences) => {
           const checkpoint = await savePreferences(preferences);
           setProfile(checkpoint);
-          setVisibleStep('location');
+          completeStep('location');
         }}
       />
     );
@@ -182,12 +231,16 @@ export function ProfileOnboardingFlow({
       <LocationScreen
         captureLocation={captureLocation}
         onBack={
-          profile?.relationshipIntent == null ? undefined : () => setVisibleStep('preferences')
+          isEditingFromReview
+            ? backFromEdit('preferences')
+            : profile?.relationshipIntent == null
+              ? undefined
+              : () => setVisibleStep('preferences')
         }
         onSave={async (location) => {
           const checkpoint = await saveLocation(location);
           setProfile(checkpoint);
-          setVisibleStep('height');
+          completeStep('height');
         }}
       />
     );
@@ -202,11 +255,17 @@ export function ProfileOnboardingFlow({
     return (
       <HeightScreen
         initialValue={initialValue}
-        onBack={profile?.hasLocation === true ? () => setVisibleStep('location') : undefined}
+        onBack={
+          isEditingFromReview
+            ? backFromEdit('location')
+            : profile?.hasLocation === true
+              ? () => setVisibleStep('location')
+              : undefined
+        }
         onSave={async (height) => {
           const checkpoint = await saveHeight(height);
           setProfile(checkpoint);
-          setVisibleStep('photos');
+          completeStep('photos');
         }}
       />
     );
@@ -217,10 +276,16 @@ export function ProfileOnboardingFlow({
       <ProfilePhotosScreen
         completePhotos={async (photoIds) => {
           await completePhotos(photoIds);
-          setVisibleStep('prompts');
+          completeStep('prompts');
         }}
         loadPhotos={loadPhotos}
-        onBack={profile?.heightCm == null ? undefined : () => setVisibleStep('height')}
+        onBack={
+          isEditingFromReview
+            ? backFromEdit('height')
+            : profile?.heightCm == null
+              ? undefined
+              : () => setVisibleStep('height')
+        }
         pickPhoto={pickPhoto}
         removePhoto={removePhoto}
         uploadPhoto={uploadPhoto}
@@ -233,13 +298,27 @@ export function ProfileOnboardingFlow({
       <ProfilePromptsScreen
         completePrompts={async (prompts) => {
           await completePrompts(prompts);
-          setVisibleStep('foundation');
+          setIsEditingFromReview(false);
+          setVisibleStep('review');
         }}
         loadPrompts={loadPrompts}
-        onBack={() => setVisibleStep('photos')}
+        onBack={isEditingFromReview ? backFromEdit('photos') : () => setVisibleStep('photos')}
       />
     );
   }
 
-  return <ProfileCheckpointScreen />;
+  return (
+    <ProfileReviewScreen
+      loadProfileReview={loadProfileReview}
+      onEditBirthday={(reviewProfile) => editFromReview('birthday', reviewProfile)}
+      onEditHeight={(reviewProfile) => editFromReview('height', reviewProfile)}
+      onEditIdentity={(reviewProfile) => editFromReview('identity', reviewProfile)}
+      onEditLocation={(reviewProfile) => editFromReview('location', reviewProfile)}
+      onEditName={(reviewProfile) => editFromReview('name', reviewProfile)}
+      onEditPhotos={(reviewProfile) => editFromReview('photos', reviewProfile)}
+      onEditPreferences={(reviewProfile) => editFromReview('preferences', reviewProfile)}
+      onEditPrompts={(reviewProfile) => editFromReview('prompts', reviewProfile)}
+      publishProfile={publishProfile}
+    />
+  );
 }

@@ -26,6 +26,7 @@ import {
   type LocalProfilePhoto,
 } from '../../src/api/profile-photos';
 import { completeProfilePrompts, listProfilePrompts } from '../../src/api/profile-prompts';
+import { loadProfileReview, publishProfile } from '../../src/api/profile-publication';
 import { apiBaseUrl, isClerkConfigured } from '../../src/config/public-env';
 import { AuthCompleteScreen } from '../../src/features/auth/auth-complete-screen';
 import { CurrentUserBootstrapScreen } from '../../src/features/onboarding/current-user-bootstrap-screen';
@@ -163,6 +164,20 @@ function ConfiguredOnboardingRoute() {
     },
     [getToken],
   );
+  const loadReview = useCallback(() => {
+    if (apiBaseUrl === null) {
+      return Promise.reject(new Error('The ProDate API is not configured.'));
+    }
+
+    return loadProfileReview({ apiBaseUrl, getToken });
+  }, [getToken]);
+  const publish = useCallback(() => {
+    if (apiBaseUrl === null) {
+      return Promise.reject(new Error('The ProDate API is not configured.'));
+    }
+
+    return publishProfile({ apiBaseUrl, getToken });
+  }, [getToken]);
 
   if (!isLoaded) {
     return null;
@@ -181,8 +196,10 @@ function ConfiguredOnboardingRoute() {
       completePhotos={completePhotos}
       completePrompts={completePrompts}
       loadPhotos={loadPhotos}
+      loadProfileReview={loadReview}
       loadPrompts={loadPrompts}
       pickPhoto={pickProfilePhoto}
+      publishProfile={publish}
       removePhoto={removePhoto}
       saveBirthDate={saveBirthDate}
       saveDisplayName={saveDisplayName}

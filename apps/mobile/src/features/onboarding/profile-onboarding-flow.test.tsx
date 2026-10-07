@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Keyboard, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 
 import type { ProfileCheckpoint } from '../../api/profile';
+import type { ProfileReview } from '@pro-date/contracts';
 import { ProfileOnboardingFlow } from './profile-onboarding-flow';
 
 const newUser = {
@@ -10,13 +11,63 @@ const newUser = {
   onboardingStatus: 'NOT_STARTED' as const,
 };
 
+const profileReview: ProfileReview = {
+  missingSections: [],
+  photos: Array.from({ length: 4 }, (_, position) => ({
+    deliveryUrl: `https://res.cloudinary.com/pro-date-dev/image/upload/profile-${position}.jpg`,
+    height: 1600,
+    id: `00000000-0000-4000-8000-${(position + 1).toString().padStart(12, '0')}`,
+    position,
+    width: 1200,
+  })),
+  profile: {
+    arePronounsVisible: true,
+    birthDate: '1998-08-19',
+    displayName: 'Avery',
+    genderIdentity: 'Non-binary',
+    hasLocation: true,
+    heightCm: 173,
+    interestedIn: ['WOMEN'],
+    isGenderVisible: true,
+    isHeightVisible: true,
+    locationLabel: 'Bengaluru, Karnataka',
+    onboardingStatus: 'IN_PROGRESS',
+    onboardingStep: 'REVIEW',
+    pronouns: 'they/them',
+    relationshipIntent: 'LONG_TERM',
+  },
+  prompts: [
+    {
+      answer: 'I build tiny tools that make creative work feel lighter.',
+      id: '10000000-0000-4000-8000-000000000001',
+      position: 0,
+      promptId: 'weekend_build',
+    },
+    {
+      answer: 'Coffee, a long walk, and one wildly specific playlist.',
+      id: '10000000-0000-4000-8000-000000000002',
+      position: 1,
+      promptId: 'debug_bad_day',
+    },
+    {
+      answer: 'Curious questions, kind reviews, and excellent snack choices.',
+      id: '10000000-0000-4000-8000-000000000003',
+      position: 2,
+      promptId: 'merge_criteria',
+    },
+  ],
+  publishedAt: null,
+};
+
 const foundationProps = {
   captureLocation: jest.fn(),
   completePhotos: jest.fn(),
   completePrompts: jest.fn(),
   loadPhotos: jest.fn().mockResolvedValue([]),
+  loadProfileReview: jest.fn().mockResolvedValue(profileReview),
   loadPrompts: jest.fn().mockResolvedValue([]),
   pickPhoto: jest.fn(),
+  publishProfile: jest.fn(),
   removePhoto: jest.fn(),
   saveHeight: jest.fn(),
   saveIdentity: jest.fn(),
@@ -341,7 +392,7 @@ describe('ProfileOnboardingFlow', () => {
     ['DETAILS', 'Add your height.'],
     ['PHOTOS', 'Show the build, not just the bio.'],
     ['PROMPTS', 'Give them something to reply to.'],
-    ['REVIEW', 'The profile has a point of view.'],
+    ['REVIEW', "Preview the profile you're shipping."],
   ] as const)('resumes %s at its dedicated screen', async (onboardingStep, heading) => {
     const view = await render(
       <ProfileOnboardingFlow
@@ -353,5 +404,31 @@ describe('ProfileOnboardingFlow', () => {
     );
 
     expect(view.getByText(heading)).toBeTruthy();
+  });
+
+  it('returns directly to review after editing a published profile field', async () => {
+    const saveDisplayName = jest.fn().mockResolvedValue({
+      ...profileReview.profile,
+      displayName: 'Avery K',
+    });
+    const view = await render(
+      <ProfileOnboardingFlow
+        {...foundationProps}
+        initialUser={{ ...newUser, onboardingStatus: 'IN_PROGRESS', onboardingStep: 'REVIEW' }}
+        saveBirthDate={jest.fn()}
+        saveDisplayName={saveDisplayName}
+      />,
+    );
+
+    await view.findByText(/Avery,/);
+    await fireEvent.press(view.getByRole('button', { name: 'Edit name' }));
+    expect(view.getByDisplayValue('Avery')).toBeTruthy();
+    await fireEvent.changeText(view.getByLabelText('First name or chosen name'), 'Avery K');
+    await fireEvent.press(view.getByRole('button', { name: 'Save and continue' }));
+
+    expect(saveDisplayName).toHaveBeenCalledWith('Avery K');
+    await waitFor(() =>
+      expect(view.getByText("Preview the profile you're shipping.")).toBeTruthy(),
+    );
   });
 });

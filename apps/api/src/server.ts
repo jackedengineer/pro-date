@@ -3,11 +3,13 @@ import {
   createCurrentUserRepository,
   createDatabaseResources,
   createProfilePhotoRepository,
+  createProfilePublicationRepository,
   createProfilePromptRepository,
   createProfileRepository,
 } from '@pro-date/database';
 
 import { createApiApp } from './app.js';
+import { registerDatabasePoolErrorHandler } from './database-pool.js';
 import { readApiServiceEnvironment } from './env.js';
 import { createLogger } from './logger.js';
 import {
@@ -16,12 +18,15 @@ import {
 } from './media/profile-photo-provider.js';
 import { createProfilePhotoService } from './media/profile-photo-service.js';
 import { createProfilePromptService } from './profile/profile-prompt-service.js';
+import { createProfilePublicationService } from './profile/profile-publication-service.js';
 
 const environment = readApiServiceEnvironment();
 const logger = createLogger(environment.logLevel);
 const { database, pool } = createDatabaseResources(environment.databaseUrl);
+registerDatabasePoolErrorHandler(pool, logger);
 const currentUserRepository = createCurrentUserRepository(database);
 const profilePhotoRepository = createProfilePhotoRepository(database);
+const profilePublicationRepository = createProfilePublicationRepository(database);
 const profilePromptRepository = createProfilePromptRepository(database);
 const profileRepository = createProfileRepository(database);
 const profilePromptService = createProfilePromptService(profilePromptRepository);
@@ -35,6 +40,14 @@ const profilePhotoService =
           client: createCloudinaryProfilePhotoClient(environment.cloudinary),
         }),
         profilePhotoRepository,
+      );
+const profilePublicationService =
+  profilePhotoService === undefined
+    ? undefined
+    : createProfilePublicationService(
+        profilePublicationRepository,
+        profilePhotoService,
+        profilePromptService,
       );
 
 if (profilePhotoService === undefined) {
@@ -50,6 +63,7 @@ const app = createApiApp({
     currentUserRepository.findOrCreateByClerkSubject(clerkSubject),
   logger,
   ...(profilePhotoService === undefined ? {} : { profilePhotoService }),
+  ...(profilePublicationService === undefined ? {} : { profilePublicationService }),
   profilePromptService,
   readinessCheck: async () => {
     await pool.query('select 1');

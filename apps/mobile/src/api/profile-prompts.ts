@@ -82,7 +82,7 @@ export async function completeProfilePrompts({
   const input = completeProfilePromptsRequestSchema.safeParse({ prompts });
 
   if (!input.success) {
-    throw new Error('Write three distinct answers with at least five words each.');
+    throw new Error('Write three distinct answers with at least five words or 30 characters each.');
   }
 
   const token = await getRequiredToken(getToken);

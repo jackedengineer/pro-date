@@ -143,12 +143,13 @@ export const PROFILE_PROMPT_CATALOGUE = [
 export const profilePromptAnswerTextSchema = z
   .string()
   .trim()
-  .min(PROFILE_PROMPT_ANSWER_MIN_CHARACTERS)
   .max(PROFILE_PROMPT_ANSWER_MAX_CHARACTERS)
   .refine(
-    (answer) => answer.split(/\s+/).filter(Boolean).length >= PROFILE_PROMPT_ANSWER_MIN_WORDS,
+    (answer) =>
+      answer.length >= PROFILE_PROMPT_ANSWER_MIN_CHARACTERS ||
+      answer.split(/\s+/).filter(Boolean).length >= PROFILE_PROMPT_ANSWER_MIN_WORDS,
     {
-      message: `Write at least ${PROFILE_PROMPT_ANSWER_MIN_WORDS} words.`,
+      message: `Write at least ${PROFILE_PROMPT_ANSWER_MIN_WORDS} words or ${PROFILE_PROMPT_ANSWER_MIN_CHARACTERS} characters.`,
     },
   );
 
