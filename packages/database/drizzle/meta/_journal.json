@@ -57,6 +57,13 @@
       "when": 1791291608546,
       "tag": "0007_cultured_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791360706677,
+      "tag": "0008_hesitant_sentinel",
+      "breakpoints": true
     }
   ]
 }

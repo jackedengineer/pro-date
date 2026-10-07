@@ -73,6 +73,7 @@ export const profiles = pgTable(
     locationCountryCode: varchar('location_country_code', { length: 2 }),
     heightCm: smallint('height_cm'),
     isHeightVisible: boolean('is_height_visible').default(true).notNull(),
+    publishedAt: timestamp('published_at', { mode: 'date', withTimezone: true }),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
