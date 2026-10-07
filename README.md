@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** passwordless authentication and profile onboarding through curated prompts are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add, order, and remove four to six photos through signed direct uploads; and answer three of twenty curated prompts before reaching profile review. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 249 automated tests. Live photo upload remains intentionally unavailable until a complete backend-only Cloudinary credential set is present. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Profile review, discovery, engagement, messaging, safety workflows, and subscriptions remain in development.
+> **Project status:** passwordless authentication and the complete profile-onboarding journey are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add, order, and remove four to six photos through signed direct Cloudinary uploads; answer three of twenty curated prompts; preview the real discovery card with visibility controls; return directly to any section for edits; and publish only after the server atomically revalidates completeness. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 279 automated tests. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Discovery, engagement, messaging, App Review-gated safety workflows, account lifecycle controls, and subscriptions remain in development.
 
 ## Product preview
 
@@ -225,6 +225,12 @@ Generated OpenAPI documentation will be exposed from the running API once endpoi
 - Every personal field has a stated purpose and retention rule; export and deletion cover provider assets, device tokens, caches, and the documented backup-expiry window rather than only the primary user row.
 
 This is a production-shaped project, not an operating public dating service. Its safety model is deliberately honest about the absence of staffed moderation and identity verification in V0.
+
+### Apple App Review release gates
+
+App Store compliance is a standing acceptance criterion even though this project is not currently intended for a public launch. Profile publishing is available for private development, but public discovery and messaging are explicitly blocked from submission until the user-generated-content safeguards required by [App Review Guideline 1.2](https://developer.apple.com/app-store/review/guidelines/) are implemented and verified: objectionable-content filtering, in-app reporting with a documented response process, immediate blocking, and published support contact information. The product will not use anonymous/random chat, objectifying hot-or-not mechanics, or hookup/pornographic positioning.
+
+Before any submission, ProDate must also provide in-app permanent account deletion that removes associated user-generated content, following [Apple's account deletion requirements](https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion); reconcile the App Privacy label with every first- and third-party data flow under [Apple's privacy guidance](https://developer.apple.com/app-store/user-privacy-and-data-use/); keep production review services live; and provide App Review with a fictional, fully accessible reviewer account plus accurate setup notes. Tracking is not part of the current architecture.
 
 ## Repository structure (implemented and planned)
 
@@ -458,7 +464,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 249 automated tests pass across shared contracts, database invariants, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
+- 279 automated tests pass across shared contracts, database invariants, atomic profile publication, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -489,44 +495,47 @@ Git push
 
 ## Current status
 
-Last architecture verification: **6 October 2026**
+Last architecture verification: **7 October 2026**
 
-| Milestone                                | Status                        |
-| ---------------------------------------- | ----------------------------- |
-| Product boundary and V0 journey          | Approved                      |
-| Capability map                           | Approved                      |
-| Core architecture and provider choices   | Approved baseline             |
-| Expo SDK/App Store compatibility         | Verified for SDK 57           |
-| Exact dependency manifest                | Verified and locked           |
-| Installed dependency lock                | Implemented                   |
-| Shared API contracts                     | Implemented and tested        |
-| Express health/startup foundation        | Implemented and tested        |
-| Mobile shell specification               | Approved                      |
-| Repository scaffold                      | Implemented                   |
-| Expo welcome and OTP entry shell         | Implemented and tested        |
-| Expo Doctor / iOS Hermes export          | Verified                      |
-| First physical-device run                | Verified                      |
-| Clerk phone OTP client flow              | Implemented and tested        |
-| Clerk email OTP client flow              | Implemented and tested        |
-| Live Clerk SMS verification              | Awaiting provider setup       |
-| Live Clerk email verification            | Verified on physical iPhone   |
-| Neon/PostGIS and Drizzle foundation      | Implemented and tested        |
-| Authenticated internal-user bootstrap    | Implemented and live verified |
-| Profile intro and name checkpoint        | Verified on physical iPhone   |
-| Birthday and server-side 18+ checkpoint  | Verified on physical iPhone   |
-| Inclusive identity and pronouns          | Implemented and tested        |
-| Dating preferences and intent            | Implemented and tested        |
-| Foreground location and PostGIS point    | Implemented and tested        |
-| Native height and visibility control     | Implemented and tested        |
-| Signed photo contracts and persistence   | Implemented and tested        |
-| Expo photo picker and ordered grid       | Implemented and tested        |
-| Live Cloudinary upload                   | Awaiting API secret           |
-| Curated three-prompt editor              | Implemented and tested        |
-| Prompt persistence and review checkpoint | Implemented and tested        |
-| Basic profile foundation compatibility   | Automated verification passed |
-| V0 vertical slice                        | In progress                   |
+| Milestone                                 | Status                        |
+| ----------------------------------------- | ----------------------------- |
+| Product boundary and V0 journey           | Approved                      |
+| Capability map                            | Approved                      |
+| Core architecture and provider choices    | Approved baseline             |
+| Expo SDK/App Store compatibility          | Verified for SDK 57           |
+| Exact dependency manifest                 | Verified and locked           |
+| Installed dependency lock                 | Implemented                   |
+| Shared API contracts                      | Implemented and tested        |
+| Express health/startup foundation         | Implemented and tested        |
+| Mobile shell specification                | Approved                      |
+| Repository scaffold                       | Implemented                   |
+| Expo welcome and OTP entry shell          | Implemented and tested        |
+| Expo Doctor / iOS Hermes export           | Verified                      |
+| First physical-device run                 | Verified                      |
+| Clerk phone OTP client flow               | Implemented and tested        |
+| Clerk email OTP client flow               | Implemented and tested        |
+| Live Clerk SMS verification               | Awaiting provider setup       |
+| Live Clerk email verification             | Verified on physical iPhone   |
+| Neon/PostGIS and Drizzle foundation       | Implemented and tested        |
+| Authenticated internal-user bootstrap     | Implemented and live verified |
+| Profile intro and name checkpoint         | Verified on physical iPhone   |
+| Birthday and server-side 18+ checkpoint   | Verified on physical iPhone   |
+| Inclusive identity and pronouns           | Implemented and tested        |
+| Dating preferences and intent             | Implemented and tested        |
+| Foreground location and PostGIS point     | Implemented and tested        |
+| Native height and visibility control      | Implemented and tested        |
+| Signed photo contracts and persistence    | Implemented and tested        |
+| Expo photo picker and ordered grid        | Implemented and tested        |
+| Live Cloudinary upload                    | Verified on physical iPhone   |
+| Curated three-prompt editor               | Implemented and tested        |
+| Prompt persistence and review checkpoint  | Implemented and tested        |
+| Real profile-card review and direct edits | Implemented and tested        |
+| Atomic profile publication                | Implemented and tested        |
+| Apple App Review release gates            | Documented and enforced       |
+| Basic profile foundation compatibility    | Automated verification passed |
+| V0 vertical slice                         | In progress                   |
 
-The next implementation checkpoint is the complete profile-card review and publish transition. The new photo and prompt screens need a physical-iPhone acceptance pass; live photo transfer additionally requires the missing Cloudinary API secret. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
+The immediate acceptance checkpoint is a physical-iPhone pass of the new review, edit-return, and publication states. The next product slice is discovery-card retrieval and ranking, developed alongside the block/report/filter/contact foundations required before any public user-generated-content surface can be submitted to App Review. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
