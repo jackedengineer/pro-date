@@ -10,6 +10,7 @@ import { styles } from './birthday-screen.styles';
 import { OnboardingProgress } from './onboarding-progress';
 
 interface BirthdayScreenProps {
+  initialValue?: string | undefined;
   onBack?: (() => void) | undefined;
   onSave: (birthDate: string) => Promise<void>;
   today?: Date;
@@ -42,10 +43,23 @@ export function toCalendarDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function BirthdayScreen({ onBack, onSave, today = new Date() }: BirthdayScreenProps) {
-  const [birthDate, setBirthDate] = useState(() => subtractCalendarYears(today, 25));
+function fromCalendarDate(calendarDate: string): Date {
+  const [year, month, day] = calendarDate.split('-').map(Number);
+
+  return new Date(year ?? 1900, (month ?? 1) - 1, day ?? 1);
+}
+
+export function BirthdayScreen({
+  initialValue,
+  onBack,
+  onSave,
+  today = new Date(),
+}: BirthdayScreenProps) {
+  const [birthDate, setBirthDate] = useState(() =>
+    initialValue === undefined ? subtractCalendarYears(today, 25) : fromCalendarDate(initialValue),
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [hasSelectedDate, setHasSelectedDate] = useState(false);
+  const [hasSelectedDate, setHasSelectedDate] = useState(initialValue !== undefined);
   const [isPickerVisible, setIsPickerVisible] = useState(Platform.OS === 'ios');
   const [isSaving, setIsSaving] = useState(false);
   const formattedBirthDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(

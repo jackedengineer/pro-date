@@ -18,12 +18,13 @@ import { styles } from './display-name-screen.styles';
 import { OnboardingProgress } from './onboarding-progress';
 
 interface DisplayNameScreenProps {
+  initialValue?: string | undefined;
   onBack: () => void;
   onSave: (displayName: string) => Promise<void>;
 }
 
-export function DisplayNameScreen({ onBack, onSave }: DisplayNameScreenProps) {
-  const [displayName, setDisplayName] = useState('');
+export function DisplayNameScreen({ initialValue, onBack, onSave }: DisplayNameScreenProps) {
+  const [displayName, setDisplayName] = useState(initialValue ?? '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
