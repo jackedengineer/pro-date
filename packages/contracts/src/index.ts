@@ -75,3 +75,13 @@ export type {
   ProfilePromptId,
   ProfilePromptListResponse,
 } from './profile-prompt';
+export {
+  profileReviewMissingSectionSchema,
+  profileReviewResponseSchema,
+  profileReviewSchema,
+} from './profile-publication';
+export type {
+  ProfileReview,
+  ProfileReviewMissingSection,
+  ProfileReviewResponse,
+} from './profile-publication';
