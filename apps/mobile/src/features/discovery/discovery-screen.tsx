@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 
 import type { DiscoveryActions, DiscoveryFilters } from '../../api/discovery';
 import { AppText } from '../../components/app-text';
@@ -13,20 +13,35 @@ import { QuietButton } from './discovery-shared';
 const tabs = [
   { id: 'discover', label: 'Discover', icon: '⌕' },
   { id: 'requests', label: 'Requests', icon: '⑂' },
-  { id: 'matches', label: 'Merged', icon: '✓' },
+  { id: 'merged', label: 'Merged', icon: '✓' },
 ] as const;
+export type DiscoveryTab = (typeof tabs)[number]['id'];
 export function DiscoveryScreen({
   actions,
   onOpenProfile,
-  onOpenMessages,
-  onOpenConversation,
+  mergedInbox,
+  onMerged,
+  selectedTab,
+  onTabChange,
 }: {
   actions: DiscoveryActions;
   onOpenProfile: () => void;
-  onOpenMessages?: () => void;
-  onOpenConversation?: (id: string) => void;
+  mergedInbox: ReactNode;
+  onMerged?: (id: string) => void;
+  selectedTab?: DiscoveryTab;
+  onTabChange?: (tab: DiscoveryTab) => void;
 }) {
-  const [tab, setTab] = useState<(typeof tabs)[number]['id']>('discover');
+  const [localTab, setLocalTab] = useState<DiscoveryTab>('discover');
+  const tab = selectedTab ?? localTab;
+  const selectTab = (value: DiscoveryTab) => {
+    if (selectedTab === undefined) setLocalTab(value);
+    onTabChange?.(value);
+  };
+  const handleMerged = (id: string) => {
+    Keyboard.dismiss();
+    onMerged?.(id);
+    selectTab('merged');
+  };
   const [filters, setFilters] = useState<DiscoveryFilters>({
     radiusKm: 50,
     minAge: 18,
@@ -39,12 +54,7 @@ export function DiscoveryScreen({
         <AppText variant="title" style={styles.headerTitle}>
           {tab === 'discover' ? 'ProDate' : tab === 'requests' ? 'Pull requests' : 'Merged'}
         </AppText>
-        <View>
-          <QuietButton label="My profile" onPress={onOpenProfile} />
-          {onOpenMessages === undefined ? null : (
-            <QuietButton label="Messages" onPress={onOpenMessages} />
-          )}
-        </View>
+        <QuietButton label="My profile" onPress={onOpenProfile} />
       </View>
       {tab === 'discover' ? (
         <View style={styles.filters}>
@@ -60,14 +70,12 @@ export function DiscoveryScreen({
             key={`${filters.radiusKm}:${filters.minAge}:${filters.maxAge}`}
             actions={actions}
             filters={filters}
+            onMerged={handleMerged}
           />
+        ) : tab === 'requests' ? (
+          <ConnectionList actions={actions} onMerged={handleMerged} />
         ) : (
-          <ConnectionList
-            key={tab}
-            actions={actions}
-            kind={tab === 'requests' ? 'requests' : 'matches'}
-            {...(onOpenConversation === undefined ? {} : { onOpenConversation })}
-          />
+          mergedInbox
         )}
       </View>
       <View style={styles.tabs}>
@@ -77,7 +85,7 @@ export function DiscoveryScreen({
             accessibilityRole="button"
             accessibilityLabel={item.label}
             accessibilityState={{ selected: tab === item.id }}
-            onPress={() => setTab(item.id)}
+            onPress={() => selectTab(item.id)}
             style={({ pressed }) => [
               styles.tab,
               tab === item.id && styles.activeTab,

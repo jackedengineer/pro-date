@@ -28,7 +28,7 @@ import { AppText } from '../../components/app-text';
 import { colors } from '../../theme/tokens';
 import { EmptyState, ErrorNotice, QuietButton } from '../discovery/discovery-shared';
 import { ProfileSafetySheet } from '../discovery/profile-safety-sheet';
-import type { ChatRow } from './chat-thread';
+import type { ChatRow, ThreadSnapshot } from './chat-thread';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
 import { useMessaging } from './messaging-provider';
@@ -62,6 +62,7 @@ const position = {
   animateAutoScrollToBottom: false,
 };
 const identify = (row: ChatRow) => row.key;
+const backToMerged = () => router.replace({ pathname: '/discover', params: { tab: 'merged' } });
 export function ConversationScreen({ id }: { id: string }) {
   const { runtime } = useMessaging();
   const thread = useMemo(() => runtime!.thread(id), [runtime, id]);
@@ -117,12 +118,12 @@ export function ConversationScreen({ id }: { id: string }) {
       }
     }
     await thread.revoke();
-    router.replace('/messages');
+    backToMerged();
   };
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={styles.header}>
-        <QuietButton label="Back to messages" onPress={() => router.replace('/messages')} />
+        <QuietButton label="Back to Merged" onPress={backToMerged} />
         <View style={styles.member}>
           <Image
             source={state.conversation?.member.photoUrl ?? null}
@@ -200,22 +201,7 @@ export function ConversationScreen({ id }: { id: string }) {
             }
             ListEmptyComponent={
               <View style={styles.empty}>
-                {state.loading ? (
-                  <ActivityIndicator color={colors.plum} />
-                ) : (
-                  <EmptyState
-                    title={
-                      state.unavailable
-                        ? 'This connection has ended.'
-                        : 'Start with something real.'
-                    }
-                    body={
-                      state.unavailable
-                        ? 'This conversation is unavailable. Return to your messages to continue.'
-                        : 'Ask about the prompt that caught your eye. A thoughtful hello beats a clever opener.'
-                    }
-                  />
-                )}
+                <ConversationEmptyState state={state} />
               </View>
             }
           />
@@ -255,14 +241,38 @@ export function ConversationScreen({ id }: { id: string }) {
           onClose={() => setSafety(false)}
           onSaved={() => {
             setSafety(false);
-            void thread
-              .revoke()
-              .then(() => router.replace('/messages'))
-              .catch(handleFailure);
+            void thread.revoke().then(backToMerged).catch(handleFailure);
           }}
         />
       ) : null}
     </SafeAreaView>
+  );
+}
+function ConversationEmptyState({
+  state,
+}: {
+  state: Pick<ThreadSnapshot, 'loading' | 'unavailable' | 'conversation'>;
+}) {
+  if (state.loading) return <ActivityIndicator color={colors.plum} />;
+  if (state.unavailable)
+    return (
+      <EmptyState
+        title="This connection has ended."
+        body="This conversation is unavailable. Return to Merged to continue."
+      />
+    );
+  if (state.conversation === null || state.conversation.lastMessage !== null)
+    return (
+      <EmptyState
+        title="Your conversation is not loaded yet."
+        body="Go online or refresh this conversation to load its history."
+      />
+    );
+  return (
+    <EmptyState
+      title="You both approved the merge."
+      body="Ship the first hello. A question about their profile is a good place to start."
+    />
   );
 }
 const styles = StyleSheet.create({

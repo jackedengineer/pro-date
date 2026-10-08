@@ -1,18 +1,19 @@
-import type { Conversation } from '@pro-date/contracts';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { AppText } from '../../components/app-text';
-import { Screen } from '../../components/screen';
-import { colors } from '../../theme/tokens';
+import { colors, radii, spacing } from '../../theme/tokens';
 import { EmptyState, ErrorNotice, QuietButton } from '../discovery/discovery-shared';
+import { buildMergedInboxRows, type MergedInboxRow } from './merged-inbox-model';
+import { MergedConversationRow } from './merged-inbox-row';
 import { useMessaging } from './messaging-provider';
 
-const identify = (row: Conversation) => row.id;
-export function MessagingInbox() {
-  const { runtime } = useMessaging();
+const identify = (row: MergedInboxRow) => row.key;
+const itemType = (row: MergedInboxRow) => row.type;
+const position = { disabled: true };
+export function MergedInbox({ onOpenConversation }: { onOpenConversation: (id: string) => void }) {
+  const { runtime, error: runtimeError, retry } = useMessaging();
   const query = useInfiniteQuery({
     queryKey: ['conversations', runtime?.ownerId],
     initialPageParam: undefined as string | undefined,
@@ -26,94 +27,173 @@ export function MessagingInbox() {
     refetchInterval: 15_000,
     refetchIntervalInBackground: false,
   });
-  const conversations = [
-    ...new Map(query.data?.pages.flatMap((page) => page.data).map((row) => [row.id, row])).values(),
-  ];
-  return (
-    <Screen>
-      <View style={styles.header}>
-        <QuietButton label="Back to discovery" onPress={() => router.replace('/discover')} />
-        <AppText variant="title">Messages</AppText>
-      </View>
-      <AppText style={styles.intro}>The merge was mutual. Make the hello yours.</AppText>
-      {query.fetchStatus === 'paused' ? (
-        <AppText style={styles.intro} variant="caption">
-          Offline · showing conversations saved on this device.
-        </AppText>
-      ) : null}
-      <ErrorNotice message={query.error?.message ?? null} />
-      {query.isPending ? <ActivityIndicator color={colors.plum} /> : null}
-      <FlashList
-        data={conversations}
-        keyExtractor={identify}
-        renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Message ${item.member.displayName}`}
-            onPress={() => router.push({ pathname: '/messages/[id]', params: { id: item.id } })}
-            style={({ pressed }) => [styles.item, pressed && styles.pressed]}
-          >
-            <Image
-              source={item.member.photoUrl}
-              contentFit="cover"
-              style={styles.avatar}
-              recyclingKey={item.member.userId}
-            />
-            <View style={styles.summary}>
-              <AppText variant="button">{item.member.displayName}</AppText>
-              <AppText numberOfLines={2} variant="caption">
-                {item.lastMessage === null
-                  ? 'Your conversation starts here.'
-                  : `${item.lastMessage.senderId === runtime?.ownerId ? 'You: ' : ''}${item.lastMessage.body}`}
-              </AppText>
-            </View>
-            <AppText variant="caption">
-              {new Date(item.activityAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-            </AppText>
-          </Pressable>
+  const rows = useMemo(
+    () =>
+      buildMergedInboxRows(
+        query.data?.pages.flatMap((page) => page.data) ?? [],
+        runtime?.ownerId ?? '',
+      ),
+    [query.data, runtime?.ownerId],
+  );
+  const renderRow = useCallback(
+    ({ item }: { item: MergedInboxRow }) =>
+      item.type === 'header' ? (
+        <View style={styles.section} accessibilityRole="header">
+          <AppText variant="button">
+            {item.turn === 'YOUR_TURN' ? 'Your turn' : 'Their turn'}
+          </AppText>
+          <AppText variant="caption" style={styles.count}>
+            {item.count}
+          </AppText>
+        </View>
+      ) : (
+        <MergedConversationRow
+          conversation={item.conversation}
+          turn={item.turn}
+          onOpen={onOpenConversation}
+        />
+      ),
+    [onOpenConversation],
+  );
+  if (runtime === null)
+    return (
+      <View style={styles.center}>
+        {runtimeError === null ? (
+          <InboxLoading />
+        ) : (
+          <>
+            <ErrorNotice message={runtimeError} />
+            <QuietButton label="Retry opening Merged" onPress={retry} />
+          </>
         )}
+      </View>
+    );
+  const offline = query.fetchStatus === 'paused';
+  return (
+    <View style={styles.body}>
+      <FlashList
+        data={rows}
+        keyExtractor={identify}
+        getItemType={itemType}
+        renderItem={renderRow}
+        maintainVisibleContentPosition={position}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.intro}>
+            <AppText style={styles.muted}>Mutual interest. Open threads.</AppText>
+            {offline ? (
+              <AppText variant="caption" style={styles.muted}>
+                Offline · showing connections saved on this device.
+              </AppText>
+            ) : null}
+            <ErrorNotice message={query.error?.message ?? null} />
+          </View>
+        }
         ListEmptyComponent={
-          !query.isPending && query.error === null ? (
-            <View style={styles.empty}>
+          <View style={styles.empty}>
+            {offline ? (
               <EmptyState
-                title="Good chemistry, mutually approved."
-                body="Merge a pull request to start a private conversation. No random DMs."
+                title="Your connections need a connection."
+                body="Go online to load your merges. Conversations saved here will be available offline."
               />
-            </View>
-          ) : null
+            ) : query.isPending ? (
+              <InboxLoading />
+            ) : query.error === null ? (
+              <EmptyState
+                title="No merges. Yet."
+                body="Send a pull request on something that caught your eye. Mutual interest lands here—no first message required."
+              />
+            ) : null}
+          </View>
         }
         ListFooterComponent={
-          <QuietButton
-            label={
-              query.isFetchingNextPage
-                ? 'Loading…'
-                : query.hasNextPage
-                  ? 'Load more conversations'
-                  : 'Refresh conversations'
-            }
-            disabled={query.isFetching}
-            onPress={() => void (query.hasNextPage ? query.fetchNextPage() : query.refetch())}
-          />
+          <View style={styles.footer}>
+            {query.hasNextPage ? (
+              <AppText variant="caption" style={styles.muted}>
+                Counts reflect loaded connections. Load more to see the rest.
+              </AppText>
+            ) : null}
+            <QuietButton
+              label={
+                query.isFetchingNextPage
+                  ? 'Loading…'
+                  : query.error !== null
+                    ? 'Retry loading connections'
+                    : query.hasNextPage
+                      ? 'Load more connections'
+                      : 'Refresh connections'
+              }
+              disabled={query.isFetching || offline}
+              onPress={() =>
+                void (query.error !== null || !query.hasNextPage
+                  ? query.refetch()
+                  : query.fetchNextPage())
+              }
+            />
+          </View>
         }
       />
-    </Screen>
+    </View>
+  );
+}
+function InboxLoading() {
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel="Loading connections"
+      style={styles.loading}
+    >
+      {[0, 1, 2].map((id) => (
+        <View key={id} style={styles.skeletonRow}>
+          <View style={styles.skeletonAvatar} />
+          <View style={styles.skeletonText}>
+            <View style={styles.skeletonName} />
+            <View style={styles.skeletonLine} />
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 16, paddingTop: 8, gap: 8 },
-  intro: { paddingHorizontal: 24, paddingVertical: 16, color: colors.muted },
-  item: {
+  body: { flex: 1 },
+  content: { paddingBottom: spacing.lg },
+  intro: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
+  muted: { color: colors.muted },
+  section: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-    minHeight: 88,
   },
-  summary: { flex: 1, gap: 4 },
-  avatar: { width: 56, height: 64, borderRadius: 18, backgroundColor: colors.plumSoft },
-  pressed: { backgroundColor: colors.plumSoft },
-  empty: { padding: 24 },
+  count: { color: colors.plum, fontVariant: ['tabular-nums'] },
+  empty: { paddingHorizontal: spacing.lg },
+  center: { padding: spacing.lg, gap: spacing.md },
+  footer: { padding: spacing.lg, gap: spacing.md },
+  loading: { gap: spacing.lg, paddingVertical: spacing.md },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  skeletonAvatar: {
+    width: 56,
+    height: 64,
+    borderRadius: radii.md,
+    backgroundColor: colors.plumSoft,
+  },
+  skeletonText: { flex: 1, gap: spacing.sm },
+  skeletonName: {
+    height: 16,
+    width: '45%',
+    borderRadius: spacing.xs,
+    backgroundColor: colors.plumSoft,
+  },
+  skeletonLine: {
+    height: 12,
+    width: '80%',
+    borderRadius: spacing.xs,
+    backgroundColor: colors.plumSoft,
+  },
 });

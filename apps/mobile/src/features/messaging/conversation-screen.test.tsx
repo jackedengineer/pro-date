@@ -5,10 +5,12 @@ import { ApiRequestError } from '../../api/http-client';
 import type { ChatStorage } from './chat-storage';
 import { ChatThread } from './chat-thread';
 import { ConversationScreen } from './conversation-screen';
+import { router } from 'expo-router';
 import { useMessaging, type MessagingRuntime } from './messaging-provider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { FlashListProps } from '@shopify/flash-list';
 import type { FlatList } from 'react-native';
+import { Alert } from 'react-native';
 import type { ChatRow } from './chat-thread';
 
 jest.mock('expo-router', () => ({ router: { replace: jest.fn() } }));
@@ -75,9 +77,11 @@ function Subject() {
     </SafeAreaProvider>
   );
 }
-function setup() {
+function setup(cachedConversation: Conversation | null = conversation) {
   const storage: ChatStorage = {
-    read: jest.fn().mockResolvedValue({ conversation, messages: [], outgoing: [] }),
+    read: jest
+      .fn()
+      .mockResolvedValue({ conversation: cachedConversation, messages: [], outgoing: [] }),
     saveConversations: jest.fn(),
     cachedConversations: jest.fn().mockResolvedValue([]),
     saveConversation: jest.fn(),
@@ -89,6 +93,7 @@ function setup() {
     pendingIds: jest.fn(),
     close: jest.fn(),
   };
+  const unmatch = jest.fn();
   const api: MessagingApi = {
     conversation: jest.fn().mockResolvedValue(conversation),
     conversations: jest.fn(),
@@ -99,25 +104,96 @@ function setup() {
       nextAfterSequence: null,
     }),
     send: jest.fn(),
-    unmatch: jest.fn(),
+    unmatch,
   };
   const thread = new ChatThread(id, owner, storage, api, () => owner, jest.fn());
+  const block = jest.fn();
   const runtime = {
     ownerId: owner,
     thread: () => thread,
     watch: () => () => {},
     api,
-    safety: { block: jest.fn(), report: jest.fn() },
+    safety: { block, report: jest.fn() },
   } as unknown as MessagingRuntime;
   jest.mocked(useMessaging).mockReturnValue({ runtime, error: null, retry: jest.fn() });
-  return { thread, api, storage };
+  return { thread, api, storage, runtime, unmatch, block };
 }
+beforeEach(() => jest.clearAllMocks());
 describe('conversation UI', () => {
+  it('does not call an uncached existing history a brand-new conversation', async () => {
+    const { thread } = setup({
+      ...conversation,
+      lastMessage: {
+        id: owner,
+        clientId: owner,
+        conversationId: id,
+        senderId: owner,
+        body: 'An already saved hello.',
+        sequence: 1,
+        createdAt: conversation.createdAt,
+      },
+    });
+    await thread.ready;
+    const view = await render(<Subject />);
+    expect(view.queryByText('You both approved the merge.')).toBeNull();
+    expect(view.getByText('Your conversation is not loaded yet.')).toBeTruthy();
+    thread.dispose();
+  });
+  it('does not invite a first message when a conversation has not loaded', async () => {
+    const { thread } = setup(null);
+    await thread.ready;
+    const view = await render(<Subject />);
+    expect(view.queryByText('You both approved the merge.')).toBeNull();
+    expect(view.getByText('Your conversation is not loaded yet.')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Send message' })).toBeDisabled();
+    thread.dispose();
+  });
+  it('returns to Merged after confirmed unmatch and clears the device conversation', async () => {
+    const { thread, unmatch, storage } = setup();
+    await thread.ready;
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    try {
+      const view = await render(<Subject />);
+      await fireEvent.press(view.getByRole('button', { name: 'Unmatch' }));
+      await act(() => {
+        alert.mock.calls[0]?.[2]?.find((button) => button.text === 'Unmatch')?.onPress?.();
+      });
+      await waitFor(() => expect(unmatch).toHaveBeenCalledWith(id));
+      expect(storage.clear).toHaveBeenCalledWith(id);
+      expect(router.replace).toHaveBeenCalledWith({
+        pathname: '/discover',
+        params: { tab: 'merged' },
+      });
+    } finally {
+      alert.mockRestore();
+      thread.dispose();
+    }
+  });
+  it('returns to Merged after blocking rather than leaving a cached chat open', async () => {
+    const { thread, block, storage } = setup();
+    await thread.ready;
+    const view = await render(<Subject />);
+    await fireEvent.press(view.getByRole('button', { name: 'Report or block' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Block this member' }));
+    await waitFor(() => expect(block).toHaveBeenCalledWith(conversation.member.userId));
+    expect(storage.clear).toHaveBeenCalledWith(id);
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/discover',
+      params: { tab: 'merged' },
+    });
+    thread.dispose();
+  });
   it('shows the real match, multiline composer, safe message states and accessible safety controls', async () => {
     const { thread } = setup();
     await thread.ready;
     const view = await render(<Subject />);
     expect(view.getByText('Avery')).toBeTruthy();
+    expect(view.getByText('You both approved the merge.')).toBeTruthy();
+    expect(
+      view.getByText(
+        'Ship the first hello. A question about their profile is a good place to start.',
+      ),
+    ).toBeTruthy();
     expect(view.getByRole('button', { name: 'Report or block' })).toBeTruthy();
     expect(view.getByRole('button', { name: 'Unmatch' })).toBeTruthy();
     await fireEvent.changeText(view.getByLabelText('Message'), 'A thoughtful hello.');
@@ -141,6 +217,17 @@ describe('conversation UI', () => {
     await waitFor(() => expect(view.getByText('This connection has ended.')).toBeTruthy());
     expect(view.getByRole('button', { name: 'Send message' })).toBeDisabled();
     expect(storage.clear).toHaveBeenCalledWith(id);
+    thread.dispose();
+  });
+  it('returns directly to the Merged inbox, not a separate Messages screen', async () => {
+    const { thread } = setup();
+    await thread.ready;
+    const view = await render(<Subject />);
+    await fireEvent.press(view.getByRole('button', { name: 'Back to Merged' }));
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/discover',
+      params: { tab: 'merged' },
+    });
     thread.dispose();
   });
 });

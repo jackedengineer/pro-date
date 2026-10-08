@@ -15,9 +15,11 @@ const identifyProfile = (profile: DiscoveryProfile) => profile.userId;
 export function DiscoveryFeed({
   actions,
   filters,
+  onMerged,
 }: {
   actions: DiscoveryActions;
   filters: DiscoveryFilters;
+  onMerged: (id: string) => void;
 }) {
   const load = useCallback(
     (cursor?: string) => actions.browse(filters, cursor),
@@ -127,8 +129,13 @@ export function DiscoveryFeed({
           target={target}
           onClose={() => setTarget(null)}
           onSend={async (input) => {
-            await actions.send(input);
+            const receipt = await actions.send(input);
             setTarget(null);
+            if (receipt.status === 'MERGED' && receipt.matchId !== null) {
+              list.remove(profile.userId);
+              onMerged(receipt.matchId);
+              return;
+            }
             setNotice('Pull request sent. The next move is theirs.');
             await advance(profile.userId);
           }}

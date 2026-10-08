@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/expo';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -11,6 +11,8 @@ import { apiBaseUrl, isClerkConfigured } from '../src/config/public-env';
 import { DiscoveryScreen } from '../src/features/discovery/discovery-screen';
 import { ErrorNotice, QuietButton, sharedStyles } from '../src/features/discovery/discovery-shared';
 import { colors } from '../src/theme/tokens';
+import { MergedInbox } from '../src/features/messaging/messaging-inbox';
+import { useMessaging } from '../src/features/messaging/messaging-provider';
 
 export default function DiscoverRoute() {
   return isClerkConfigured && apiBaseUrl !== null ? (
@@ -20,6 +22,8 @@ export default function DiscoverRoute() {
   );
 }
 function ConfiguredDiscoveryRoute({ apiUrl }: { apiUrl: string }) {
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const { runtime } = useMessaging();
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [status, setStatus] = useState<'loading' | 'onboarding' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -49,13 +53,21 @@ function ConfiguredDiscoveryRoute({ apiUrl }: { apiUrl: string }) {
   }, [apiUrl, getToken, isLoaded, isSignedIn, attempt]);
   if (isLoaded && !isSignedIn) return <Redirect href="/" />;
   if (status === 'onboarding') return <Redirect href="/onboarding" />;
-  if (status === 'ready')
+  // A restored, account-scoped runtime may show cached chats while the API is offline.
+  // An authoritative onboarding response above still takes precedence; REST rechecks all access.
+  if (status === 'ready' || (isLoaded && isSignedIn && runtime !== null))
     return (
       <DiscoveryScreen
         actions={actions}
         onOpenProfile={() => router.push('/onboarding')}
-        onOpenMessages={() => router.push('/messages')}
-        onOpenConversation={(id) => router.push({ pathname: '/messages/[id]', params: { id } })}
+        selectedTab={tab === 'merged' || tab === 'requests' ? tab : 'discover'}
+        onTabChange={(value) => router.setParams({ tab: value })}
+        onMerged={(id) => runtime?.hint(id)}
+        mergedInbox={
+          <MergedInbox
+            onOpenConversation={(id) => router.push({ pathname: '/messages/[id]', params: { id } })}
+          />
+        }
       />
     );
   return (

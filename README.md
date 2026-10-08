@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** authentication, profile onboarding, nearby discovery, item-specific engagement, and private text messaging are implemented. Members publish a profile with four to six photos and three curated prompt answers, like a particular photo or prompt, and merge or decline incoming pull requests. A merge opens a private conversation with saved history, foreground realtime updates, and device-persisted outgoing messages. Pass, block, report, and unmatch are enforced by the Express API. Automated tests and rollback-only Neon integration checks cover the implementation; messaging still awaits physical-iPhone visual and release-performance acceptance. Email OTP remains the development path while India SMS enablement is pending with Clerk support. Push delivery, complete App Review safety operations, account lifecycle controls, and subscriptions are not complete.
+> **Project status:** authentication, profile onboarding, nearby discovery, item-specific engagement, and private text messaging are implemented. Members publish a profile with four to six photos and three curated prompt answers, like a particular photo or prompt, and merge or decline incoming pull requests. Merged is the single match-and-chat inbox, grouped into Your turn and Their turn; untouched matches appear for both members without needing a first message. Conversations support saved history, foreground realtime updates, and device-persisted outgoing messages. Pass, block, report, and unmatch are enforced by the Express API. Automated tests and rollback-only Neon integration checks cover the implementation; messaging still awaits physical-iPhone visual and release-performance acceptance. Email OTP remains the development path while India SMS enablement is pending with Clerk support. Push delivery, complete App Review safety operations, account lifecycle controls, and subscriptions are not complete.
 
 ## Product preview
 
@@ -42,7 +42,7 @@ flowchart LR
     E --> F{Mutual interest?}
     F -- No --> D
     F -- Yes --> G[Match]
-    G --> H[Durable real-time chat]
+    G --> H[Merged inbox and durable chat]
     H --> I[Push notification]
 
     D -. user safety .-> J[Block or report]
@@ -214,7 +214,14 @@ Generated OpenAPI documentation will be exposed from the running API once endpoi
 
 ## Private text messaging
 
-Open **Messages** from the discovery header, or choose **Merged → Message** beside an accepted connection. Messaging does not require discovery eligibility quotas to remain satisfied after a match.
+Open **Merged** in the bottom navigation and tap a connection to chat. There is no separate Messages inbox or match gallery. Accepting a pull request, or sending a reciprocal like that completes a match, switches directly to Merged after the server confirms. Messaging does not require discovery eligibility quotas to remain satisfied after a match.
+
+- **Your turn:** a mutual match with no messages, or a conversation whose latest saved message came from the other member. Untouched matches appear here for **both** members with a **Start the conversation** cue.
+- **Their turn:** the latest saved message came from you. This is a conversation cue, not a read or delivery receipt; locally queued or failed sends do not transfer the turn.
+- Each section orders loaded connections by recent activity. Counts describe loaded pages, not total matches; **Load more connections** follows the existing bounded server cursor. Overlapping pages are deduplicated using the newest confirmed message sequence, and empty sections are omitted.
+- Opening an untouched chat shows an original ProDate invitation to send the first hello, not an automatically sent message. Back, block, and unmatch return to Merged. Legacy `/messages` inbox links redirect to Merged; `/messages/[id]` remains the internal conversation-detail route.
+
+The inbox reuses the account-scoped TanStack Query cache and SQLite summaries. Saved connections remain visible offline, and errors offer retry without hiding cached rows or claiming an unqueried inbox is empty. A single recycled [FlashList with typed section headers](https://shopify.github.io/flash-list/docs/guides/section-list/) avoids nesting separate lists. Message acknowledgments and realtime hints invalidate summaries; foreground fallback refresh runs every 15 seconds. New matches confirmed on the current device open Merged immediately; the other member discovers them on inbox fetch/refresh or foreground polling, not a new match push event. Push delivery remains unfinished.
 
 The message lifecycle is deliberately explicit:
 
@@ -264,7 +271,7 @@ node --import ../../node_modules/tsx/dist/loader.mjs --env-file-if-exists=../../
 
 This verifies membership, guarded retries, sequence/history, atomic outbox creation, blocking, and unmatch with fictional fixtures that are rolled back. Local socket tests use two injected authenticated test clients; they do not substitute for a real Clerk/iPhone end-to-end test. SQLite tests execute real SQL through Node's SQLite engine with only the native bridge replaced. Component tests replace native list/keyboard bridges and do not prove native scrolling performance.
 
-On your iPhone, check Merged → Message, multiline typing, keyboard dismissal, loading older history, offline queueing followed by reconnect, and block/unmatch. Two actual accounts are necessary to accept a mutual connection and test both sides; they can be exercised sequentially on one device, although simultaneous realtime acceptance still needs two clients. Do not inject fictional runtime matches just to make the inbox look populated.
+On your iPhone, check Requests → Merge → Merged → open a chat, and also complete a reciprocal like from Discover. Before any messages, both accounts should see the connection under Your turn. After a persisted first message, the sender should see Their turn and the recipient Your turn; simply reading a chat must not change that grouping. Also check multiline typing, keyboard dismissal, loading older history, offline queueing followed by reconnect, return navigation, and block/unmatch. Two actual accounts are necessary to accept a mutual connection and test both sides; they can be exercised sequentially on one device, although simultaneous realtime acceptance still needs two clients. Do not inject fictional runtime matches just to make the inbox look populated.
 
 Rollback is application-first: redeploy the previous application while leaving the additive tables/columns intact. Dropping message tables would destroy history and is not a routine rollback. Never delete migration records on a populated database.
 
@@ -455,7 +462,7 @@ Implementation references: [Expo Location for SDK 57](https://docs.expo.dev/vers
 
 ## Discovery and item-specific connections
 
-Discovery presents one vertically scrollable profile at a time. Every photo and prompt answer has its own like action. Selecting an item opens a keyboard-aware composer with an optional comment of up to 280 characters. A **pull request** means a like on that specific item; **Merge** means accepting it to make the connection mutual. A separate **Pass** action advances to the next profile. The Requests inbox shows the sender, the exact liked item, and their opening comment, with profile review, merge, decline, block, and report actions. Accepted connections appear in Merged; messaging is not yet available.
+Discovery presents one vertically scrollable profile at a time. Every photo and prompt answer has its own like action. Selecting an item opens a keyboard-aware composer with an optional comment of up to 280 characters. A **pull request** means a like on that specific item; **Merge** means accepting it to make the connection mutual. A separate **Pass** action advances to the next profile. The Requests inbox shows the sender, the exact liked item, and their opening comment, with profile review, merge, decline, block, and report actions. Accepted connections appear directly in the Merged chat inbox, even before either member sends a message.
 
 Candidate selection uses the existing PostGIS geography/GiST index with `ST_DWithin` in meters. It requires a published, complete, adult profile with at least four photos and exactly three prompts; applies age, radius, and reciprocal dating preferences; and excludes self, passed profiles, existing requests/connections, and blocks in either direction. The first version orders by publication time and UUID. It does not claim learned compatibility ranking or expose precise distance. Arbitrary self-described/questioning identities are not inferred into a gender category: they are eligible when the other member selects all three audiences. Explicit Woman, Man, Non-binary, Genderfluid, and Agender presets have documented audience mappings in the query.
 
@@ -560,7 +567,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 338 automated tests cover shared contracts, database invariants, discovery/engagement, private messaging access, retry deduplication, realtime hints, device queue recovery, real SQLite queries, and accessible mobile behavior. Explicit live PostGIS and messaging checks additionally exercise persistence and state transitions with rolled-back fixtures.
+- Automated tests cover shared contracts, database invariants, discovery/engagement, private messaging access, retry deduplication, realtime hints, device queue recovery, real SQLite queries, and accessible mobile behavior. Merged inbox tests cover both members' untouched matches, sender-derived turns, overlapping cursor pages, cached/offline states, immediate confirmed-match navigation, and safety exits. Explicit live PostGIS and messaging checks additionally exercise persistence and state transitions with rolled-back fixtures.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -642,7 +649,7 @@ Last architecture verification: **8 October 2026**
 | Basic profile foundation compatibility    | Automated verification passed          |
 | V0 vertical slice                         | In progress                            |
 
-The immediate acceptance checkpoint is discovery → item like → Requests → Merge → Message on physical iPhones, including keyboard/scrolling and reconnect behavior. Next messaging slices are push delivery, typing/read semantics, and release-build performance profiling, with safety operations and account-lifecycle work required before App Store submission. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
+The immediate acceptance checkpoint is discovery → item like → Requests → Merge → Merged chat on physical iPhones, including Your turn / Their turn grouping, untouched matches for both accounts, keyboard/scrolling, and reconnect behavior. Next messaging slices are push delivery, typing/read semantics, and release-build performance profiling, with safety operations and account-lifecycle work required before App Store submission. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
