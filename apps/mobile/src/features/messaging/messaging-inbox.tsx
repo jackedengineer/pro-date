@@ -8,6 +8,7 @@ import { EmptyState, ErrorNotice, QuietButton } from '../discovery/discovery-sha
 import { buildMergedInboxRows, type MergedInboxRow } from './merged-inbox-model';
 import { MergedConversationRow } from './merged-inbox-row';
 import { useMessaging } from './messaging-provider';
+import { NotificationSettingsButton } from '../notifications/notification-settings-sheet';
 
 const identify = (row: MergedInboxRow) => row.key;
 const itemType = (row: MergedInboxRow) => row.type;
@@ -82,6 +83,9 @@ export function MergedInbox({ onOpenConversation }: { onOpenConversation: (id: s
         ListHeaderComponent={
           <View style={styles.intro}>
             <AppText style={styles.muted}>Mutual interest. Open threads.</AppText>
+            <View style={styles.notifications}>
+              <NotificationSettingsButton runtime={runtime} />
+            </View>
             {offline ? (
               <AppText variant="caption" style={styles.muted}>
                 Offline · showing connections saved on this device.
@@ -161,6 +165,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: spacing.lg },
   intro: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
   muted: { color: colors.muted },
+  notifications: { alignSelf: 'flex-start' },
   section: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -87,3 +87,4 @@ export type {
 } from './profile-publication';
 export * from './discovery';
 export * from './messaging';
+export * from './notifications';

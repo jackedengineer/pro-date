@@ -74,3 +74,5 @@ export {
   buildMessageHistoryQuery,
 } from './messaging-repository.js';
 export type { MessagingRepository, ConversationRecord } from './messaging-repository.js';
+export { createNotificationPreferencesRepository } from './notification-preferences-repository.js';
+export type { NotificationPreferencesRepository } from './notification-preferences-repository.js';

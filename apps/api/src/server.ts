@@ -7,6 +7,7 @@ import {
   createDatabaseResources,
   createDiscoveryRepository,
   createMessagingRepository,
+  createNotificationPreferencesRepository,
   createProfilePhotoRepository,
   createProfilePublicationRepository,
   createProfilePromptRepository,
@@ -66,6 +67,10 @@ if (profilePhotoService === undefined) {
 }
 
 const app = createApiApp({
+  notificationPreferences: {
+    enabled: environment.notificationsEnabled,
+    repository: createNotificationPreferencesRepository(database),
+  },
   findCurrentUser: (subject) => currentUserRepository.findByClerkSubject(subject),
   messagingService: createMessagingService(
     messagingRepository,

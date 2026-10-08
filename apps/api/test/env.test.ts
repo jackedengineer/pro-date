@@ -50,6 +50,7 @@ describe('readApiEnvironment', () => {
       }),
     ).toEqual({
       clerkPublishableKey: 'pk_test_example',
+      notificationsEnabled: false,
       clerkSecretKey: 'sk_test_example',
       cloudinary: null,
       databaseUrl: 'postgresql://user:password@example.test/pro_date?sslmode=require',
@@ -75,6 +76,18 @@ describe('readApiEnvironment', () => {
       apiSecret: 'private-cloudinary-secret',
       cloudName: 'pro-date-dev',
     });
+  });
+
+  it('enables preference storage only with an explicit flag, never a truthy string', () => {
+    const input = {
+      CLERK_PUBLISHABLE_KEY: 'pk_test_example',
+      CLERK_SECRET_KEY: 'sk_test_example',
+      DATABASE_URL: 'postgresql://user:password@example.test/pro_date',
+    };
+    expect(
+      readApiServiceEnvironment({ ...input, NOTIFICATIONS_ENABLED: 'true' }).notificationsEnabled,
+    ).toBe(true);
+    expect(() => readApiServiceEnvironment({ ...input, NOTIFICATIONS_ENABLED: '1' })).toThrow();
   });
 
   it('keeps media disabled when the optional Cloudinary secret is missing', () => {

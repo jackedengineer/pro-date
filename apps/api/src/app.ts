@@ -44,6 +44,10 @@ import { createDiscoveryRouter } from './discovery/discovery-routes.js';
 import type { DiscoveryService } from './discovery/discovery-service.js';
 import { createMessagingRouter } from './messaging/messaging-routes.js';
 import type { MessagingService } from './messaging/messaging-service.js';
+import {
+  createNotificationRouter,
+  type NotificationPreferencesOptions,
+} from './notifications/notification-routes.js';
 import { ProfilePhotoProviderError } from './media/profile-photo-provider.js';
 import {
   ProfilePhotoSlotConflictError,
@@ -77,6 +81,7 @@ export interface CurrentUserRecord {
 export type ProfileCheckpointRecord = ProfileResponse['data'];
 
 export interface ApiAppOptions {
+  notificationPreferences?: NotificationPreferencesOptions;
   messagingService?: MessagingService;
   findCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord | null>;
   discoveryService?: DiscoveryService;
@@ -745,6 +750,16 @@ export function createApiApp(options: ApiAppOptions = {}) {
       service: options.discoveryService,
       resolveClerkSubject,
       findOrCreateCurrentUser,
+      requestId: getRequestId,
+    }),
+  );
+
+  app.use(
+    '/v1',
+    createNotificationRouter({
+      preferences: options.notificationPreferences,
+      resolveClerkSubject,
+      findCurrentUser: options.findCurrentUser ?? findOrCreateCurrentUser,
       requestId: getRequestId,
     }),
   );

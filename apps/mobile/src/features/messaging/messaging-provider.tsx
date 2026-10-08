@@ -21,6 +21,7 @@ import { AppState } from 'react-native';
 import { io } from 'socket.io-client';
 import { createDiscoveryApi, type DiscoveryActions } from '../../api/discovery';
 import { bootstrapChatUser, createMessagingApi, type MessagingApi } from '../../api/messaging';
+import { createNotificationsApi, type NotificationsApi } from '../../api/notifications';
 import { apiBaseUrl, isClerkConfigured } from '../../config/public-env';
 import { ChatThread } from './chat-thread';
 import type { ChatStorage } from './chat-storage';
@@ -41,6 +42,7 @@ export class MessagingRuntime {
     readonly safety: DiscoveryActions,
     readonly storage: ChatStorage,
     readonly queries: QueryClient,
+    readonly notifications: NotificationsApi,
   ) {}
   async restoreQueue() {
     const cached = await this.storage.cachedConversations();
@@ -202,6 +204,7 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
           createDiscoveryApi({ apiBaseUrl: apiUrl, getToken }),
           storage,
           queries,
+          createNotificationsApi({ apiBaseUrl: apiUrl, getToken }),
         );
         runtimeRef.current = runtime;
         const socket = io(apiUrl, {

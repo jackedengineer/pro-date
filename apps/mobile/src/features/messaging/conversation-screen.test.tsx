@@ -195,6 +195,7 @@ describe('conversation UI', () => {
       ),
     ).toBeTruthy();
     expect(view.getByRole('button', { name: 'Report or block' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Chat notifications' })).toBeTruthy();
     expect(view.getByRole('button', { name: 'Unmatch' })).toBeTruthy();
     await fireEvent.changeText(view.getByLabelText('Message'), 'A thoughtful hello.');
     await fireEvent.press(view.getByRole('button', { name: 'Send message' }));

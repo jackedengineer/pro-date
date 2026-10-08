@@ -8,6 +8,7 @@ const apiEnvironmentSchema = z.object({
 });
 
 const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
+  NOTIFICATIONS_ENABLED: z.enum(['true', 'false']).default('false'),
   CLERK_PUBLISHABLE_KEY: z.string().trim().startsWith('pk_'),
   CLERK_SECRET_KEY: z.string().trim().startsWith('sk_'),
   CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
@@ -35,6 +36,7 @@ export interface ApiEnvironment {
 }
 
 export interface ApiServiceEnvironment extends ApiEnvironment {
+  notificationsEnabled: boolean;
   clerkPublishableKey: string;
   clerkSecretKey: string;
   cloudinary: CloudinaryEnvironment | null;
@@ -70,6 +72,7 @@ export function readApiServiceEnvironment(
       : null;
 
   return {
+    notificationsEnabled: environment.NOTIFICATIONS_ENABLED === 'true',
     clerkPublishableKey: environment.CLERK_PUBLISHABLE_KEY,
     clerkSecretKey: environment.CLERK_SECRET_KEY,
     cloudinary,
