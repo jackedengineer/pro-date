@@ -27,7 +27,7 @@ import {
   profilePhotoIdSchema,
   updateProfileRequestSchema,
 } from '@pro-date/contracts';
-import { ProfileIncompleteError } from '@pro-date/database';
+import { DiscoveryError, ProfileIncompleteError } from '@pro-date/database';
 import cors from 'cors';
 import express, {
   type ErrorRequestHandler,
@@ -40,6 +40,8 @@ import type { Logger } from 'pino';
 import pinoHttp from 'pino-http';
 
 import { createLogger } from './logger.js';
+import { createDiscoveryRouter } from './discovery/discovery-routes.js';
+import type { DiscoveryService } from './discovery/discovery-service.js';
 import { ProfilePhotoProviderError } from './media/profile-photo-provider.js';
 import {
   ProfilePhotoSlotConflictError,
@@ -73,6 +75,7 @@ export interface CurrentUserRecord {
 export type ProfileCheckpointRecord = ProfileResponse['data'];
 
 export interface ApiAppOptions {
+  discoveryService?: DiscoveryService;
   authenticationMiddleware?: RequestHandler;
   clock?: () => Date;
   findOrCreateCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord>;
@@ -732,6 +735,16 @@ export function createApiApp(options: ApiAppOptions = {}) {
     response.status(200).json(body);
   });
 
+  app.use(
+    '/v1',
+    createDiscoveryRouter({
+      service: options.discoveryService,
+      resolveClerkSubject,
+      findOrCreateCurrentUser,
+      requestId: getRequestId,
+    }),
+  );
+
   app.use((request, response) => {
     const body = {
       error: {
@@ -757,6 +770,17 @@ export function createApiApp(options: ApiAppOptions = {}) {
       } satisfies ApiErrorResponse;
 
       response.status(400).json(body);
+      return;
+    }
+
+    if (error instanceof DiscoveryError) {
+      response.status(error.status).json({
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse);
       return;
     }
 

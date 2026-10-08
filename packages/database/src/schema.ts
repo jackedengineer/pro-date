@@ -9,6 +9,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   smallint,
   timestamp,
   unique,
@@ -143,3 +144,121 @@ export type Profile = typeof profiles.$inferSelect;
 export type ProfilePhoto = typeof profilePhotos.$inferSelect;
 export type ProfilePromptAnswer = typeof profilePromptAnswers.$inferSelect;
 export type User = typeof users.$inferSelect;
+
+export const pullRequestStatus = pgEnum('pull_request_status', ['PENDING', 'MERGED', 'DECLINED']);
+
+export const pullRequests = pgTable(
+  'pull_requests',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    senderUserId: uuid('sender_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    recipientUserId: uuid('recipient_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    targetType: varchar('target_type', { length: 6 }).notNull(),
+    targetId: uuid('target_id').notNull(),
+    // Preserve the item that was liked even when prompt answers are subsequently edited.
+    photoPublicId: varchar('photo_public_id', { length: 255 }),
+    photoVersion: bigint('photo_version', { mode: 'number' }),
+    promptId: varchar('prompt_id', { length: 64 }),
+    promptAnswer: varchar('prompt_answer', { length: 280 }),
+    comment: varchar('comment', { length: 280 }).default('').notNull(),
+    status: pullRequestStatus('status').default('PENDING').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    respondedAt: timestamp('responded_at', { mode: 'date', withTimezone: true }),
+  },
+  (table) => [
+    unique('pull_requests_sender_recipient_unique').on(table.senderUserId, table.recipientUserId),
+    index('pull_requests_inbox_idx').on(
+      table.recipientUserId,
+      table.status,
+      table.createdAt,
+      table.id,
+    ),
+    check('pull_requests_no_self_check', sql`${table.senderUserId} <> ${table.recipientUserId}`),
+    check(
+      'pull_requests_target_check',
+      sql`(${table.targetType} = 'PHOTO' and ${table.photoPublicId} is not null and ${table.photoVersion} is not null and ${table.photoVersion} > 0 and ${table.promptId} is null and ${table.promptAnswer} is null) or (${table.targetType} = 'PROMPT' and ${table.promptId} is not null and ${table.promptAnswer} is not null and ${table.photoPublicId} is null and ${table.photoVersion} is null)`,
+    ),
+  ],
+);
+
+export const matches = pgTable(
+  'matches',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    firstUserId: uuid('first_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    secondUserId: uuid('second_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique('matches_pair_unique').on(table.firstUserId, table.secondUserId),
+    index('matches_second_user_idx').on(table.secondUserId, table.createdAt, table.id),
+    check('matches_ordered_pair_check', sql`${table.firstUserId} < ${table.secondUserId}`),
+  ],
+);
+
+export const profilePasses = pgTable(
+  'profile_passes',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    passedUserId: uuid('passed_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.passedUserId] }),
+    check('profile_passes_no_self_check', sql`${table.userId} <> ${table.passedUserId}`),
+  ],
+);
+
+export const userBlocks = pgTable(
+  'user_blocks',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    blockedUserId: uuid('blocked_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.blockedUserId] }),
+    index('user_blocks_reverse_idx').on(table.blockedUserId, table.userId),
+    check('user_blocks_no_self_check', sql`${table.userId} <> ${table.blockedUserId}`),
+  ],
+);
+
+export const profileReports = pgTable(
+  'profile_reports',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    reporterUserId: uuid('reporter_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    reportedUserId: uuid('reported_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    reason: varchar('reason', { length: 24 }).notNull(),
+    details: varchar('details', { length: 1000 }).default('').notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique('profile_reports_reporter_target_unique').on(table.reporterUserId, table.reportedUserId),
+    check(
+      'profile_reports_reason_check',
+      sql`${table.reason} in ('HARASSMENT', 'INAPPROPRIATE_CONTENT', 'SPAM', 'UNDERAGE', 'OTHER')`,
+    ),
+    check('profile_reports_no_self_check', sql`${table.reporterUserId} <> ${table.reportedUserId}`),
+  ],
+);

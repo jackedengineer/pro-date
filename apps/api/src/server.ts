@@ -2,6 +2,7 @@ import { clerkMiddleware, getAuth } from '@clerk/express';
 import {
   createCurrentUserRepository,
   createDatabaseResources,
+  createDiscoveryRepository,
   createProfilePhotoRepository,
   createProfilePublicationRepository,
   createProfilePromptRepository,
@@ -12,6 +13,7 @@ import { createApiApp } from './app.js';
 import { registerDatabasePoolErrorHandler } from './database-pool.js';
 import { readApiServiceEnvironment } from './env.js';
 import { createLogger } from './logger.js';
+import { createDiscoveryService } from './discovery/discovery-service.js';
 import {
   createCloudinaryProfilePhotoClient,
   createProfilePhotoProvider,
@@ -30,17 +32,18 @@ const profilePublicationRepository = createProfilePublicationRepository(database
 const profilePromptRepository = createProfilePromptRepository(database);
 const profileRepository = createProfileRepository(database);
 const profilePromptService = createProfilePromptService(profilePromptRepository);
+const photoProvider =
+  environment.cloudinary === null
+    ? undefined
+    : createProfilePhotoProvider({
+        apiKey: environment.cloudinary.apiKey,
+        cloudName: environment.cloudinary.cloudName,
+        client: createCloudinaryProfilePhotoClient(environment.cloudinary),
+      });
 const profilePhotoService =
   environment.cloudinary === null
     ? undefined
-    : createProfilePhotoService(
-        createProfilePhotoProvider({
-          apiKey: environment.cloudinary.apiKey,
-          cloudName: environment.cloudinary.cloudName,
-          client: createCloudinaryProfilePhotoClient(environment.cloudinary),
-        }),
-        profilePhotoRepository,
-      );
+    : createProfilePhotoService(photoProvider!, profilePhotoRepository);
 const profilePublicationService =
   profilePhotoService === undefined
     ? undefined
@@ -62,6 +65,14 @@ const app = createApiApp({
   findOrCreateCurrentUser: (clerkSubject) =>
     currentUserRepository.findOrCreateByClerkSubject(clerkSubject),
   logger,
+  ...(photoProvider === undefined
+    ? {}
+    : {
+        discoveryService: createDiscoveryService(
+          createDiscoveryRepository(database),
+          (publicId, version) => photoProvider.getDeliveryUrl(publicId, version),
+        ),
+      }),
   ...(profilePhotoService === undefined ? {} : { profilePhotoService }),
   ...(profilePublicationService === undefined ? {} : { profilePublicationService }),
   profilePromptService,
