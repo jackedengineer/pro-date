@@ -86,3 +86,4 @@ export type {
   ProfileReviewResponse,
 } from './profile-publication';
 export * from './discovery';
+export * from './messaging';

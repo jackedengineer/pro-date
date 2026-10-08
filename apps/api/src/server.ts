@@ -1,8 +1,12 @@
+import { createServer } from 'node:http';
+import { verifyToken } from '@clerk/backend';
 import { clerkMiddleware, getAuth } from '@clerk/express';
+import { z } from 'zod';
 import {
   createCurrentUserRepository,
   createDatabaseResources,
   createDiscoveryRepository,
+  createMessagingRepository,
   createProfilePhotoRepository,
   createProfilePublicationRepository,
   createProfilePromptRepository,
@@ -14,6 +18,8 @@ import { registerDatabasePoolErrorHandler } from './database-pool.js';
 import { readApiServiceEnvironment } from './env.js';
 import { createLogger } from './logger.js';
 import { createDiscoveryService } from './discovery/discovery-service.js';
+import { createMessagingRealtime } from './messaging/messaging-realtime.js';
+import { createMessagingService } from './messaging/messaging-service.js';
 import {
   createCloudinaryProfilePhotoClient,
   createProfilePhotoProvider,
@@ -32,6 +38,8 @@ const profilePublicationRepository = createProfilePublicationRepository(database
 const profilePromptRepository = createProfilePromptRepository(database);
 const profileRepository = createProfileRepository(database);
 const profilePromptService = createProfilePromptService(profilePromptRepository);
+const messagingRepository = createMessagingRepository(database);
+let notifyMessaging = () => {};
 const photoProvider =
   environment.cloudinary === null
     ? undefined
@@ -58,6 +66,15 @@ if (profilePhotoService === undefined) {
 }
 
 const app = createApiApp({
+  findCurrentUser: (subject) => currentUserRepository.findByClerkSubject(subject),
+  messagingService: createMessagingService(
+    messagingRepository,
+    (publicId, version) => {
+      if (photoProvider === undefined) throw new Error('Photo delivery is not configured.');
+      return photoProvider.getDeliveryUrl(publicId, version);
+    },
+    () => notifyMessaging(),
+  ),
   authenticationMiddleware: clerkMiddleware({
     publishableKey: environment.clerkPublishableKey,
     secretKey: environment.clerkSecretKey,
@@ -96,7 +113,27 @@ const app = createApiApp({
     profileRepository.savePreferences(userId, preferences),
 });
 
-const server = app.listen(environment.port, environment.host, () => {
+const server = createServer(app);
+const messagingRealtime = createMessagingRealtime(server, {
+  repository: messagingRepository,
+  logger,
+  authenticate: async (token) => {
+    // A socket handshake carries a token rather than an Express Request.
+    // Source: https://clerk.com/docs/reference/backend/verify-token
+    const verification = await verifyToken(token, { secretKey: environment.clerkSecretKey });
+    const claims = z
+      .object({ sub: z.string().min(1), sid: z.string().min(1), exp: z.number().int().positive() })
+      .parse(verification.data);
+    const user = await currentUserRepository.findByClerkSubject(claims.sub);
+    if (user === null || user.onboardingStatus !== 'COMPLETE')
+      throw new Error('A published member is required.');
+    return { userId: user.id, expiresAt: claims.exp * 1000 };
+  },
+});
+notifyMessaging = () => {
+  void messagingRealtime.flush();
+};
+server.listen(environment.port, environment.host, () => {
   logger.info(
     {
       environment: environment.nodeEnv,
@@ -123,29 +160,21 @@ function shutdown(signal: NodeJS.Signals) {
   }, 10_000);
   forceExitTimer.unref();
 
-  server.close((error) => {
-    clearTimeout(forceExitTimer);
-
-    if (error !== undefined) {
-      logger.error({ errorType: error.name }, 'HTTP server failed to close');
+  void messagingRealtime
+    .close()
+    .then(() => pool.end())
+    .then(() => {
+      clearTimeout(forceExitTimer);
+      logger.info('Graceful shutdown complete');
+      process.exitCode = 0;
+    })
+    .catch((poolError: unknown) => {
+      logger.error(
+        { errorType: poolError instanceof Error ? poolError.name : 'UnknownError' },
+        'Database pool failed to close',
+      );
       process.exitCode = 1;
-      return;
-    }
-
-    void pool
-      .end()
-      .then(() => {
-        logger.info('Graceful shutdown complete');
-        process.exitCode = 0;
-      })
-      .catch((poolError: unknown) => {
-        logger.error(
-          { errorType: poolError instanceof Error ? poolError.name : 'UnknownError' },
-          'Database pool failed to close',
-        );
-        process.exitCode = 1;
-      });
-  });
+    });
 }
 
 server.on('error', (error) => {
