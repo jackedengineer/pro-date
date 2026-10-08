@@ -22,7 +22,7 @@ export function ProfileSafetySheet({
   onClose,
   onSaved,
 }: {
-  profile: DiscoveryProfile;
+  profile: Pick<DiscoveryProfile, 'userId' | 'displayName'>;
   actions: DiscoveryActions;
   onClose: () => void;
   onSaved: (message: string) => void;

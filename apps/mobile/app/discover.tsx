@@ -50,7 +50,14 @@ function ConfiguredDiscoveryRoute({ apiUrl }: { apiUrl: string }) {
   if (isLoaded && !isSignedIn) return <Redirect href="/" />;
   if (status === 'onboarding') return <Redirect href="/onboarding" />;
   if (status === 'ready')
-    return <DiscoveryScreen actions={actions} onOpenProfile={() => router.push('/onboarding')} />;
+    return (
+      <DiscoveryScreen
+        actions={actions}
+        onOpenProfile={() => router.push('/onboarding')}
+        onOpenMessages={() => router.push('/messages')}
+        onOpenConversation={(id) => router.push({ pathname: '/messages/[id]', params: { id } })}
+      />
+    );
   return (
     <Screen>
       <View style={sharedStyles.content}>

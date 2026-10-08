@@ -8,11 +8,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ClerkAuthProvider } from '../src/auth/clerk-auth-provider';
 import { resolveBootstrapState } from '../src/bootstrap/resolve-bootstrap-state';
 import { colors, spacing } from '../src/theme/tokens';
+import { MessagingProvider } from '../src/features/messaging/messaging-provider';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -45,13 +47,17 @@ export default function RootLayout() {
           </View>
         ) : (
           <ClerkAuthProvider>
-            <Stack
-              screenOptions={{
-                animation: 'fade',
-                contentStyle: styles.root,
-                headerShown: false,
-              }}
-            />
+            <KeyboardProvider>
+              <MessagingProvider>
+                <Stack
+                  screenOptions={{
+                    animation: 'fade',
+                    contentStyle: styles.root,
+                    headerShown: false,
+                  }}
+                />
+              </MessagingProvider>
+            </KeyboardProvider>
           </ClerkAuthProvider>
         )}
       </SafeAreaProvider>

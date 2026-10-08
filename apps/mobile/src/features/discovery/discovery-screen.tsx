@@ -18,9 +18,13 @@ const tabs = [
 export function DiscoveryScreen({
   actions,
   onOpenProfile,
+  onOpenMessages,
+  onOpenConversation,
 }: {
   actions: DiscoveryActions;
   onOpenProfile: () => void;
+  onOpenMessages?: () => void;
+  onOpenConversation?: (id: string) => void;
 }) {
   const [tab, setTab] = useState<(typeof tabs)[number]['id']>('discover');
   const [filters, setFilters] = useState<DiscoveryFilters>({
@@ -35,7 +39,12 @@ export function DiscoveryScreen({
         <AppText variant="title" style={styles.headerTitle}>
           {tab === 'discover' ? 'ProDate' : tab === 'requests' ? 'Pull requests' : 'Merged'}
         </AppText>
-        <QuietButton label="My profile" onPress={onOpenProfile} />
+        <View>
+          <QuietButton label="My profile" onPress={onOpenProfile} />
+          {onOpenMessages === undefined ? null : (
+            <QuietButton label="Messages" onPress={onOpenMessages} />
+          )}
+        </View>
       </View>
       {tab === 'discover' ? (
         <View style={styles.filters}>
@@ -57,6 +66,7 @@ export function DiscoveryScreen({
             key={tab}
             actions={actions}
             kind={tab === 'requests' ? 'requests' : 'matches'}
+            {...(onOpenConversation === undefined ? {} : { onOpenConversation })}
           />
         )}
       </View>

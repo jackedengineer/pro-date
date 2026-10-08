@@ -18,9 +18,11 @@ const identifyConnection = (item: IncomingPullRequest | Match) => item.id;
 export function ConnectionList({
   actions,
   kind,
+  onOpenConversation,
 }: {
   actions: DiscoveryActions;
   kind: 'requests' | 'matches';
+  onOpenConversation?: (id: string) => void;
 }) {
   const load = useCallback(
     (cursor?: string) =>
@@ -61,7 +63,7 @@ export function ConnectionList({
         <AppText style={sharedStyles.muted}>
           {kind === 'requests'
             ? 'A like on something you shared. Merge to make it mutual.'
-            : 'You both chose the connection. Messaging is coming in the next update.'}
+            : 'You both chose the connection. Take the conversation somewhere good.'}
         </AppText>
         {notice === null ? null : (
           <AppText accessibilityLiveRegion="polite" variant="caption">
@@ -117,7 +119,12 @@ export function ConnectionList({
                   <TargetPreview target={item.target} />
                   {item.comment.length === 0 ? null : <AppText>“{item.comment}”</AppText>}
                 </>
-              ) : null}
+              ) : onOpenConversation === undefined ? null : (
+                <AppButton
+                  label={`Message ${profile.displayName}`}
+                  onPress={() => onOpenConversation(item.id)}
+                />
+              )}
               <QuietButton
                 label={`View ${profile.displayName}'s profile`}
                 onPress={() => setSelected(profile)}

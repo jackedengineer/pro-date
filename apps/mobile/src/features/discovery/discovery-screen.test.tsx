@@ -52,7 +52,14 @@ describe('DiscoveryScreen', () => {
       ],
       nextCursor: null,
     });
-    const view = await render(<DiscoveryScreen actions={api} onOpenProfile={jest.fn()} />);
+    const openConversation = jest.fn();
+    const view = await render(
+      <DiscoveryScreen
+        actions={api}
+        onOpenProfile={jest.fn()}
+        onOpenConversation={openConversation}
+      />,
+    );
     await fireEvent.press(view.getByRole('button', { name: 'Requests' }));
     expect(await view.findByText('Tell me about this project.', { exact: false })).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Merge request from Avery' }));
@@ -62,6 +69,8 @@ describe('DiscoveryScreen', () => {
     expect(await view.findByText('Merged. Find your new connection in Merged.')).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Merged' }));
     expect(await view.findByRole('button', { name: "View Avery's profile" })).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: 'Message Avery' }));
+    expect(openConversation).toHaveBeenCalledWith(discoveryFixture.userId);
   });
   it('loads the next cursor page after passing the last profile in a batch', async () => {
     const api = actions();
