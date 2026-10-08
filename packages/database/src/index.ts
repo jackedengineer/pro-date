@@ -68,3 +68,9 @@ export type {
   MatchRecord,
   PagePosition,
 } from './discovery-repository.js';
+export {
+  createMessagingRepository,
+  buildConversationAccessQuery,
+  buildMessageHistoryQuery,
+} from './messaging-repository.js';
+export type { MessagingRepository, ConversationRecord } from './messaging-repository.js';

@@ -1,4 +1,5 @@
 import type { OnboardingStatus, OnboardingStep } from '@pro-date/contracts';
+import { eq } from 'drizzle-orm';
 
 import type { ProDateDatabase } from './client.js';
 import { users } from './schema.js';
@@ -26,6 +27,18 @@ export function buildCurrentUserUpsertQuery(database: ProDateDatabase, clerkSubj
 
 export function createCurrentUserRepository(database: ProDateDatabase) {
   return {
+    async findByClerkSubject(clerkSubject: string): Promise<CurrentUserRecord | null> {
+      const [user] = await database
+        .select({
+          id: users.id,
+          onboardingStatus: users.onboardingStatus,
+          onboardingStep: users.onboardingStep,
+        })
+        .from(users)
+        .where(eq(users.clerkSubject, clerkSubject))
+        .limit(1);
+      return user ?? null;
+    },
     async findOrCreateByClerkSubject(clerkSubject: string): Promise<CurrentUserRecord> {
       const [currentUser] = await buildCurrentUserUpsertQuery(database, clerkSubject);
 

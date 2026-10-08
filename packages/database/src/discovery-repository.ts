@@ -206,7 +206,7 @@ export function createDiscoveryRepository(database: ProDateDatabase | Transactio
         to_char(m.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "matchAt"
         from matches m join profiles p on p.user_id = case when m.first_user_id = ${viewerId}::uuid then m.second_user_id else m.first_user_id end
         join users u on u.id = p.user_id
-        where (m.first_user_id = ${viewerId}::uuid or m.second_user_id = ${viewerId}::uuid) and ${publicAvailability(viewerId)}
+        where (m.first_user_id = ${viewerId}::uuid or m.second_user_id = ${viewerId}::uuid) and m.unmatched_at is null and ${publicAvailability(viewerId)}
         and m.created_at <= ${position.ceiling}::timestamptz
         ${position.at === undefined ? sql`` : sql`and (m.created_at, m.id) < (${position.at}::timestamptz, ${position.id}::uuid)`}
         order by m.created_at desc, m.id desc limit ${query.limit + 1}`)

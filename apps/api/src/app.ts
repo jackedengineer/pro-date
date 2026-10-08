@@ -42,6 +42,8 @@ import pinoHttp from 'pino-http';
 import { createLogger } from './logger.js';
 import { createDiscoveryRouter } from './discovery/discovery-routes.js';
 import type { DiscoveryService } from './discovery/discovery-service.js';
+import { createMessagingRouter } from './messaging/messaging-routes.js';
+import type { MessagingService } from './messaging/messaging-service.js';
 import { ProfilePhotoProviderError } from './media/profile-photo-provider.js';
 import {
   ProfilePhotoSlotConflictError,
@@ -75,6 +77,8 @@ export interface CurrentUserRecord {
 export type ProfileCheckpointRecord = ProfileResponse['data'];
 
 export interface ApiAppOptions {
+  messagingService?: MessagingService;
+  findCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord | null>;
   discoveryService?: DiscoveryService;
   authenticationMiddleware?: RequestHandler;
   clock?: () => Date;
@@ -741,6 +745,16 @@ export function createApiApp(options: ApiAppOptions = {}) {
       service: options.discoveryService,
       resolveClerkSubject,
       findOrCreateCurrentUser,
+      requestId: getRequestId,
+    }),
+  );
+
+  app.use(
+    '/v1',
+    createMessagingRouter({
+      service: options.messagingService,
+      resolveClerkSubject,
+      findCurrentUser: options.findCurrentUser ?? findOrCreateCurrentUser,
       requestId: getRequestId,
     }),
   );

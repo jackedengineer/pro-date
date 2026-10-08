@@ -195,6 +195,8 @@ export const matches = pgTable(
     secondUserId: uuid('second_user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    lastMessageSequence: integer('last_message_sequence').default(0).notNull(),
+    unmatchedAt: timestamp('unmatched_at', { mode: 'date', withTimezone: true }),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
@@ -202,6 +204,45 @@ export const matches = pgTable(
     index('matches_second_user_idx').on(table.secondUserId, table.createdAt, table.id),
     check('matches_ordered_pair_check', sql`${table.firstUserId} < ${table.secondUserId}`),
   ],
+);
+
+export const messages = pgTable(
+  'messages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    senderId: uuid('sender_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id').notNull(),
+    sequence: integer('sequence').notNull(),
+    body: varchar('body', { length: 2000 }).notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .default(sql`clock_timestamp()`)
+      .notNull(),
+  },
+  (table) => [
+    unique('messages_sender_intent_unique').on(table.senderId, table.clientId),
+    unique('messages_conversation_sequence_unique').on(table.conversationId, table.sequence),
+    check('messages_body_check', sql`char_length(btrim(${table.body})) between 1 and 2000`),
+    check('messages_sequence_check', sql`${table.sequence} > 0`),
+    index('messages_sender_created_idx').on(table.senderId, table.createdAt),
+  ],
+);
+
+export const messageOutbox = pgTable(
+  'message_outbox',
+  {
+    messageId: uuid('message_id')
+      .primaryKey()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    leasedUntil: timestamp('leased_until', { mode: 'date', withTimezone: true }),
+    publishedAt: timestamp('published_at', { mode: 'date', withTimezone: true }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('message_outbox_pending_idx').on(table.publishedAt, table.leasedUntil)],
 );
 
 export const profilePasses = pgTable(
