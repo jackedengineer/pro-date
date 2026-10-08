@@ -16,7 +16,7 @@ function ConfiguredWelcomeRoute() {
   }
 
   if (isSignedIn) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href="/discover" />;
   }
 
   return <Welcome />;

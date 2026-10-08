@@ -9,6 +9,7 @@ import { OnboardingStepLayout } from './onboarding-step-layout';
 import { ProfilePreviewCard } from './profile-preview-card';
 
 interface ProfileReviewScreenProps {
+  onDiscover?: (() => void) | undefined;
   loadProfileReview: () => Promise<ProfileReview>;
   onEditBirthday: (profile: ProfileReview['profile']) => void;
   onEditHeight: (profile: ProfileReview['profile']) => void;
@@ -26,6 +27,7 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 export function ProfileReviewScreen({
+  onDiscover,
   loadProfileReview,
   onEditBirthday,
   onEditHeight,
@@ -42,6 +44,7 @@ export function ProfileReviewScreen({
   const [isPublishing, setIsPublishing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [isReviewingPublished, setIsReviewingPublished] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -85,13 +88,20 @@ export function ProfileReviewScreen({
 
     try {
       setReview(await publishProfile());
+      setIsReviewingPublished(false);
+      setIsPublishing(false);
     } catch (error: unknown) {
       setPublishError(errorMessage(error, 'We could not publish your profile.'));
       setIsPublishing(false);
     }
   };
 
-  if (review?.publishedAt !== null && review?.publishedAt !== undefined) {
+  if (
+    review?.publishedAt !== null &&
+    review?.publishedAt !== undefined &&
+    !isReviewingPublished &&
+    review.missingSections.length === 0
+  ) {
     return (
       <OnboardingStepLayout current={9} footer={null}>
         <View style={styles.publishedMark}>
@@ -102,13 +112,13 @@ export function ProfileReviewScreen({
         <AppText variant="eyebrow">Profile shipped</AppText>
         <AppText variant="display">Your profile is live.</AppText>
         <AppText style={styles.supportingText}>
-          Your profile is published to your account. Discovery is the next build.
+          You’re ready to meet your kind of people. A good connection starts with something
+          specific.
         </AppText>
-        <View style={styles.statusPill}>
-          <AppText style={styles.statusText} variant="button">
-            Discovery is the next build.
-          </AppText>
-        </View>
+        {onDiscover === undefined ? null : (
+          <AppButton label="Explore profiles" onPress={onDiscover} />
+        )}
+        <AppButton label="Review my profile" onPress={() => setIsReviewingPublished(true)} />
       </OnboardingStepLayout>
     );
   }
@@ -125,8 +135,8 @@ export function ProfileReviewScreen({
               </View>
             )}
             <AppText style={styles.privacyNote} variant="caption">
-              Publishing makes only the profile details you chose visible to other members once
-              discovery is enabled.
+              Only the profile details you chose to show are visible to other members. Your birthday
+              and exact location stay private.
             </AppText>
             <AppButton
               accessibilityLabel={isPublishing ? 'Publishing profile' : 'Publish profile'}
@@ -228,17 +238,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.md,
     width: 56,
-  },
-  statusPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.plumSoft,
-    borderRadius: radii.pill,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  statusText: {
-    color: colors.plum,
   },
   supportingText: {
     color: colors.muted,

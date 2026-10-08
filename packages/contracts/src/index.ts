@@ -85,3 +85,4 @@ export type {
   ProfileReviewMissingSection,
   ProfileReviewResponse,
 } from './profile-publication';
+export * from './discovery';

@@ -55,3 +55,16 @@ export {
   users,
 } from './schema.js';
 export type { NewUser, Profile, ProfilePhoto, ProfilePromptAnswer, User } from './schema.js';
+export {
+  createDiscoveryRepository,
+  buildDiscoveryQuery,
+  buildPublicProfilesQuery,
+  DiscoveryError,
+} from './discovery-repository.js';
+export type {
+  DiscoveryRepository,
+  PublicProfileRecord,
+  IncomingRequestRecord,
+  MatchRecord,
+  PagePosition,
+} from './discovery-repository.js';

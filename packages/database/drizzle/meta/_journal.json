@@ -71,6 +71,20 @@
       "when": 1791363100296,
       "tag": "0009_blushing_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791438560807,
+      "tag": "0010_smart_owl",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791440523325,
+      "tag": "0011_next_the_twelve",
+      "breakpoints": true
     }
   ]
 }

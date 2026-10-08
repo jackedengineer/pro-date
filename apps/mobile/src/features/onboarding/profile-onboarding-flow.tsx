@@ -26,6 +26,7 @@ import { ProfilePromptsScreen } from './profile-prompts-screen';
 import { ProfileReviewScreen } from './profile-review-screen';
 
 export interface ProfileOnboardingFlowProps {
+  onDiscover?: (() => void) | undefined;
   captureLocation: () => Promise<LocationUpdate>;
   completePhotos: (photoIds: string[]) => Promise<CompletedProfilePhotos>;
   completePrompts: (prompts: ProfilePromptAnswerInput[]) => Promise<CompletedProfilePrompts>;
@@ -83,6 +84,7 @@ function getInitialVisibleStep(user: CurrentUser): VisibleStep {
 }
 
 export function ProfileOnboardingFlow({
+  onDiscover,
   captureLocation,
   completePhotos,
   completePrompts,
@@ -309,6 +311,7 @@ export function ProfileOnboardingFlow({
 
   return (
     <ProfileReviewScreen
+      onDiscover={onDiscover}
       loadProfileReview={loadProfileReview}
       onEditBirthday={(reviewProfile) => editFromReview('birthday', reviewProfile)}
       onEditHeight={(reviewProfile) => editFromReview('height', reviewProfile)}

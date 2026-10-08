@@ -63,6 +63,22 @@ const editCallbacks = {
 };
 
 describe('ProfileReviewScreen', () => {
+  it('can review an already-published profile and return to the published actions after saving', async () => {
+    const published: ProfileReview = { ...review, publishedAt: '2026-10-08T00:00:00.000Z' };
+    const onDiscover = jest.fn();
+    const view = await render(
+      <ProfileReviewScreen
+        {...editCallbacks}
+        onDiscover={onDiscover}
+        loadProfileReview={jest.fn().mockResolvedValue(published)}
+        publishProfile={jest.fn().mockResolvedValue(published)}
+      />,
+    );
+    await fireEvent.press(await view.findByRole('button', { name: 'Review my profile' }));
+    await fireEvent.press(await view.findByRole('button', { name: 'Publish profile' }));
+    await fireEvent.press(await view.findByRole('button', { name: 'Explore profiles' }));
+    expect(onDiscover).toHaveBeenCalledTimes(1);
+  });
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -151,7 +167,7 @@ describe('ProfileReviewScreen', () => {
 
     expect(publishProfile).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(view.getByText('Your profile is live.')).toBeTruthy());
-    expect(view.getByText('Discovery is the next build.')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Review my profile' })).toBeTruthy();
   });
 
   it('keeps load failures recoverable', async () => {
