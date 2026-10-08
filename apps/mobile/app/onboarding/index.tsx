@@ -6,7 +6,7 @@ import type {
   PreferencesUpdate,
   ProfilePromptAnswerInput,
 } from '@pro-date/contracts';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useCallback } from 'react';
 
 import { bootstrapCurrentUser } from '../../src/api/current-user';
@@ -198,6 +198,7 @@ function ConfiguredOnboardingRoute() {
       loadPhotos={loadPhotos}
       loadProfileReview={loadReview}
       loadPrompts={loadPrompts}
+      onDiscover={() => router.replace('/discover')}
       pickPhoto={pickProfilePhoto}
       publishProfile={publish}
       removePhoto={removePhoto}

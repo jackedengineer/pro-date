@@ -4,7 +4,7 @@
 
 `ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
-> **Project status:** passwordless authentication and the complete profile-onboarding journey are implemented end to end. A user can verify by Clerk email/phone OTP; persist name, birthday, identity, pronouns, dating preferences, location, and height; add, order, and remove four to six photos through signed direct Cloudinary uploads; answer three of twenty curated prompts; preview the real discovery card with visibility controls; return directly to any section for edits; and publish only after the server atomically revalidates completeness. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS migrations are covered by 285 automated tests. Email OTP is the current development path while India SMS enablement is pending with Clerk support. Discovery, engagement, messaging, App Review-gated safety workflows, account lifecycle controls, and subscriptions remain in development.
+> **Project status:** authentication, profile onboarding, nearby discovery, and item-specific engagement are implemented end to end. Members can publish a profile with four to six photos and three curated prompt answers, browse full profiles, like a particular photo or prompt with an optional opening comment, and merge or decline incoming pull requests. A merge creates a durable connection; pass, block, and report actions are persisted by the API. The Expo app, Express API, shared Zod contracts, Drizzle repositories, and Neon/PostGIS queries are covered by 309 automated tests plus a rollback-only live database integration check. Email OTP is the current development path while India SMS enablement is pending with Clerk support. The new discovery flow awaits physical-iPhone acceptance. Messaging, push delivery, complete App Review safety operations, account lifecycle controls, and subscriptions remain in development.
 
 ## Product preview
 
@@ -388,11 +388,48 @@ The implemented onboarding journey is intentionally resumable. Each primary acti
 5. Height uses the Expo UI universal picker, persists centimeters, and keeps public visibility optional.
 6. Photos use six ordered slots, require four completed assets, normalize device images before upload, and advance atomically to `PROMPTS` only after the server verifies ownership and ordering.
 7. Prompts offer twenty curated founder-, developer-, design-, and Gen-Z-aware conversation starters without turning safety or validation copy into jargon. A profile requires three distinct answers; each must contain at least five words or 30 characters, with a 280-character maximum.
-8. Completing the three answers stores normalized relational rows and advances to `REVIEW`; the full discovery-card review is the next profile slice.
+8. Completing three answers stores normalized relational rows and advances to `REVIEW`. The real profile preview respects visibility settings and supports direct section edits. Publication atomically rechecks profile completeness and advances to `COMPLETE`; published members can open discovery or review their profile again.
 
-The location request sends exact latitude/longitude over the authenticated API because the future discovery query requires distance calculations. No profile response contains those coordinates, and the mobile UI explains the distinction between the private stored point and the public city/region label before requesting permission.
+The location request sends exact latitude/longitude over the authenticated API for distance calculations. No profile response contains those coordinates, and the mobile UI explains the distinction between the private stored point and the public city/region label before requesting permission.
 
 Implementation references: [Expo Location for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/location/), [Expo UI universal Picker for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/ui/universal/picker/), and [Drizzle PostGIS geography points](https://orm.drizzle.team/docs/guides/postgis-geometry-point).
+
+## Discovery and item-specific connections
+
+Discovery presents one vertically scrollable profile at a time. Every photo and prompt answer has its own like action. Selecting an item opens a keyboard-aware composer with an optional comment of up to 280 characters. A **pull request** means a like on that specific item; **Merge** means accepting it to make the connection mutual. A separate **Pass** action advances to the next profile. The Requests inbox shows the sender, the exact liked item, and their opening comment, with profile review, merge, decline, block, and report actions. Accepted connections appear in Merged; messaging is not yet available.
+
+Candidate selection uses the existing PostGIS geography/GiST index with `ST_DWithin` in meters. It requires a published, complete, adult profile with at least four photos and exactly three prompts; applies age, radius, and reciprocal dating preferences; and excludes self, passed profiles, existing requests/connections, and blocks in either direction. The first version orders by publication time and UUID. It does not claim learned compatibility ranking or expose precise distance. Arbitrary self-described/questioning identities are not inferred into a gender category: they are eligible when the other member selects all three audiences. Explicit Woman, Man, Non-binary, Genderfluid, and Agender presets have documented audience mappings in the query.
+
+Discovery starts at 50 km and ages 18–99. The Preferences sheet supports a 25/50/100/200 km radius and an age range. These discovery filters are local to the current screen session; onboarding audience preferences remain persisted. Public responses contain age rather than birthday, city/region rather than coordinates, and only gender, pronouns, and height that the member chose to display.
+
+Cursor pagination only controls loading. Each bounded page uses a publication/UUID keyset and a snapshot ceiling, preserves PostgreSQL microsecond precision, and returns an opaque `nextCursor`. Cursors are bound to the authenticated viewer, list purpose, and relevant filters. Newly published profiles appear on refresh. Eligibility is rechecked on subsequent queries and writes; the cursor never grants access to a profile. Media is fetched in two bounded batch queries per page, avoiding one query per member.
+
+| Method | Endpoint                         | Behavior                                                                 |
+| ------ | -------------------------------- | ------------------------------------------------------------------------ |
+| GET    | `/v1/discovery`                  | Nearby profiles; `cursor`, `limit`, `radiusKm`, `minAge`, `maxAge`       |
+| POST   | `/v1/pull-requests`              | Like an owned photo/prompt; sender is derived from the Clerk session     |
+| GET    | `/v1/pull-requests`              | Paginated incoming pending requests                                      |
+| PUT    | `/v1/pull-requests/:id/response` | Recipient-only `MERGED` or `DECLINED` decision                           |
+| GET    | `/v1/matches`                    | Paginated accepted connections                                           |
+| PUT    | `/v1/passes`                     | Persist a dismissal                                                      |
+| PUT    | `/v1/blocks`                     | Immediately remove visibility and prevent interaction in both directions |
+| PUT    | `/v1/reports`                    | Atomically persist a report and block the reported member                |
+
+All endpoints require authentication and completed onboarding. A pull request stores an immutable prompt-answer snapshot or versioned photo reference. If the photo is later removed from Cloudinary, the inbox presents an unavailable-photo state. The database allows one request per sender/recipient pair and one canonically ordered match per pair. Ordered user-row locks serialize interaction writes with blocking; request creation rechecks publication, preferences, item ownership, prior interaction, and a 30-request rolling 24-hour limit. Send/merge/decline retries replay the same result; changing an already-sent request or completed decision returns a conflict. Reports use one record per reporter/member pair and reject changed retry payloads.
+
+Reports are recorded and immediately block the member; automated content filtering, report resolution and response operations, published support contact information, and account deletion remain release gates. These development screens are not evidence of App Store readiness. [Apple’s UGC requirements](https://developer.apple.com/app-store/review/guidelines/#user-generated-content) require those additional operations before submission.
+
+For a live development database check, run:
+
+```bash
+pnpm --filter @pro-date/database db:test:discovery
+```
+
+This command uses the API workspace’s existing TypeScript runtime and ignored environment file. It verifies PostGIS filters, cursor ordering, public visibility, item ownership, recipient authorization, immutable prompt snapshots, retry behavior, merge/decline persistence, passes, bidirectional blocking, and report persistence. Fictional fixtures and all writes are rolled back, even on failure. It does not create Clerk accounts or upload media.
+
+Physical-device acceptance requires two published test accounts with reciprocal preferences within the chosen radius. Verify an item like from account A appears with the correct target/comment in account B’s Requests, merge it, and confirm both accounts see the connection. Also verify decline, pass, report/block, empty states, preferences, and the comment keyboard. A single published account correctly sees an empty discovery state; the app does not inject mock people.
+
+Implementation references: [PostGIS `ST_DWithin`](https://postgis.net/docs/ST_DWithin.html), [PostgreSQL deterministic ordering and row locks](https://www.postgresql.org/docs/current/sql-select.html), and [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
 
 ## Physical iPhone: Expo Go first run
 
@@ -453,7 +490,7 @@ EAS Update is reserved for JavaScript and asset changes compatible with the inst
 | Domain tests         | Pure rules and state transitions are deterministic                                                               |
 | Mobile tests         | Components are behavior- and accessibility-tested                                                                |
 | API integration      | Routes are exercised through Supertest                                                                           |
-| Database integration | Queries and constraints run against real PostGIS through Testcontainers                                          |
+| Database integration | Explicit real-PostGIS check with rolled-back fixtures; containerized CI remains planned                          |
 | Native flows         | Critical paths run through Maestro on a development/preview build                                                |
 | Dependency health    | Expo Doctor and package compatibility checks pass                                                                |
 | Migration safety     | Forward migrations pass on a fresh and representative database                                                   |
@@ -464,7 +501,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- 285 automated tests pass across shared contracts, database invariants, atomic profile publication, API integration behavior, authentication rules, signed media boundaries, prompt validation, resend timing, location handling, and accessible mobile component behavior.
+- 309 automated tests cover shared contracts, database invariants, publication, cursor validation, discovery routes and public projections, item-specific sends, request acceptance, pagination, blocking, authentication, uploads, prompts, and accessible mobile behavior. The explicit live PostGIS check additionally exercises persistence and state transitions with rolled-back fixtures.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
 - Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
@@ -495,47 +532,53 @@ Git push
 
 ## Current status
 
-Last architecture verification: **7 October 2026**
+Last architecture verification: **8 October 2026**
 
-| Milestone                                 | Status                        |
-| ----------------------------------------- | ----------------------------- |
-| Product boundary and V0 journey           | Approved                      |
-| Capability map                            | Approved                      |
-| Core architecture and provider choices    | Approved baseline             |
-| Expo SDK/App Store compatibility          | Verified for SDK 57           |
-| Exact dependency manifest                 | Verified and locked           |
-| Installed dependency lock                 | Implemented                   |
-| Shared API contracts                      | Implemented and tested        |
-| Express health/startup foundation         | Implemented and tested        |
-| Mobile shell specification                | Approved                      |
-| Repository scaffold                       | Implemented                   |
-| Expo welcome and OTP entry shell          | Implemented and tested        |
-| Expo Doctor / iOS Hermes export           | Verified                      |
-| First physical-device run                 | Verified                      |
-| Clerk phone OTP client flow               | Implemented and tested        |
-| Clerk email OTP client flow               | Implemented and tested        |
-| Live Clerk SMS verification               | Awaiting provider setup       |
-| Live Clerk email verification             | Verified on physical iPhone   |
-| Neon/PostGIS and Drizzle foundation       | Implemented and tested        |
-| Authenticated internal-user bootstrap     | Implemented and live verified |
-| Profile intro and name checkpoint         | Verified on physical iPhone   |
-| Birthday and server-side 18+ checkpoint   | Verified on physical iPhone   |
-| Inclusive identity and pronouns           | Implemented and tested        |
-| Dating preferences and intent             | Implemented and tested        |
-| Foreground location and PostGIS point     | Implemented and tested        |
-| Native height and visibility control      | Implemented and tested        |
-| Signed photo contracts and persistence    | Implemented and tested        |
-| Expo photo picker and ordered grid        | Implemented and tested        |
-| Live Cloudinary upload                    | Verified on physical iPhone   |
-| Curated three-prompt editor               | Implemented and tested        |
-| Prompt persistence and review checkpoint  | Implemented and tested        |
-| Real profile-card review and direct edits | Implemented and tested        |
-| Atomic profile publication                | Implemented and tested        |
-| Apple App Review release gates            | Documented and enforced       |
-| Basic profile foundation compatibility    | Automated verification passed |
-| V0 vertical slice                         | In progress                   |
+| Milestone                                 | Status                         |
+| ----------------------------------------- | ------------------------------ |
+| Product boundary and V0 journey           | Approved                       |
+| Capability map                            | Approved                       |
+| Core architecture and provider choices    | Approved baseline              |
+| Expo SDK/App Store compatibility          | Verified for SDK 57            |
+| Exact dependency manifest                 | Verified and locked            |
+| Installed dependency lock                 | Implemented                    |
+| Shared API contracts                      | Implemented and tested         |
+| Express health/startup foundation         | Implemented and tested         |
+| Mobile shell specification                | Approved                       |
+| Repository scaffold                       | Implemented                    |
+| Expo welcome and OTP entry shell          | Implemented and tested         |
+| Expo Doctor / iOS Hermes export           | Verified                       |
+| First physical-device run                 | Verified                       |
+| Clerk phone OTP client flow               | Implemented and tested         |
+| Clerk email OTP client flow               | Implemented and tested         |
+| Live Clerk SMS verification               | Awaiting provider setup        |
+| Live Clerk email verification             | Verified on physical iPhone    |
+| Neon/PostGIS and Drizzle foundation       | Implemented and tested         |
+| Authenticated internal-user bootstrap     | Implemented and live verified  |
+| Profile intro and name checkpoint         | Verified on physical iPhone    |
+| Birthday and server-side 18+ checkpoint   | Verified on physical iPhone    |
+| Inclusive identity and pronouns           | Implemented and tested         |
+| Dating preferences and intent             | Implemented and tested         |
+| Foreground location and PostGIS point     | Implemented and tested         |
+| Native height and visibility control      | Implemented and tested         |
+| Signed photo contracts and persistence    | Implemented and tested         |
+| Expo photo picker and ordered grid        | Implemented and tested         |
+| Live Cloudinary upload                    | Verified on physical iPhone    |
+| Curated three-prompt editor               | Implemented and tested         |
+| Prompt persistence and review checkpoint  | Implemented and tested         |
+| Real profile-card review and direct edits | Implemented and tested         |
+| Atomic profile publication                | Implemented and tested         |
+| PostGIS discovery and cursor pages        | Implemented; database verified |
+| Photo/prompt likes and incoming requests  | Implemented and tested         |
+| Merge/decline and durable connections     | Implemented; database verified |
+| Pass and bidirectional blocking           | Implemented; database verified |
+| Report persistence and immediate block    | Implemented; database verified |
+| Discovery physical-iPhone acceptance      | Pending                        |
+| Apple App Review release gates            | Documented and enforced        |
+| Basic profile foundation compatibility    | Automated verification passed  |
+| V0 vertical slice                         | In progress                    |
 
-The immediate acceptance checkpoint is a physical-iPhone pass of the new review, edit-return, and publication states. The next product slice is discovery-card retrieval and ranking, developed alongside the block/report/filter/contact foundations required before any public user-generated-content surface can be submitted to App Review. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
+The immediate acceptance checkpoint is the discovery → item like → Requests → Merge flow on physical iPhones. The next product slice is durable messaging for accepted connections, with safety and account-lifecycle work continuing before App Store submission. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
