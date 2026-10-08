@@ -25,6 +25,7 @@ import { apiBaseUrl, isClerkConfigured } from '../../config/public-env';
 import { ChatThread } from './chat-thread';
 import type { ChatStorage } from './chat-storage';
 import { cachedChatOwner, forgetChatAccounts, openChatStorage } from './sqlite-chat-storage';
+import { RealtimeReconnect } from './realtime-reconnect';
 
 export class MessagingRuntime {
   private threads = new Map<string, ChatThread>();
@@ -216,19 +217,23 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
         });
         let foreground = AppState.currentState === 'active';
         let online = true;
-        let reconnect: ReturnType<typeof setTimeout> | undefined;
+        const recovery = new RealtimeReconnect({
+          connect: () => {
+            socket.connect();
+          },
+          disconnect: () => {
+            socket.disconnect();
+          },
+        });
         const update = () => {
           const enabled = foreground && online;
           runtime.setEnabled(enabled);
           focusManager.setFocused(foreground);
           onlineManager.setOnline(online);
-          if (enabled) socket.connect();
-          else {
-            clearTimeout(reconnect);
-            socket.disconnect();
-          }
+          recovery.setAvailable(enabled);
         };
         socket.on('connect', () => {
+          recovery.connected();
           if (foreground && online) {
             runtime.setEnabled(true);
             void queries.invalidateQueries({ queryKey: ['conversations', ownerId] });
@@ -238,14 +243,10 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
           const parsed = conversationChangedSchema.safeParse(value);
           if (parsed.success) runtime.hint(parsed.data.conversationId);
         });
-        const retryConnection = () => {
-          clearTimeout(reconnect);
-          if (foreground && online) reconnect = setTimeout(() => socket.connect(), 2500);
-        };
         socket.on('disconnect', (reason) => {
-          if (reason === 'io server disconnect') retryConnection();
+          if (reason === 'io server disconnect') recovery.expired();
         });
-        socket.on('connect_error', retryConnection);
+        socket.on('connect_error', (error) => recovery.rejected(error, socket.active));
         const appListener = AppState.addEventListener('change', (value) => {
           foreground = value === 'active';
           update();
@@ -261,7 +262,7 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
           })
           .catch(() => {});
         cleanupConnection = () => {
-          clearTimeout(reconnect);
+          recovery.dispose();
           socket.removeAllListeners();
           socket.disconnect();
           appListener.remove();
