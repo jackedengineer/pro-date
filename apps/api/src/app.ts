@@ -789,8 +789,23 @@ export function createApiApp(options: ApiAppOptions = {}) {
     response.status(404).json(body);
   });
 
-  const errorHandler: ErrorRequestHandler = (error, request, response, next) => {
+  const errorHandler: ErrorRequestHandler = (error: unknown, request, response, next) => {
     void next;
+
+    // body-parser's known size-limit error is a client rejection, not a server fault.
+    // https://expressjs.com/en/resources/middleware/body-parser.html#request-entity-too-large
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'type' in error &&
+      error.type === 'entity.too.large'
+    ) {
+      response.status(413).json({
+        error: { code: 'PAYLOAD_TOO_LARGE', message: 'The request body is too large.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse);
+      return;
+    }
 
     if (isMalformedJsonError(error)) {
       const body = {

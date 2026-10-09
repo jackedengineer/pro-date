@@ -74,33 +74,35 @@ export function createProfilePhotoService(
   return {
     async add(userId, upload) {
       const confirmed = await provider.confirmUpload(userId, upload);
-
-      try {
-        const existingPhotos = await repository.list(userId);
-
-        if (existingPhotos.some((photo) => photo.position === confirmed.position)) {
-          throw new ProfilePhotoSlotConflictError();
-        }
-
-        await repository.save(userId, {
-          bytes: confirmed.bytes,
-          format: confirmed.format,
-          height: confirmed.height,
-          position: confirmed.position,
-          providerAssetId: confirmed.providerAssetId,
-          providerPublicId: confirmed.providerPublicId,
-          providerVersion: confirmed.providerVersion,
-          width: confirmed.width,
-        });
-      } catch (error: unknown) {
-        try {
-          await provider.deleteUpload(userId, confirmed.providerPublicId);
-        } catch {
-          // Preserve the persistence failure; orphan reconciliation can retry provider cleanup.
-        }
-
-        throw error;
+      const existingPhotos = await repository.list(userId);
+      if (
+        existingPhotos.some(
+          (photo) =>
+            photo.providerAssetId === confirmed.providerAssetId &&
+            photo.providerPublicId === confirmed.providerPublicId &&
+            photo.providerVersion === confirmed.providerVersion,
+        )
+      ) {
+        // A lost confirmation response must not duplicate or delete a persisted/reordered photo.
+        return existingPhotos.map((photo) => toProfilePhoto(photo, provider));
       }
+      if (existingPhotos.some((photo) => photo.position === confirmed.position)) {
+        throw new ProfilePhotoSlotConflictError();
+      }
+
+      // Never compensate a failed/unknown database write by deleting the provider asset:
+      // it may already be committed or concurrently referenced. Reconcile unreferenced
+      // uploads separately after a grace period, rather than risk destroying a saved photo.
+      await repository.save(userId, {
+        bytes: confirmed.bytes,
+        format: confirmed.format,
+        height: confirmed.height,
+        position: confirmed.position,
+        providerAssetId: confirmed.providerAssetId,
+        providerPublicId: confirmed.providerPublicId,
+        providerVersion: confirmed.providerVersion,
+        width: confirmed.width,
+      });
 
       return list(userId);
     },
