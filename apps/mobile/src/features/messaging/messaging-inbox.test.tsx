@@ -87,6 +87,7 @@ describe('Merged inbox UI', () => {
     const view = await render(subject);
     expect(await view.findByText('Your turn')).toBeTruthy();
     expect(view.getByText('Their turn')).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Notifications' })).toBeTruthy();
     expect(view.getByText('Start the conversation')).toBeTruthy();
     expect(view.getByText('You: What are you making this weekend?')).toBeTruthy();
     expect(view.queryByText('Messages')).toBeNull();

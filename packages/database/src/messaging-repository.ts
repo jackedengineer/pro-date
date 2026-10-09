@@ -43,7 +43,7 @@ export function buildMessageHistoryQuery(
 
 // Share/update locks use the same member ordering as block/report and match creation.
 // Access is rechecked after acquiring locks, making a committed block authoritative.
-async function requireAccess(
+export async function requireConversationAccess(
   tx: Transaction,
   viewerId: string,
   id: string,
@@ -134,7 +134,7 @@ export function createMessagingRepository(database: ProDateDatabase | Transactio
     },
     async conversation(this: void, viewerId: string, id: string) {
       return database.transaction(async (tx) => {
-        await requireAccess(tx, viewerId, id, false);
+        await requireConversationAccess(tx, viewerId, id, false);
         const [row] = (await tx.execute(conversationQuery(viewerId, id))).rows;
         if (row === undefined) throw unavailable();
         return assemble(row);
@@ -148,7 +148,7 @@ export function createMessagingRepository(database: ProDateDatabase | Transactio
       beforeSequence?: number,
     ) {
       return database.transaction(async (tx) => {
-        const match = await requireAccess(tx, viewerId, id, false);
+        const match = await requireConversationAccess(tx, viewerId, id, false);
         const rows = (
           await tx.execute<Message & Record<string, unknown>>(
             buildMessageHistoryQuery(id, query, beforeSequence),
@@ -159,7 +159,7 @@ export function createMessagingRepository(database: ProDateDatabase | Transactio
     },
     async send(this: void, viewerId: string, id: string, input: SendMessage): Promise<Message> {
       return database.transaction(async (tx) => {
-        const match = await requireAccess(tx, viewerId, id, true);
+        const match = await requireConversationAccess(tx, viewerId, id, true);
         const [existing] = await tx
           .select()
           .from(messages)
@@ -194,7 +194,7 @@ export function createMessagingRepository(database: ProDateDatabase | Transactio
     },
     async unmatch(this: void, viewerId: string, id: string) {
       await database.transaction(async (tx) => {
-        await requireAccess(tx, viewerId, id, true);
+        await requireConversationAccess(tx, viewerId, id, true);
         await tx.update(matches).set({ unmatchedAt: new Date() }).where(eq(matches.id, id));
       });
     },

@@ -32,6 +32,7 @@ import type { ChatRow, ThreadSnapshot } from './chat-thread';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
 import { useMessaging } from './messaging-provider';
+import { NotificationSettingsButton } from '../notifications/notification-settings-sheet';
 
 const ScrollContext = createContext<{
   padding: SharedValue<number>;
@@ -142,6 +143,9 @@ export function ConversationScreen({ id }: { id: string }) {
                   : 'Offline · sends stay queued'}
             </AppText>
           </View>
+          {!state.unavailable && state.conversation !== null ? (
+            <NotificationSettingsButton runtime={runtime!} conversationId={id} />
+          ) : null}
         </View>
         {state.conversation === null ? null : (
           <View style={styles.tools}>

@@ -55,6 +55,12 @@ export const conversationChangedSchema = z.strictObject({
   sequence: z.number().int().positive(),
 });
 
+export const realtimeAdmissionErrorSchema = z.strictObject({
+  code: z.enum(['AUTH_REQUIRED', 'AUTH_TIMEOUT', 'RATE_LIMITED', 'SERVER_BUSY']),
+  retryAfterMs: z.number().int().min(0).max(300_000).optional(),
+});
+export type RealtimeAdmissionError = z.infer<typeof realtimeAdmissionErrorSchema>;
+
 export type SendMessage = z.infer<typeof sendMessageSchema>;
 export type Message = z.infer<typeof messageSchema>;
 export type MessageHistoryQuery = z.infer<typeof messageHistoryQuerySchema>;

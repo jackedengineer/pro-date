@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { messageHistoryQuerySchema, sendMessageSchema } from '../src/messaging.js';
+import {
+  messageHistoryQuerySchema,
+  realtimeAdmissionErrorSchema,
+  sendMessageSchema,
+} from '../src/messaging.js';
 
 const clientId = '10000000-0000-4000-8000-000000000001';
 describe('messaging boundaries', () => {
+  it('accepts only minimized, bounded admission errors', () => {
+    expect(realtimeAdmissionErrorSchema.parse({ code: 'AUTH_REQUIRED' })).toEqual({
+      code: 'AUTH_REQUIRED',
+    });
+    expect(
+      realtimeAdmissionErrorSchema.safeParse({ code: 'SERVER_BUSY', retryAfterMs: 60_000 }).success,
+    ).toBe(true);
+    for (const value of [
+      { code: 'INTERNAL', token: 'secret' },
+      { code: 'AUTH_TIMEOUT', retryAfterMs: Infinity },
+      { code: 'RATE_LIMITED', retryAfterMs: -1 },
+    ])
+      expect(realtimeAdmissionErrorSchema.safeParse(value).success).toBe(false);
+  });
   it('trims text without accepting empty, oversized, or forged sender input', () => {
     expect(sendMessageSchema.parse({ clientId, body: '  Hello, fellow builder.  ' })).toEqual({
       clientId,
