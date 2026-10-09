@@ -20,6 +20,10 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-notifications",
+        { "defaultChannel": "messages", "enableBackgroundRemoteNotifications": false }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "ProDate uses your location to show relevant people nearby. Your exact location is never shown on your profile."

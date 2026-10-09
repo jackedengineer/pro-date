@@ -127,6 +127,16 @@ export function createInstallationRegistration(ports: Ports) {
     isRegistered: state.isRegistered,
   });
   return {
+    hasConsent(ownerId: string): Promise<boolean> {
+      return serialized(async () => {
+        assertOwner(ownerId);
+        const state = await load();
+        assertOwner(ownerId);
+        if (state?.pending !== null && state?.pending !== undefined)
+          return state.pending.ownerId === ownerId && state.pending.action === 'REGISTER';
+        return state?.ownerId === ownerId && state.isRegistered;
+      });
+    },
     register(ownerId: string, desired: Registration): Promise<NotificationDeviceReceipt> {
       return serialized(async () => {
         z.uuid().parse(ownerId);

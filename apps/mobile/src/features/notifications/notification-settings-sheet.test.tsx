@@ -3,6 +3,17 @@ import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react
 import type { NotificationsApi } from '../../api/notifications';
 import { NotificationSettingsSheet } from './notification-settings-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useNotificationDevice } from './notification-provider';
+import { Linking } from 'react-native';
+
+jest.mock('./notification-provider', () => ({ useNotificationDevice: jest.fn() }));
+const enableDevice = jest.fn();
+beforeEach(() => {
+  enableDevice.mockReset().mockResolvedValue('SETUP_PENDING');
+  jest
+    .mocked(useNotificationDevice)
+    .mockReturnValue({ status: 'SETUP_PENDING', enable: enableDevice, beforeSignOut: jest.fn() });
+});
 
 const owner = '10000000-0000-4000-8000-000000000001';
 const id = '10000000-0000-4000-8000-000000000002';
@@ -51,6 +62,58 @@ afterEach(async () => {
   for (const client of clients.splice(0)) client.clear();
 });
 describe('notification preference controls', () => {
+  it('does not save a late opt-in after the sheet closes during device setup', async () => {
+    const { subject, api } = setup();
+    let resolve: () => void = () => {};
+    enableDevice.mockImplementation(
+      () =>
+        new Promise<void>((done) => {
+          resolve = done;
+        }),
+    );
+    const view = await render(subject);
+    const toggle = await view.findByRole('switch', { name: 'Notify me for this chat' });
+    await waitFor(() => expect(toggle).not.toBeDisabled());
+    await fireEvent.press(toggle);
+    await waitFor(() => expect(enableDevice).toHaveBeenCalled());
+    await view.unmount();
+    await act(() => resolve());
+    expect(api.saveConversation).not.toHaveBeenCalled();
+  });
+  it('requests device setup only on chat opt-in, not pause or mute', async () => {
+    const { subject, api } = setup();
+    const view = await render(subject);
+    const toggle = await view.findByRole('switch', { name: 'Notify me for this chat' });
+    await waitFor(() => expect(toggle).not.toBeDisabled());
+    await fireEvent.press(toggle);
+    await waitFor(() => expect(api.saveConversation).toHaveBeenCalled());
+    expect(enableDevice).toHaveBeenCalledTimes(1);
+    await fireEvent.press(view.getByRole('switch', { name: 'Pause all chat notifications' }));
+    await waitFor(() => expect(api.saveSettings).toHaveBeenCalled());
+    expect(enableDevice).toHaveBeenCalledTimes(1);
+  });
+  it('offers system settings after denial and never claims this device is ready', async () => {
+    const { subject } = setup();
+    jest
+      .mocked(useNotificationDevice)
+      .mockReturnValue({ status: 'DENIED', enable: enableDevice, beforeSignOut: jest.fn() });
+    const open = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
+    try {
+      const view = await render(subject);
+      expect(
+        await view.findByText(
+          'Notifications are off in your device settings. Chat preferences apply to your other devices.',
+        ),
+      ).toBeTruthy();
+      await fireEvent.press(
+        view.getByRole('button', { name: 'Open device notification settings' }),
+      );
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(enableDevice).not.toHaveBeenCalled();
+    } finally {
+      open.mockRestore();
+    }
+  });
   it('cancels an in-flight setting request on close and ignores late success', async () => {
     const { subject, api, queries } = setup();
     let resolve: (value: typeof preference) => void = () => {};

@@ -7,6 +7,8 @@ import { colors, radii, spacing } from '../../theme/tokens';
 import { ErrorNotice, QuietButton } from '../discovery/discovery-shared';
 import { DiscoverySheet } from '../discovery/discovery-sheet';
 import type { MessagingRuntime } from '../messaging/messaging-provider';
+import { useNotificationDevice } from './notification-provider';
+import { NotificationDeviceStatus } from './notification-device-status';
 
 export function NotificationSettingsButton({
   runtime,
@@ -50,6 +52,7 @@ export function NotificationSettingsSheet({
   onClose: () => void;
 }) {
   const queries = useQueryClient();
+  const device = useNotificationDevice();
   const settingsKey = ['notification-settings', ownerId];
   const preferenceKey = ['conversation-notification', ownerId, conversationId];
   const settings = useQuery({
@@ -88,6 +91,11 @@ export function NotificationSettingsSheet({
       const controller = new AbortController();
       operations.current.add(controller);
       try {
+        if (kind === 'CHAT' && value) {
+          await device.enable();
+          if (!alive.current || controller.signal.aborted)
+            throw new Error('Notification settings closed.');
+        }
         return kind === 'PAUSE'
           ? ({ kind, data: await api.saveSettings(value, controller.signal) } as const)
           : ({
@@ -217,6 +225,9 @@ export function NotificationSettingsSheet({
         When push is connected, alerts will say “New message on ProDate.” No names or message
         previews.
       </AppText>
+      <NotificationDeviceStatus
+        canEnable={preference.data?.isEnabled === true && settings.data?.isDeliveryReady === true}
+      />
       <ErrorNotice message={error} />
       {notice === null ? null : <AppText accessibilityLiveRegion="polite">{notice}</AppText>}
       {error === null ? null : (

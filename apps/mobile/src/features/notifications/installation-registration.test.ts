@@ -55,6 +55,21 @@ function setup() {
   };
 }
 describe('secure installation operations', () => {
+  it('renews only an explicitly consented current-owner registration, not a pending revocation', async () => {
+    const test = setup();
+    const registration = createInstallationRegistration(test.ports);
+    expect(await registration.hasConsent(owner)).toBe(false);
+    test.register.mockRejectedValueOnce(new Error('Unknown outcome'));
+    await expect(registration.register(owner, desired)).rejects.toThrow('Unknown outcome');
+    expect(await registration.hasConsent(owner)).toBe(true);
+    await registration.register(owner, desired);
+    expect(await registration.hasConsent(owner)).toBe(true);
+    test.revoke.mockRejectedValueOnce(new Error('Offline'));
+    await expect(registration.revoke(owner)).rejects.toThrow('Offline');
+    expect(await registration.hasConsent(owner)).toBe(false);
+    test.setOwner(other);
+    expect(await registration.hasConsent(other)).toBe(false);
+  });
   it('rejects a session switch during cached revocation lookup', async () => {
     const test = setup();
     const registration = createInstallationRegistration(test.ports);
