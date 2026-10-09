@@ -15,6 +15,7 @@ import { ClerkAuthProvider } from '../src/auth/clerk-auth-provider';
 import { resolveBootstrapState } from '../src/bootstrap/resolve-bootstrap-state';
 import { colors, spacing } from '../src/theme/tokens';
 import { MessagingProvider } from '../src/features/messaging/messaging-provider';
+import { NotificationProvider } from '../src/features/notifications/notification-provider';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -49,13 +50,15 @@ export default function RootLayout() {
           <ClerkAuthProvider>
             <KeyboardProvider>
               <MessagingProvider>
-                <Stack
-                  screenOptions={{
-                    animation: 'fade',
-                    contentStyle: styles.root,
-                    headerShown: false,
-                  }}
-                />
+                <NotificationProvider>
+                  <Stack
+                    screenOptions={{
+                      animation: 'fade',
+                      contentStyle: styles.root,
+                      headerShown: false,
+                    }}
+                  />
+                </NotificationProvider>
               </MessagingProvider>
             </KeyboardProvider>
           </ClerkAuthProvider>

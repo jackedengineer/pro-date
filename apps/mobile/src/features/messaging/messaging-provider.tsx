@@ -22,6 +22,10 @@ import { io } from 'socket.io-client';
 import { createDiscoveryApi, type DiscoveryActions } from '../../api/discovery';
 import { bootstrapChatUser, createMessagingApi, type MessagingApi } from '../../api/messaging';
 import { createNotificationsApi, type NotificationsApi } from '../../api/notifications';
+import {
+  createNotificationDevicesApi,
+  type NotificationDevicesApi,
+} from '../../api/notification-devices';
 import { apiBaseUrl, isClerkConfigured } from '../../config/public-env';
 import { ChatThread } from './chat-thread';
 import type { ChatStorage } from './chat-storage';
@@ -43,6 +47,8 @@ export class MessagingRuntime {
     readonly storage: ChatStorage,
     readonly queries: QueryClient,
     readonly notifications: NotificationsApi,
+    readonly notificationDevices: NotificationDevicesApi,
+    readonly isCurrent: () => boolean,
   ) {}
   async restoreQueue() {
     const cached = await this.storage.cachedConversations();
@@ -205,6 +211,16 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
           storage,
           queries,
           createNotificationsApi({ apiBaseUrl: apiUrl, getToken }),
+          createNotificationDevicesApi({
+            apiBaseUrl: apiUrl,
+            getToken,
+            ownerId,
+            currentOwner: () => runtimeRef.current?.ownerId ?? null,
+          }),
+          () =>
+            runtimeRef.current?.ownerId === ownerId &&
+            authRef.current.isSignedIn === true &&
+            authRef.current.userId === session,
         );
         runtimeRef.current = runtime;
         const socket = io(apiUrl, {
