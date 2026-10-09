@@ -76,3 +76,5 @@ export {
 export type { MessagingRepository, ConversationRecord } from './messaging-repository.js';
 export { createNotificationPreferencesRepository } from './notification-preferences-repository.js';
 export type { NotificationPreferencesRepository } from './notification-preferences-repository.js';
+export { createNotificationDeviceRepository } from './notification-device-repository.js';
+export type { NotificationDeviceRepository } from './notification-device-repository.js';

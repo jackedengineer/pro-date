@@ -47,6 +47,7 @@ import type { MessagingService } from './messaging/messaging-service.js';
 import {
   createNotificationRouter,
   type NotificationPreferencesOptions,
+  type NotificationDevicesOptions,
 } from './notifications/notification-routes.js';
 import { ProfilePhotoProviderError } from './media/profile-photo-provider.js';
 import {
@@ -82,6 +83,7 @@ export type ProfileCheckpointRecord = ProfileResponse['data'];
 
 export interface ApiAppOptions {
   notificationPreferences?: NotificationPreferencesOptions;
+  notificationDevices?: NotificationDevicesOptions;
   messagingService?: MessagingService;
   findCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord | null>;
   discoveryService?: DiscoveryService;
@@ -758,6 +760,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
     '/v1',
     createNotificationRouter({
       preferences: options.notificationPreferences,
+      devices: options.notificationDevices,
       resolveClerkSubject,
       findCurrentUser: options.findCurrentUser ?? findOrCreateCurrentUser,
       requestId: getRequestId,

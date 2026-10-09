@@ -8,6 +8,7 @@ import {
   createDiscoveryRepository,
   createMessagingRepository,
   createNotificationPreferencesRepository,
+  createNotificationDeviceRepository,
   createProfilePhotoRepository,
   createProfilePublicationRepository,
   createProfilePromptRepository,
@@ -67,6 +68,11 @@ if (profilePhotoService === undefined) {
 }
 
 const app = createApiApp({
+  notificationDevices: {
+    enabled: environment.notificationsEnabled,
+    projectId: environment.expoProjectId,
+    repository: createNotificationDeviceRepository(database),
+  },
   notificationPreferences: {
     enabled: environment.notificationsEnabled,
     repository: createNotificationPreferencesRepository(database),

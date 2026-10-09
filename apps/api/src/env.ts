@@ -9,6 +9,7 @@ const apiEnvironmentSchema = z.object({
 
 const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
   NOTIFICATIONS_ENABLED: z.enum(['true', 'false']).default('false'),
+  EXPO_PROJECT_ID: z.preprocess((value) => (value === '' ? undefined : value), z.uuid().optional()),
   CLERK_PUBLISHABLE_KEY: z.string().trim().startsWith('pk_'),
   CLERK_SECRET_KEY: z.string().trim().startsWith('sk_'),
   CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
@@ -37,6 +38,7 @@ export interface ApiEnvironment {
 
 export interface ApiServiceEnvironment extends ApiEnvironment {
   notificationsEnabled: boolean;
+  expoProjectId: string | null;
   clerkPublishableKey: string;
   clerkSecretKey: string;
   cloudinary: CloudinaryEnvironment | null;
@@ -73,6 +75,7 @@ export function readApiServiceEnvironment(
 
   return {
     notificationsEnabled: environment.NOTIFICATIONS_ENABLED === 'true',
+    expoProjectId: environment.EXPO_PROJECT_ID ?? null,
     clerkPublishableKey: environment.CLERK_PUBLISHABLE_KEY,
     clerkSecretKey: environment.CLERK_SECRET_KEY,
     cloudinary,

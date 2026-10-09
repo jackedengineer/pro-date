@@ -3,8 +3,15 @@ import {
   notificationSettingsResponseSchema,
   conversationNotificationPatchSchema,
   conversationNotificationResponseSchema,
+  notificationDeviceRegisterSchema,
+  notificationDeviceRevokeSchema,
+  notificationDeviceResponseSchema,
 } from '@pro-date/contracts';
-import { DiscoveryError, type NotificationPreferencesRepository } from '@pro-date/database';
+import {
+  DiscoveryError,
+  type NotificationPreferencesRepository,
+  type NotificationDeviceRepository,
+} from '@pro-date/database';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { CurrentUserRecord } from '../app.js';
@@ -13,8 +20,14 @@ export interface NotificationPreferencesOptions {
   repository: NotificationPreferencesRepository;
   enabled: boolean;
 }
+export interface NotificationDevicesOptions {
+  repository: NotificationDeviceRepository;
+  enabled: boolean;
+  projectId: string | null;
+}
 export function createNotificationRouter(options: {
   preferences: NotificationPreferencesOptions | undefined;
+  devices: NotificationDevicesOptions | undefined;
   findCurrentUser: (subject: string) => Promise<CurrentUserRecord | null>;
   resolveClerkSubject: (request: Request) => string | null;
   requestId: (request: Request) => string;
@@ -24,6 +37,7 @@ export function createNotificationRouter(options: {
   // Preference storage is not proof that a worker/device/provider is ready.
   const capabilities = { isAvailable, isDeliveryReady: false };
   const paths = ['/notification-settings', '/conversations/:id/notification-preference'];
+  const devicePath = '/notification-devices/:installationId';
   function reject(
     request: Request,
     response: Response,
@@ -35,7 +49,7 @@ export function createNotificationRouter(options: {
       .status(status)
       .json({ error: { code, message }, requestId: options.requestId(request) });
   }
-  router.use(paths, async (request, response, next) => {
+  router.use([...paths, devicePath], async (request, response, next) => {
     const subject = options.resolveClerkSubject(request);
     if (!subject) {
       reject(request, response, 401, 'UNAUTHORIZED', 'Authentication is required.');
@@ -54,6 +68,59 @@ export function createNotificationRouter(options: {
     }
     response.locals.viewerId = viewer.id;
     next();
+  });
+  router.use(devicePath, (request, response, next) => {
+    if (options.devices?.enabled === true) {
+      next();
+      return;
+    }
+    reject(
+      request,
+      response,
+      503,
+      'NOTIFICATIONS_UNAVAILABLE',
+      'Push setup is pending. Messaging still works.',
+    );
+  });
+  router.put(devicePath, async (request, response) => {
+    if (options.devices!.projectId === null) {
+      reject(request, response, 503, 'NOTIFICATIONS_UNAVAILABLE', 'Push project setup is pending.');
+      return;
+    }
+    const installationId = input(z.uuid(), request.params.installationId);
+    const registration = input(notificationDeviceRegisterSchema, request.body);
+    if (registration.projectId !== options.devices!.projectId)
+      throw new DiscoveryError(
+        'VALIDATION_ERROR',
+        422,
+        'Check this build’s push project configuration.',
+      );
+    const receipt = await options.devices!.repository.register(
+      response.locals.viewerId as string,
+      installationId,
+      registration,
+    );
+    response.json(
+      notificationDeviceResponseSchema.parse({
+        data: receipt,
+        requestId: options.requestId(request),
+      }),
+    );
+  });
+  router.delete(devicePath, async (request, response) => {
+    const installationId = input(z.uuid(), request.params.installationId);
+    const revocation = input(notificationDeviceRevokeSchema, request.body);
+    const receipt = await options.devices!.repository.revoke(
+      response.locals.viewerId as string,
+      installationId,
+      revocation,
+    );
+    response.json(
+      notificationDeviceResponseSchema.parse({
+        data: receipt,
+        requestId: options.requestId(request),
+      }),
+    );
   });
   const repository = () => options.preferences!.repository;
   // Capability reads work even before migration; mutating/chat-specific routes fail closed.
