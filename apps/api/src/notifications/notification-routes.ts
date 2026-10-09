@@ -19,6 +19,7 @@ import type { CurrentUserRecord } from '../app.js';
 export interface NotificationPreferencesOptions {
   repository: NotificationPreferencesRepository;
   enabled: boolean;
+  deliveryEnabled?: boolean;
 }
 export interface NotificationDevicesOptions {
   repository: NotificationDeviceRepository;
@@ -34,8 +35,11 @@ export function createNotificationRouter(options: {
 }) {
   const router = Router();
   const isAvailable = options.preferences?.enabled === true;
-  // Preference storage is not proof that a worker/device/provider is ready.
-  const capabilities = { isAvailable, isDeliveryReady: false };
+  // Configured handoff capability, not a worker health check or a delivery guarantee.
+  const capabilities = {
+    isAvailable,
+    isDeliveryReady: isAvailable && options.preferences?.deliveryEnabled === true,
+  };
   const paths = ['/notification-settings', '/conversations/:id/notification-preference'];
   const devicePath = '/notification-devices/:installationId';
   function reject(

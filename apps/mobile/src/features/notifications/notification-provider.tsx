@@ -12,6 +12,7 @@ import { useMessaging } from '../messaging/messaging-provider';
 import { createSecureInstallationRegistration } from './installation-registration';
 import { NotificationLifecycle, type NotificationStatus } from './notification-lifecycle';
 import { notificationDevice } from './notification-device';
+import { NotificationEvents } from './notification-events';
 
 const pending = (): Promise<NotificationStatus> => Promise.resolve('SETUP_PENDING');
 const fallback = {
@@ -87,6 +88,7 @@ export function NotificationProvider({ children }: PropsWithChildren) {
           lifecycle === null ? fallback.beforeSignOut : () => lifecycle.beforeSignOut(),
       }}
     >
+      <NotificationEvents />
       {children}
     </Context.Provider>
   );

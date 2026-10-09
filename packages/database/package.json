@@ -14,6 +14,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=../../apps/api/.env ../../node_modules/drizzle-kit/bin.cjs migrate",
     "db:test:discovery": "pnpm --filter @pro-date/api exec tsx --env-file-if-exists=../../apps/api/.env ../../packages/database/scripts/verify-discovery.ts",
+    "db:test:notifications": "pnpm --filter @pro-date/api exec tsx ../../packages/database/scripts/verify-notifications.ts",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

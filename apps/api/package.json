@@ -7,6 +7,7 @@
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
     "lint": "eslint . --max-warnings 0",
     "start": "tsx --env-file-if-exists=.env src/server.ts",
+    "worker:notifications": "tsx --env-file-if-exists=.env src/notifications/notification-worker-main.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --project tsconfig.json"

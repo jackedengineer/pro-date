@@ -9,6 +9,17 @@ const apiEnvironmentSchema = z.object({
 
 const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
   NOTIFICATIONS_ENABLED: z.enum(['true', 'false']).default('false'),
+  PUSH_ENABLED: z.enum(['true', 'false']).default('false'),
+  EXPO_PUSH_ACCESS_TOKEN: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .trim()
+      .min(1)
+      .max(4096)
+      .regex(/^[^\r\n]+$/)
+      .optional(),
+  ),
   EXPO_PROJECT_ID: z.preprocess((value) => (value === '' ? undefined : value), z.uuid().optional()),
   CLERK_PUBLISHABLE_KEY: z.string().trim().startsWith('pk_'),
   CLERK_SECRET_KEY: z.string().trim().startsWith('sk_'),
@@ -38,6 +49,8 @@ export interface ApiEnvironment {
 
 export interface ApiServiceEnvironment extends ApiEnvironment {
   notificationsEnabled: boolean;
+  pushEnabled: boolean;
+  expoPushAccessToken: string | null;
   expoProjectId: string | null;
   clerkPublishableKey: string;
   clerkSecretKey: string;
@@ -62,6 +75,7 @@ export function readApiServiceEnvironment(
   input: Record<string, string | undefined> = process.env,
 ): ApiServiceEnvironment {
   const environment = apiServiceEnvironmentSchema.parse(input);
+  validatePushEnvironment(environment);
   const cloudinary =
     environment.CLOUDINARY_API_KEY !== undefined &&
     environment.CLOUDINARY_API_SECRET !== undefined &&
@@ -75,6 +89,8 @@ export function readApiServiceEnvironment(
 
   return {
     notificationsEnabled: environment.NOTIFICATIONS_ENABLED === 'true',
+    pushEnabled: environment.PUSH_ENABLED === 'true',
+    expoPushAccessToken: environment.EXPO_PUSH_ACCESS_TOKEN ?? null,
     expoProjectId: environment.EXPO_PROJECT_ID ?? null,
     clerkPublishableKey: environment.CLERK_PUBLISHABLE_KEY,
     clerkSecretKey: environment.CLERK_SECRET_KEY,
@@ -84,5 +100,47 @@ export function readApiServiceEnvironment(
     logLevel: environment.LOG_LEVEL,
     nodeEnv: environment.NODE_ENV,
     port: environment.PORT,
+  };
+}
+
+function validatePushEnvironment(
+  environment: Pick<
+    z.infer<typeof apiServiceEnvironmentSchema>,
+    'PUSH_ENABLED' | 'NOTIFICATIONS_ENABLED' | 'EXPO_PROJECT_ID' | 'EXPO_PUSH_ACCESS_TOKEN'
+  >,
+) {
+  if (
+    environment.PUSH_ENABLED === 'true' &&
+    (environment.NOTIFICATIONS_ENABLED !== 'true' ||
+      !environment.EXPO_PROJECT_ID ||
+      !environment.EXPO_PUSH_ACCESS_TOKEN)
+  )
+    throw new Error(
+      'Push delivery requires notification storage, an EAS project and enhanced server-only push authentication.',
+    );
+}
+
+/** The private worker needs no Clerk or Cloudinary credentials. */
+export function readNotificationWorkerEnvironment(
+  input: Record<string, string | undefined> = process.env,
+) {
+  const environment = apiServiceEnvironmentSchema
+    .pick({
+      NOTIFICATIONS_ENABLED: true,
+      PUSH_ENABLED: true,
+      EXPO_PROJECT_ID: true,
+      EXPO_PUSH_ACCESS_TOKEN: true,
+      DATABASE_URL: true,
+      LOG_LEVEL: true,
+    })
+    .parse(input);
+  validatePushEnvironment(environment);
+  return {
+    notificationsEnabled: environment.NOTIFICATIONS_ENABLED === 'true',
+    pushEnabled: environment.PUSH_ENABLED === 'true',
+    expoProjectId: environment.EXPO_PROJECT_ID ?? null,
+    expoPushAccessToken: environment.EXPO_PUSH_ACCESS_TOKEN ?? null,
+    databaseUrl: environment.DATABASE_URL,
+    logLevel: environment.LOG_LEVEL,
   };
 }

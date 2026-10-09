@@ -3,6 +3,31 @@ import { describe, expect, it } from 'vitest';
 import { readApiEnvironment, readApiServiceEnvironment } from '../src/env.js';
 
 describe('readApiEnvironment', () => {
+  it('fails closed instead of sending anonymously or before storage/project setup', () => {
+    const input = {
+      CLERK_PUBLISHABLE_KEY: 'pk_test_example',
+      CLERK_SECRET_KEY: 'sk_test_example',
+      DATABASE_URL: 'postgresql://user:password@example.test/pro_date',
+    };
+    expect(() => readApiServiceEnvironment({ ...input, PUSH_ENABLED: 'true' })).toThrow();
+    expect(() =>
+      readApiServiceEnvironment({
+        ...input,
+        PUSH_ENABLED: 'true',
+        NOTIFICATIONS_ENABLED: 'true',
+        EXPO_PROJECT_ID: '10000000-0000-4000-8000-000000000001',
+      }),
+    ).toThrow();
+    expect(
+      readApiServiceEnvironment({
+        ...input,
+        PUSH_ENABLED: 'true',
+        NOTIFICATIONS_ENABLED: 'true',
+        EXPO_PROJECT_ID: '10000000-0000-4000-8000-000000000001',
+        EXPO_PUSH_ACCESS_TOKEN: 'private-test-token',
+      }),
+    ).toMatchObject({ pushEnabled: true });
+  });
   it('provides safe local defaults', () => {
     expect(readApiEnvironment({})).toEqual({
       host: '0.0.0.0',
@@ -51,6 +76,8 @@ describe('readApiEnvironment', () => {
     ).toEqual({
       clerkPublishableKey: 'pk_test_example',
       notificationsEnabled: false,
+      pushEnabled: false,
+      expoPushAccessToken: null,
       expoProjectId: null,
       clerkSecretKey: 'sk_test_example',
       cloudinary: null,
