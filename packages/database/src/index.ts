@@ -78,3 +78,15 @@ export { createNotificationPreferencesRepository } from './notification-preferen
 export type { NotificationPreferencesRepository } from './notification-preferences-repository.js';
 export { createNotificationDeviceRepository } from './notification-device-repository.js';
 export type { NotificationDeviceRepository } from './notification-device-repository.js';
+export { createNotificationJobRepository } from './notification-job-repository.js';
+export type {
+  NotificationJobRepository,
+  NotificationClaim,
+  NotificationAttempt,
+  NotificationCompletion,
+} from './notification-job-repository.js';
+export { createNotificationReceiptRepository } from './notification-receipt-repository.js';
+export type {
+  NotificationReceiptRepository,
+  NotificationReceiptWork,
+} from './notification-receipt-repository.js';

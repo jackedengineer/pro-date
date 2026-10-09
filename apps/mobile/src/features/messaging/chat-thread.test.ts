@@ -25,9 +25,10 @@ const message = (sequence = 1): Message => ({
 function setup() {
   let messages: Message[] = [];
   let outgoing: OutgoingMessage[] = [];
+  const saveConversation = jest.fn();
   const storage: ChatStorage = {
     read: () => Promise.resolve({ conversation, messages: [...messages], outgoing: [...outgoing] }),
-    saveConversation: jest.fn(),
+    saveConversation,
     saveConversations: jest.fn(),
     cachedConversations: jest.fn().mockResolvedValue([]),
     saveMessages: (_id, rows) => {
@@ -71,9 +72,44 @@ function setup() {
   };
   const make = () =>
     new ChatThread(conversation.id, owner, storage, api, () => clientId, jest.fn());
-  return { api, storage, make };
+  return { api, storage, make, saveConversation };
 }
 describe('durable chat thread', () => {
+  it('does not restore a revoked chat from a delayed network response', async () => {
+    const { api, saveConversation, make } = setup();
+    let resolve!: (value: Conversation) => void;
+    jest.mocked(api.conversation).mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    const thread = make();
+    await thread.ready;
+    thread.setEnabled(true);
+    const sync = thread.sync();
+    await Promise.resolve();
+    await thread.revoke();
+    resolve(conversation);
+    await sync;
+    expect(saveConversation).not.toHaveBeenCalled();
+    expect(thread.getSnapshot()).toMatchObject({ unavailable: true, conversation: null, rows: [] });
+    thread.dispose();
+  });
+  it('does not restore a revoked chat from a delayed cache read', async () => {
+    const { storage, make } = setup();
+    let resolve!: (value: Awaited<ReturnType<ChatStorage['read']>>) => void;
+    storage.read = () =>
+      new Promise((done) => {
+        resolve = done;
+      });
+    const thread = make();
+    await thread.revoke();
+    resolve({ conversation, messages: [message()], outgoing: [] });
+    await thread.ready;
+    expect(thread.getSnapshot()).toMatchObject({ unavailable: true, conversation: null, rows: [] });
+    thread.dispose();
+  });
   it('renders immediately, persists before sending, and recovers the same ID after restart', async () => {
     const { api, storage, make } = setup();
     const first = make();

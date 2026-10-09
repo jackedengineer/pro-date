@@ -9,6 +9,10 @@ import type { MergedInboxRow } from './merged-inbox-model';
 import type { MessagingApi } from '../../api/messaging';
 
 jest.mock('./messaging-provider', () => ({ useMessaging: jest.fn() }));
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), replace: jest.fn() },
+  usePathname: () => '/discover',
+}));
 jest.mock('@shopify/flash-list', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   const Native = jest.requireActual<typeof import('react-native')>('react-native');

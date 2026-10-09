@@ -40,7 +40,10 @@ const profilePublicationRepository = createProfilePublicationRepository(database
 const profilePromptRepository = createProfilePromptRepository(database);
 const profileRepository = createProfileRepository(database);
 const profilePromptService = createProfilePromptService(profilePromptRepository);
-const messagingRepository = createMessagingRepository(database);
+const messagingRepository = createMessagingRepository(database, {
+  notificationsEnabled: environment.notificationsEnabled,
+  expoProjectId: environment.expoProjectId,
+});
 let notifyMessaging = () => {};
 const photoProvider =
   environment.cloudinary === null
@@ -75,6 +78,7 @@ const app = createApiApp({
   },
   notificationPreferences: {
     enabled: environment.notificationsEnabled,
+    deliveryEnabled: environment.pushEnabled,
     repository: createNotificationPreferencesRepository(database),
   },
   findCurrentUser: (subject) => currentUserRepository.findByClerkSubject(subject),

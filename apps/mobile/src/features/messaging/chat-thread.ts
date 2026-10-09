@@ -56,12 +56,13 @@ export class ChatThread {
     this.ready = storage
       .read(id)
       .then((cached) => {
-        if (this.disposed) return;
+        if (this.disposed || this.snapshot.unavailable) return;
         this.messages = cached.messages;
         this.outgoing = cached.outgoing;
         this.publish({ conversation: cached.conversation, loading: false });
       })
       .catch(() => {
+        if (this.snapshot.unavailable) return;
         this.publish({
           loading: false,
           error: 'We couldn’t open the local chat cache. Please reopen messaging.',
@@ -215,7 +216,7 @@ export class ChatThread {
         this.attempts = 0;
       } catch (failure: unknown) {
         this.statuses.delete(pending.clientId);
-        if (this.disposed) return;
+        if (this.disposed || this.snapshot.unavailable) return;
         if (failure instanceof ApiRequestError && failure.status === 404) {
           await this.revoke();
           return;
@@ -268,8 +269,9 @@ export class ChatThread {
     this.controllers.add(request);
     try {
       const conversation = await this.api.conversation(this.id, request.signal);
-      if (this.disposed) return;
+      if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
       await this.storage.saveConversation(conversation);
+      if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
       this.publish({ conversation });
       do {
         const baseline = this.watermark === null;
@@ -278,11 +280,12 @@ export class ChatThread {
           baseline ? {} : { afterSequence: this.watermark! },
           request.signal,
         );
-        if (this.disposed) return;
+        if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
         // A fresh latest page resets a truncated cached window so its older cursor cannot skip gaps.
         if (baseline)
           this.messages = this.messages.filter((message) => message.sequence > page.latestSequence);
         await this.accept(page.data);
+        if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
         this.watermark = page.nextAfterSequence ?? page.latestSequence;
         if (baseline) {
           this.olderCursor = page.olderCursor;
@@ -291,7 +294,7 @@ export class ChatThread {
         if (page.nextAfterSequence === null) break;
       } while (this.enabled && !this.disposed);
     } catch (failure: unknown) {
-      if (this.disposed) return;
+      if (this.disposed || this.snapshot.unavailable) return;
       if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
       else if (!request.signal.aborted)
         this.publish({
@@ -303,14 +306,22 @@ export class ChatThread {
     }
   }
   async loadOlder() {
-    if (this.olderCursor === null || !this.enabled || this.snapshot.loadingOlder || this.disposed)
+    if (
+      this.olderCursor === null ||
+      !this.enabled ||
+      this.snapshot.loadingOlder ||
+      this.disposed ||
+      this.snapshot.unavailable
+    )
       return;
     const request = new AbortController();
     this.controllers.add(request);
     this.publish({ loadingOlder: true });
     try {
       const page = await this.api.history(this.id, { cursor: this.olderCursor }, request.signal);
+      if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
       await this.accept(page.data);
+      if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
       this.olderCursor = page.olderCursor;
       this.publish({ hasOlder: this.olderCursor !== null });
     } catch (failure: unknown) {
@@ -328,7 +339,18 @@ export class ChatThread {
     for (const request of this.controllers) request.abort();
     this.messages = [];
     this.outgoing = [];
-    this.publish({ unavailable: true, conversation: null, error: null, online: false });
+    this.statuses.clear();
+    this.olderCursor = null;
+    this.watermark = null;
+    this.publish({
+      unavailable: true,
+      conversation: null,
+      error: null,
+      online: false,
+      loading: false,
+      hasOlder: false,
+      loadingOlder: false,
+    });
     try {
       await this.storage.clear(this.id);
     } catch {

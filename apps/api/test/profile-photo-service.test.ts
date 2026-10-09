@@ -78,7 +78,25 @@ describe('profile photo service removal', () => {
 });
 
 describe('profile photo service upload cleanup', () => {
-  it('removes the new provider asset instead of overwriting an occupied slot', async () => {
+  it('treats a repeated confirmation as an idempotent read, never deleting the saved photo', async () => {
+    const media = provider({ confirmUpload: vi.fn().mockResolvedValue(photo) });
+    const data = repository({ list: vi.fn().mockResolvedValue([photo]) });
+    await expect(createProfilePhotoService(media, data).add(userId, upload)).resolves.toMatchObject(
+      [{ id: photoId }],
+    );
+    expect(media.deleteUpload).not.toHaveBeenCalled();
+    expect(data.save).not.toHaveBeenCalled();
+  });
+  it('recognizes a replay after the saved photo has been reordered', async () => {
+    const media = provider({ confirmUpload: vi.fn().mockResolvedValue(photo) });
+    const data = repository({ list: vi.fn().mockResolvedValue([{ ...photo, position: 2 }]) });
+    await expect(createProfilePhotoService(media, data).add(userId, upload)).resolves.toMatchObject(
+      [{ id: photoId, position: 2 }],
+    );
+    expect(media.deleteUpload).not.toHaveBeenCalled();
+    expect(data.save).not.toHaveBeenCalled();
+  });
+  it('rejects a different photo in an occupied slot without destructive compensation', async () => {
     const deleteUpload = vi.fn().mockResolvedValue(undefined);
     const save = vi.fn();
     const service = createProfilePhotoService(
@@ -86,18 +104,25 @@ describe('profile photo service upload cleanup', () => {
         confirmUpload: vi.fn().mockResolvedValue(photo),
         deleteUpload,
       }),
-      repository({ list: vi.fn().mockResolvedValue([photo]), save }),
+      repository({
+        list: vi
+          .fn()
+          .mockResolvedValue([
+            { ...photo, providerAssetId: 'other-asset', providerPublicId: 'other-public-id' },
+          ]),
+        save,
+      }),
     );
 
     await expect(service.add(userId, upload)).rejects.toMatchObject({
       code: 'PHOTO_SLOT_OCCUPIED',
       name: 'ProfilePhotoSlotConflictError',
     });
-    expect(deleteUpload).toHaveBeenCalledWith(userId, photo.providerPublicId);
+    expect(deleteUpload).not.toHaveBeenCalled();
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('removes the new provider asset when database persistence fails', async () => {
+  it('does not delete a photo after an unknown database commit outcome', async () => {
     const databaseError = new Error('Database write failed.');
     const deleteUpload = vi.fn().mockResolvedValue(undefined);
     const service = createProfilePhotoService(
@@ -112,6 +137,6 @@ describe('profile photo service upload cleanup', () => {
     );
 
     await expect(service.add(userId, upload)).rejects.toBe(databaseError);
-    expect(deleteUpload).toHaveBeenCalledWith(userId, photo.providerPublicId);
+    expect(deleteUpload).not.toHaveBeenCalled();
   });
 });

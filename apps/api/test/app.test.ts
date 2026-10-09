@@ -40,6 +40,14 @@ function createTestApp(options: ApiAppOptions = {}) {
 }
 
 describe('API application', () => {
+  it('rejects oversized JSON as a client error without echoing private content', async () => {
+    const response = await request(createTestApp())
+      .post('/v1/unknown')
+      .send({ private: 'x'.repeat(110000) })
+      .expect(413);
+    expect(apiErrorResponseSchema.parse(response.body).error.code).toBe('PAYLOAD_TOO_LARGE');
+    expect(JSON.stringify(response.body)).not.toContain('xxxx');
+  });
   it('returns a contract-valid liveness response', async () => {
     const response = await request(createTestApp()).get('/health/live').expect(200);
 

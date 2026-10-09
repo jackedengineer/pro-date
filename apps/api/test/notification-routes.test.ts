@@ -11,7 +11,7 @@ import {
 
 const owner = '10000000-0000-4000-8000-000000000001';
 const id = '10000000-0000-4000-8000-000000000002';
-function setup(subject: string | null = 'verified', enabled = true) {
+function setup(subject: string | null = 'verified', enabled = true, deliveryEnabled = false) {
   const repository: NotificationPreferencesRepository = {
     settings: vi.fn().mockResolvedValue({ isPaused: false, revision: 0 }),
     saveSettings: vi.fn().mockResolvedValue({ isPaused: true, revision: 1 }),
@@ -26,11 +26,24 @@ function setup(subject: string | null = 'verified', enabled = true) {
     requestId: () => id,
     resolveClerkSubject: () => subject,
     findCurrentUser,
-    notificationPreferences: { repository, enabled },
+    notificationPreferences: { repository, enabled, deliveryEnabled },
   });
   return { app, repository, findCurrentUser };
 }
 describe('account-owned notification preferences', () => {
+  it('reports configured delivery only when both storage and handoff are enabled', async () => {
+    for (const [enabled, deliveryEnabled, expected] of [
+      [false, true, false],
+      [true, false, false],
+      [true, true, true],
+    ]) {
+      const { app } = setup('verified', enabled, deliveryEnabled);
+      const result = await request(app).get('/v1/notification-settings').expect(200);
+      expect(notificationSettingsResponseSchema.parse(result.body).data.isDeliveryReady).toBe(
+        expected,
+      );
+    }
+  });
   it('requires authentication and a published account on every endpoint', async () => {
     const { app, repository } = setup(null);
     await request(app).get('/v1/notification-settings').expect(401);

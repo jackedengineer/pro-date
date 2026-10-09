@@ -7,6 +7,8 @@ import { createSecureInstallationRegistration } from './installation-registratio
 import { StrictMode } from 'react';
 
 jest.mock('../messaging/messaging-provider', () => ({ useMessaging: jest.fn() }));
+// Native event/Router integration has its own focused suite; this suite owns registration lifecycle.
+jest.mock('./notification-events', () => ({ NotificationEvents: () => null }));
 jest.mock('./notification-device', () => ({
   notificationDevice: { supported: true, prepare: jest.fn(), listenTokens: jest.fn() },
 }));

@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { ProDateDatabase } from './client.js';
 import { DiscoveryError, type PagePosition } from './discovery-repository.js';
 import { matches, messageOutbox, messages, users } from './schema.js';
+import { buildEnqueueNotifications } from './notification-job-repository.js';
 
 type Transaction = Parameters<Parameters<ProDateDatabase['transaction']>[0]>[0];
 type MatchRow = typeof matches.$inferSelect;
@@ -125,7 +126,13 @@ function assemble(row: Record<string, unknown>): ConversationRecord {
   };
 }
 
-export function createMessagingRepository(database: ProDateDatabase | Transaction) {
+export function createMessagingRepository(
+  database: ProDateDatabase | Transaction,
+  notifications: { notificationsEnabled: boolean; expoProjectId: string | null } = {
+    notificationsEnabled: false,
+    expoProjectId: null,
+  },
+) {
   return {
     async conversations(this: void, viewerId: string, limit: number, position?: PagePosition) {
       return (
@@ -189,6 +196,13 @@ export function createMessagingRepository(database: ProDateDatabase | Transactio
           .returning();
         if (message === undefined) throw new Error('Message persistence failed.');
         await tx.insert(messageOutbox).values({ messageId: message.id });
+        if (notifications.notificationsEnabled && notifications.expoProjectId !== null) {
+          const recipientId =
+            match.firstUserId === viewerId ? match.secondUserId : match.firstUserId;
+          await tx.execute(
+            buildEnqueueNotifications(message.id, recipientId, notifications.expoProjectId),
+          );
+        }
         return toMessage(message);
       });
     },

@@ -160,7 +160,7 @@ The backend is a modular monolith deployed as two processes from one codebase: a
 | Domain modeling    | Normalized relational tables; no JSONB domain documents                           | Explicit constraints, joins, uniqueness, and queryable relationships                   |
 | Authentication     | Clerk custom phone/email OTP plus internal UUID users                             | Provider handles verification; application retains domain identity ownership           |
 | Media              | Signed Cloudinary uploads                                                         | The device uploads directly without receiving a provider secret                        |
-| Async work         | PostgreSQL transactional outbox; chat dispatcher inside the single API process    | Atomic message/event intent; a separate push worker remains planned                    |
+| Async work         | PostgreSQL transactional outbox; in-process chat hints and a private push worker  | Atomic message/notification intent and durable retries outside the HTTP request        |
 | Subscriptions      | RevenueCat Test Store, then platform billing sandboxes                            | Production-shaped entitlement handling without collecting card details directly        |
 | Deployment         | Railway API/worker and Neon database in Singapore                                 | Simple first deployment with Docker, WebSockets, private services, and nearby data     |
 | Scale posture      | One API replica and no Redis in V0                                                | Avoids infrastructure without a demonstrated scaling need                              |
@@ -177,7 +177,7 @@ Exact installed package versions are pinned in the workspace lockfile. Expo-nati
 | Mobile state/forms | TanStack Query for inbox pages, SQLite-backed chat controller, Zod and local React state; React Hook Form and Zustand are not currently required                                        |
 | API                | Express 5, Zod, Helmet, CORS, Pino, message quotas and socket admission budgets; general throttling/OpenAPI/Scalar remain planned                                                       |
 | Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                               |
-| Integrations       | Clerk, Cloudinary, Socket.IO and Expo Notifications adapter implemented; push delivery, RevenueCat and Sentry pending                                                                   |
+| Integrations       | Clerk, Cloudinary, Socket.IO and Expo Push delivery implemented; live native push acceptance, RevenueCat and Sentry pending                                                             |
 | Mobile tests       | Jest, `jest-expo`, React Native Testing Library; Maestro planned                                                                                                                        |
 | API tests          | Vitest, Supertest and explicit rollback-only database scripts; Testcontainers planned                                                                                                   |
 | Delivery           | Neon configured; Docker, Railway, EAS Build/Update and GitHub Actions planned                                                                                                           |
@@ -198,7 +198,7 @@ Intentionally deferred: Redis, the Socket.IO Redis adapter, Kubernetes, microser
 - Candidate and message lists use opaque cursor pagination rather than page numbers.
 - Provider webhook event IDs are unique, and webhook payloads are normalized into typed relational fields.
 - Latest location is stored as PostGIS geography. Exact coordinates are never returned to another user or included in logs.
-- Messaging transactions write outbox records atomically. The in-process dispatcher publishes foreground refresh hints; push delivery and a standalone worker remain planned.
+- Messaging transactions write realtime hints and eligible message/device notification jobs atomically. The in-process dispatcher publishes refresh hints; a separate private process handles push attempts and receipts.
 
 ## API and realtime contract
 
@@ -221,7 +221,7 @@ Open **Merged** in the bottom navigation and tap a connection to chat. There is 
 - Each section orders loaded connections by recent activity. Counts describe loaded pages, not total matches; **Load more connections** follows the existing bounded server cursor. Overlapping pages are deduplicated using the newest confirmed message sequence, and empty sections are omitted.
 - Opening an untouched chat shows an original ProDate invitation to send the first hello, not an automatically sent message. Back, block, and unmatch return to Merged. Legacy `/messages` inbox links redirect to Merged; `/messages/[id]` remains the internal conversation-detail route.
 
-The inbox reuses the account-scoped TanStack Query cache and SQLite summaries. Saved connections remain visible offline, and errors offer retry without hiding cached rows or claiming an unqueried inbox is empty. A single recycled [FlashList with typed section headers](https://shopify.github.io/flash-list/docs/guides/section-list/) avoids nesting separate lists. Message acknowledgments and realtime hints invalidate summaries; foreground fallback refresh runs every 15 seconds. New matches confirmed on the current device open Merged immediately; the other member discovers them on inbox fetch/refresh or foreground polling, not a new match push event. Push delivery remains unfinished.
+The inbox reuses the account-scoped TanStack Query cache and SQLite summaries. Saved connections remain visible offline, and errors offer retry without hiding cached rows or claiming an unqueried inbox is empty. A single recycled [FlashList with typed section headers](https://shopify.github.io/flash-list/docs/guides/section-list/) avoids nesting separate lists. Message acknowledgments and realtime hints invalidate summaries; foreground fallback refresh runs every 15 seconds. New matches confirmed on the current device open Merged immediately; the other member discovers them on inbox fetch/refresh or foreground polling, not a new match push event. Message push is implemented behind disabled setup gates; physical-device delivery remains unverified.
 
 The message lifecycle is deliberately explicit:
 
@@ -239,7 +239,7 @@ Reconnect → REST history by ordered sequence → deduplicate and reconcile
 - Mobile namespace admission retries use jittered backoff, honor server delays, and stop after eight consecutive failures; explicit authentication rejection waits for foreground/network recovery or a manual messaging retry. Socket.IO handles transport reconnection separately. Background/account transitions cancel application retry timers; REST remains authoritative even if realtime admission is unavailable.
 - Text is plain text, 1–2,000 trimmed characters. The API limits a member to 60 new messages per minute across conversations; idempotent retries do not spend that allowance. Non-members and inaccessible conversations return the same unavailable response.
 - [Expo SQLite](https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/) stores a maximum of 200 confirmed messages per cached conversation and recent member summaries. The cache is account-scoped, expires after seven days of inactivity, and clears on logout/account change or an authoritative unavailable response. Pending sends are retained separately, up to 500 per account, until acknowledged, removed, or cleared by logout/block/unmatch. This is ordinary application-private storage, **not SQLCipher or end-to-end encryption**; backup/retention policy remains a release gate.
-- Queue recovery runs while foregrounded and online. Cached conversations remain readable offline for a previously signed-in account, but remote block/unmatch state can only be learned when connectivity returns. Background delivery and push notifications are not implemented.
+- Queue recovery runs while foregrounded and online. Cached conversations remain readable offline for a previously signed-in account, but remote block/unmatch state can only be learned when connectivity returns. Late network/cache responses cannot restore a locally revoked conversation. Push alerts do not execute background message synchronization or flush outgoing messages.
 - The composer has local state, multiline text, draft-preserving save errors, and at least 44-point actions. [KeyboardChatScrollView](https://kirillzyusko.github.io/react-native-keyboard-controller/docs/api/components/keyboard-chat-scroll-view) lifts content only near the newest messages; older-history readers keep their place and can choose **Jump to latest**. FlashList uses stable keys and memoized bubbles. Physical release-build frame rate and latency are not yet measured.
 - Report/block and permanent, confirmed unmatch are available inside a conversation. Server history is retained but becomes inaccessible to both members after unmatch; account deletion and final server/backup retention policies remain unfinished.
 
@@ -290,7 +290,7 @@ The first notification slice adds **Chat notifications** inside a conversation a
 
 Responses use shared strict schemas and the existing request-ID error envelope. Unknown ownership fields are rejected. Both conversation operations reuse messaging's ordered member locks and block/unmatch checks; preferences never grant conversation access. Mobile queries are keyed by internal account ID, and writes are not an offline queue: a failed/ambiguous request shows an error and refetches authoritative state instead of claiming an optimistic save. Closing the sheet aborts its outstanding request and ignores late UI/cache updates.
 
-**Setup status:** migration `0013_chat_notifications` is prepared, **not applied or live-database verified**. It adds five relational tables for settings, per-chat preferences, device bindings, deduplicated message/device jobs, and minimized delivery attempts. `NOTIFICATIONS_ENABLED=false` is the safe default; authenticated capability reads return unavailable without reading new tables, and notification writes return a setup-pending response. Do not enable this flag until the migration is applied to an explicitly confirmed database. This flag enables preference/device storage only: `isDeliveryReady` remains false in this slice. No migration or integration test has been run against the configured database.
+**Setup status:** migration `0013_chat_notifications` is prepared, **not applied or live-database verified**. It adds five relational tables for settings, per-chat preferences, device bindings, deduplicated message/device jobs, and minimized delivery attempts. `NOTIFICATIONS_ENABLED=false` and `PUSH_ENABLED=false` remain the safe defaults. Disabled capability reads avoid new tables; writes return setup-pending. `isDeliveryReady` indicates configured handoff capability only when both flags are enabled, not worker health, provider availability, or guaranteed device delivery. No notification migration or integration test has been run against the configured database.
 
 ### Device binding foundation
 
@@ -308,14 +308,52 @@ When delivery setup is available, selecting an individual chat initiates context
 
 Foreground/reconnect checks renew only a locally consented current-owner installation and never prompt automatically. Native token rotations use the supplied token rather than recursively requesting a native token from its listener. Permission revocation attempts to retire server eligibility. Account transitions dispose listeners and suppress late readiness; no old-account request is retried with new credentials. A best-effort `beforeSignOut` helper is exposed for future sign-out UI, bounded to three seconds; the application does not yet expose that UI. Offline/unknown revocation cannot promise instant server awareness or recall alerts already handed to the provider.
 
-Remote push delivery is **not implemented yet**. Remaining work includes transactional job creation, worker retries/receipts/retention, foreground presentation policy, and authenticated notification-tap navigation. The approved delivery design uses Expo Notifications/Push with fixed generic lock-screen copy (“New message on ProDate.”), no sender name or message preview, and no push for muted chats. Native device testing, EAS project credentials and provider setup remain required; JS/Hermes exports do not verify APNs/FCM or replace native development builds. `isDeliveryReady` remains false, so the new native permission path is dormant until those server-side gates are completed. Do not enable registration in a deployed environment until expiry/retention housekeeping and the live concurrency checks are ready.
+### Durable delivery and receipt worker
+
+Each newly committed text message creates one job per currently eligible recipient installation in the **same PostgreSQL transaction**. Retrying that message returns the existing message without recreating jobs. Enabling a chat or registering a device later never generates historical alerts. New matches, likes, typing and read receipts do not create push work.
+
+The private worker claims four jobs at a time with `FOR UPDATE SKIP LOCKED`, UUID-fenced 60-second leases, and a persisted attempt before external handoff. It rechecks publication, membership, block/unmatch, mute/pause revisions, device ownership/generation, project and expiry immediately before sending. No database lock is held across the network call. Retries use bounded jittered backoff, at most eight attempts, and a 24-hour intent lifetime. Credential failures open a five-minute circuit; shutdown stops new work and waits for in-flight work within a bounded deadline.
+
+The [Expo Push Service adapter](https://docs.expo.dev/push-notifications/sending-notifications/) uses Node's built-in HTTP client, fixed HTTPS endpoints, no redirects or hidden retries, a ten-second request/body deadline, and bounded, validated responses. Enhanced push authentication is required. Visible copy is always **ProDate / New message on ProDate.** Payload data contains only a schema version, event type, internal recipient/conversation/message UUIDs—never a name, text body, photo, session token or arbitrary URL. This minimizes previews; Expo and platform providers still receive routing metadata and the device token. It is not end-to-end encrypted notification delivery.
+
+Accepted tickets schedule separate receipt checks after 15 minutes; unresolved receipts expire after 23 hours and never trigger a blind resend. `DeviceNotRegistered` retires only the matching device generation. Housekeeping runs even with provider handoff paused: expired intents are terminal, resolved job/attempt metadata is pruned after seven days, and expired 30-day device tokens are removed. Minimal binding/version tombstones are retained for compare-and-swap replay protection and cascade on account deletion; automatic tombstone pruning/re-enrollment is not implemented. Logs contain outcome enums, timings, queue age and random worker/cycle correlation IDs, not private identifiers or provider response text.
+
+Exactly-once notification delivery is **not promised**: an unknown provider response or crash after handoff can cause a duplicate generic alert on retry. A preference change after handoff cannot recall an alert already at Expo/FCM/APNs. A successful ticket/receipt is not proof of device display or a message read. REST remains authoritative.
+
+### Foreground alerts and notification taps
+
+Foreground alerts suppress the currently open conversation and require fresh, authorized opt-in/pause checks within two seconds; errors fail closed. Cold/warm taps validate strict metadata, deduplicate message IDs, wait for the current account bootstrap, and fetch the conversation through authorized REST before navigation. Wrong-account, malformed or obsolete responses cannot open private content. Unavailable conversations return to Merged with a neutral explanation. SDK 57's synchronous initial-response APIs and listener cleanup handle remounts without retaining stale account state. Actual OS presentation and cold-start routing still need physical-device acceptance.
+
+### Configuration and verification gates
+
+Do not enable the feature until the database target is explicitly approved, migration `0013` is applied and verified, native credentials/builds exist, and the worker is operational. API and worker must use the same database, EAS project and flag configuration. Keep provider secrets server-only.
+
+| Variable                 | Purpose                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `NOTIFICATIONS_ENABLED`  | Enables notification storage/job creation; default `false`                     |
+| `PUSH_ENABLED`           | Enables provider handoff and configured delivery capability; default `false`   |
+| `EXPO_PROJECT_ID`        | The app's EAS project UUID, validated on registrations                         |
+| `EXPO_PUSH_ACCESS_TOKEN` | Server-only enhanced Expo push authentication token; required for live handoff |
+| `DATABASE_URL`           | Migrated PostgreSQL connection for this deployment                             |
+
+After approved setup, run the private process from the repository root:
+
+```bash
+pnpm --filter @pro-date/api worker:notifications
+```
+
+`NOTIFICATIONS_ENABLED=true` with `PUSH_ENABLED=false` runs housekeeping without provider calls; with notification storage disabled the command exits without opening a database connection. There is no public worker HTTP endpoint.
+
+`pnpm --filter @pro-date/database db:test:notifications` is an **opt-in, rollback-only** harness. It deliberately does not load the API `.env` or use `DATABASE_URL`; it requires a separate `NOTIFICATION_TEST_DATABASE_URL`, `CONFIRM_NOTIFICATION_TEST_DATABASE=true`, and an explicitly approved isolated, migrated test database. It is prepared, not executed. It covers atomic message/job rollback, deduplication, sequential lease recovery/fencing, receipts, mute/pause and retention. It does not prove multi-connection concurrency; that remains a separate acceptance gate.
+
+Fake-provider, SQL-boundary and mobile lifecycle tests plus Android/iOS Hermes exports verify local implementation—not FCM/APNs delivery. Native development-build acceptance must cover background/terminated alerts, same-chat suppression, per-chat silence, pause, denied/revoked permissions, account switching, cold/warm taps, block/unmatch and token rotation. EAS/Firebase/APNs credentials, Railway deployment and worker monitoring remain pending.
 
 ## Safety, security, and privacy
 
 - V0 requires a calendar birthday and enforces 18+ eligibility at the API boundary, but does not claim government-ID or selfie verification.
 - Block and report are available from discovery and conversation contexts. Blocking removes mutual visibility and prevents new interaction.
 - Reports preserve the minimum evidence needed for later review. V0 has no admin dashboard, so reporting must never imply an immediate human response that does not exist.
-- Image uploads use constrained signed parameters, MIME/content validation, size limits, metadata removal, and derived delivery assets.
+- Image uploads use constrained signed parameters, MIME/content validation, size limits, metadata removal, and derived delivery assets. Repeated confirmations return the saved photo even after reordering. Unknown database outcomes never trigger destructive provider compensation; grace-period orphan reconciliation remains a release task.
 - Exact coordinates, phone numbers, session tokens, private message bodies, and provider secrets are excluded from logs and error telemetry.
 - Clerk tokens are verified by the backend; authorization is evaluated against internal account and resource state on every protected operation.
 - Rate limits are differentiated by authentication, discovery, engagement, messaging, media, and webhook risk.
@@ -340,7 +378,7 @@ pro-date/
 ├── apps/
 │   ├── mobile/        # Expo application
 │   ├── api/           # Express HTTP and Socket.IO service
-│   └── worker/        # Planned transactional-outbox consumers
+│   └── worker/        # Reserved; push entry point is currently in apps/api/src/notifications
 ├── packages/
 │   ├── contracts/     # Shared Zod schemas and transport types
 │   ├── database/      # Drizzle schema, PostGIS migrations, pool, and repositories
@@ -602,6 +640,7 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
+- The 9 October local verification passes **526 tests** (60 contracts, 66 database-boundary, 136 API, 264 mobile), formatting, lint and strict TypeScript. Notification SQL-boundary tests use fakes; live notification database/concurrency and native delivery acceptance remain pending.
 - Automated tests cover shared contracts, database invariants, discovery/engagement, private messaging access, retry deduplication, realtime hints, device queue recovery, real SQLite queries, and accessible mobile behavior. Merged inbox tests cover both members' untouched matches, sender-derived turns, overlapping cursor pages, cached/offline states, immediate confirmed-match navigation, and safety exits. Explicit live PostGIS and messaging checks additionally exercise persistence and state transitions with rolled-back fixtures.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
@@ -615,7 +654,7 @@ Current implementation evidence:
 Git push
 ├── Railway Singapore
 │   ├── Public API + Socket.IO service
-│   └── In-process chat outbox dispatcher (separate push worker planned)
+│   └── Private push worker (implemented, not deployed)
 ├── Neon Singapore
 │   └── PostgreSQL + PostGIS
 └── EAS
@@ -636,61 +675,61 @@ Git push
 
 Last local automated verification: **9 October 2026**
 
-| Milestone                                 | Status                                               |
-| ----------------------------------------- | ---------------------------------------------------- |
-| Product boundary and V0 journey           | Approved                                             |
-| Capability map                            | Approved                                             |
-| Core architecture and provider choices    | Approved baseline                                    |
-| Expo SDK/App Store compatibility          | Verified for SDK 57                                  |
-| Exact dependency manifest                 | Verified and locked                                  |
-| Installed dependency lock                 | Implemented                                          |
-| Shared API contracts                      | Implemented and tested                               |
-| Express health/startup foundation         | Implemented and tested                               |
-| Mobile shell specification                | Approved                                             |
-| Repository scaffold                       | Implemented                                          |
-| Expo welcome and OTP entry shell          | Implemented and tested                               |
-| Expo Doctor / iOS Hermes export           | Verified                                             |
-| First physical-device run                 | Verified                                             |
-| Clerk phone OTP client flow               | Implemented and tested                               |
-| Clerk email OTP client flow               | Implemented and tested                               |
-| Live Clerk SMS verification               | Awaiting provider setup                              |
-| Live Clerk email verification             | Verified on physical iPhone                          |
-| Neon/PostGIS and Drizzle foundation       | Implemented and tested                               |
-| Authenticated internal-user bootstrap     | Implemented and live verified                        |
-| Profile intro and name checkpoint         | Verified on physical iPhone                          |
-| Birthday and server-side 18+ checkpoint   | Verified on physical iPhone                          |
-| Inclusive identity and pronouns           | Implemented and tested                               |
-| Dating preferences and intent             | Implemented and tested                               |
-| Foreground location and PostGIS point     | Implemented and tested                               |
-| Native height and visibility control      | Implemented and tested                               |
-| Signed photo contracts and persistence    | Implemented and tested                               |
-| Expo photo picker and ordered grid        | Implemented and tested                               |
-| Live Cloudinary upload                    | Verified on physical iPhone                          |
-| Curated three-prompt editor               | Implemented and tested                               |
-| Prompt persistence and review checkpoint  | Implemented and tested                               |
-| Real profile-card review and direct edits | Implemented and tested                               |
-| Atomic profile publication                | Implemented and tested                               |
-| PostGIS discovery and cursor pages        | Implemented; database verified                       |
-| Photo/prompt likes and incoming requests  | Implemented and tested                               |
-| Merge/decline and durable connections     | Implemented; database verified                       |
-| Pass and bidirectional blocking           | Implemented; database verified                       |
-| Report persistence and immediate block    | Implemented; database verified                       |
-| Text inbox, private history, and sends    | Implemented; device acceptance pending               |
-| Durable outgoing queue and retry recovery | Implemented; SQLite verified                         |
-| Authenticated foreground realtime hints   | Implemented; local clients verified                  |
-| Bounded socket admission/auth retries     | Implemented; local socket tests passed               |
-| Chat notification preferences and pause   | Implemented; local tests passed; disabled by default |
-| Notification relational migration         | Prepared only; not applied or live verified          |
-| Device binding API / local controller     | Implemented; disabled; native/live DB checks pending |
-| Native notification adapter / lifecycle   | Implemented; native acceptance pending               |
-| Push delivery worker / safe tap handling  | Not implemented yet                                  |
-| Chat safety and permanent unmatch         | Implemented; database verified                       |
-| Discovery physical-iPhone acceptance      | Pending                                              |
-| Apple App Review release gates            | Documented and enforced                              |
-| Basic profile foundation compatibility    | Automated verification passed                        |
-| V0 vertical slice                         | In progress                                          |
+| Milestone                                 | Status                                                   |
+| ----------------------------------------- | -------------------------------------------------------- |
+| Product boundary and V0 journey           | Approved                                                 |
+| Capability map                            | Approved                                                 |
+| Core architecture and provider choices    | Approved baseline                                        |
+| Expo SDK/App Store compatibility          | Verified for SDK 57                                      |
+| Exact dependency manifest                 | Verified and locked                                      |
+| Installed dependency lock                 | Implemented                                              |
+| Shared API contracts                      | Implemented and tested                                   |
+| Express health/startup foundation         | Implemented and tested                                   |
+| Mobile shell specification                | Approved                                                 |
+| Repository scaffold                       | Implemented                                              |
+| Expo welcome and OTP entry shell          | Implemented and tested                                   |
+| Expo Doctor / iOS Hermes export           | Verified                                                 |
+| First physical-device run                 | Verified                                                 |
+| Clerk phone OTP client flow               | Implemented and tested                                   |
+| Clerk email OTP client flow               | Implemented and tested                                   |
+| Live Clerk SMS verification               | Awaiting provider setup                                  |
+| Live Clerk email verification             | Verified on physical iPhone                              |
+| Neon/PostGIS and Drizzle foundation       | Implemented and tested                                   |
+| Authenticated internal-user bootstrap     | Implemented and live verified                            |
+| Profile intro and name checkpoint         | Verified on physical iPhone                              |
+| Birthday and server-side 18+ checkpoint   | Verified on physical iPhone                              |
+| Inclusive identity and pronouns           | Implemented and tested                                   |
+| Dating preferences and intent             | Implemented and tested                                   |
+| Foreground location and PostGIS point     | Implemented and tested                                   |
+| Native height and visibility control      | Implemented and tested                                   |
+| Signed photo contracts and persistence    | Implemented and tested                                   |
+| Expo photo picker and ordered grid        | Implemented and tested                                   |
+| Live Cloudinary upload                    | Verified on physical iPhone                              |
+| Curated three-prompt editor               | Implemented and tested                                   |
+| Prompt persistence and review checkpoint  | Implemented and tested                                   |
+| Real profile-card review and direct edits | Implemented and tested                                   |
+| Atomic profile publication                | Implemented and tested                                   |
+| PostGIS discovery and cursor pages        | Implemented; database verified                           |
+| Photo/prompt likes and incoming requests  | Implemented and tested                                   |
+| Merge/decline and durable connections     | Implemented; database verified                           |
+| Pass and bidirectional blocking           | Implemented; database verified                           |
+| Report persistence and immediate block    | Implemented; database verified                           |
+| Text inbox, private history, and sends    | Implemented; device acceptance pending                   |
+| Durable outgoing queue and retry recovery | Implemented; SQLite verified                             |
+| Authenticated foreground realtime hints   | Implemented; local clients verified                      |
+| Bounded socket admission/auth retries     | Implemented; local socket tests passed                   |
+| Chat notification preferences and pause   | Implemented; local tests passed; disabled by default     |
+| Notification relational migration         | Prepared only; not applied or live verified              |
+| Device binding API / local controller     | Implemented; disabled; native/live DB checks pending     |
+| Native notification adapter / lifecycle   | Implemented; native acceptance pending                   |
+| Push delivery worker / safe tap handling  | Implemented; disabled; native/live DB acceptance pending |
+| Chat safety and permanent unmatch         | Implemented; database verified                           |
+| Discovery physical-iPhone acceptance      | Pending                                                  |
+| Apple App Review release gates            | Documented and enforced                                  |
+| Basic profile foundation compatibility    | Automated verification passed                            |
+| V0 vertical slice                         | In progress                                              |
 
-The immediate implementation step is durable message-notification intent and worker delivery, followed by foreground presentation and authorized tap handling. Native registration is locally verified but is not evidence of alerts arriving on a device. Migration application/live database verification remain gated separately. Device acceptance covers discovery → item like → Requests → Merge → Merged chat, Your turn / Their turn, untouched matches for both accounts, keyboard/scrolling, reconnect and notification opt-ins. Native push, typing/read semantics, release profiling, safety operations and account-lifecycle work remain unfinished. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
+The next step is approved database verification/migration and native development-build setup, followed by Railway API/worker deployment and physical-device push acceptance. Automated notification tests are not evidence of alerts arriving on a device. Device acceptance covers discovery → item like → Requests → Merge → Merged chat, Your turn / Their turn, untouched matches for both accounts, keyboard/scrolling, reconnect and notification opt-ins. Live push acceptance, typing/read semantics, release profiling, safety operations and account-lifecycle work remain unfinished. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 
