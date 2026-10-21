@@ -31,12 +31,14 @@ import { ChatThread } from './chat-thread';
 import type { ChatStorage } from './chat-storage';
 import { cachedChatOwner, forgetChatAccounts, openChatStorage } from './sqlite-chat-storage';
 import { RealtimeReconnect } from './realtime-reconnect';
+import { InboxRefresh } from './inbox-refresh';
 
 export class MessagingRuntime {
   private threads = new Map<string, ChatThread>();
   private watched = new Set<string>();
   private enabled = false;
   private disposed = false;
+  private inboxRefresh: InboxRefresh;
   private timer = setInterval(() => {
     if (this.enabled) for (const id of this.watched) void this.thread(id).sync();
   }, 15_000);
@@ -49,7 +51,9 @@ export class MessagingRuntime {
     readonly notifications: NotificationsApi,
     readonly notificationDevices: NotificationDevicesApi,
     readonly isCurrent: () => boolean,
-  ) {}
+  ) {
+    this.inboxRefresh = new InboxRefresh(queries, ownerId);
+  }
   async restoreQueue() {
     const cached = await this.storage.cachedConversations();
     if (this.disposed) return;
@@ -69,7 +73,7 @@ export class MessagingRuntime {
     if (thread === undefined) {
       thread = new ChatThread(id, this.ownerId, this.storage, this.api, randomUUID, () => {
         if (!this.disposed) {
-          if (this.threads.get(id)?.getSnapshot().unavailable)
+          if (this.threads.get(id)?.getSnapshot().unavailable) {
             this.queries.setQueryData<{
               pages: { data: Conversation[]; nextCursor: string | null }[];
               pageParams: unknown[];
@@ -84,7 +88,11 @@ export class MessagingRuntime {
                     })),
                   },
             );
-          void this.queries.invalidateQueries({ queryKey: ['conversations', this.ownerId] });
+            // Safety exits must cancel an older response that could restore the removed row.
+            void this.queries.invalidateQueries({ queryKey: ['conversations', this.ownerId] });
+          } else {
+            this.inboxRefresh.request();
+          }
         }
       });
       this.threads.set(id, thread);
@@ -102,7 +110,7 @@ export class MessagingRuntime {
   hint(id: string) {
     const thread = this.threads.get(id);
     if (thread !== undefined) void thread.sync();
-    void this.queries.invalidateQueries({ queryKey: ['conversations', this.ownerId] });
+    this.inboxRefresh.request();
   }
   setEnabled(enabled: boolean) {
     if (this.disposed) return;
@@ -112,6 +120,7 @@ export class MessagingRuntime {
   dispose() {
     this.disposed = true;
     clearInterval(this.timer);
+    this.inboxRefresh.dispose();
     for (const thread of this.threads.values()) thread.dispose();
     this.queries.clear();
   }

@@ -233,6 +233,8 @@ Open **Merged** in the bottom navigation and tap a connection to chat. There is 
 
 The inbox reuses the account-scoped TanStack Query cache and SQLite summaries. Saved connections remain visible offline, and errors offer retry without hiding cached rows or claiming an unqueried inbox is empty. A single recycled [FlashList with typed section headers](https://shopify.github.io/flash-list/docs/guides/section-list/) avoids nesting separate lists. Message acknowledgments and realtime hints invalidate summaries; foreground fallback refresh runs every 15 seconds. New matches confirmed on the current device open Merged immediately; the other member discovers them on inbox fetch/refresh or foreground polling, not a new match push event. Message push is implemented behind disabled setup gates; physical-device delivery remains unverified.
 
+Inbox invalidations share a fixed 50 ms batching window per account. They [preserve a running refresh](https://tanstack.com/query/latest/docs/framework/react/reference/classes/QueryClient) instead of repeatedly canceling it; hints arriving during that refresh schedule one follow-up after it settles. Runtime disposal cancels scheduled work. Open-conversation history synchronization and immediate safety-related cache removal do not wait for this inbox window.
+
 The message lifecycle is deliberately explicit:
 
 ```text
@@ -273,7 +275,19 @@ pnpm dev:api
 pnpm dev:mobile --lan
 ```
 
-The transactional-outbox dispatcher runs inside the API process every 1.5 seconds and is also nudged after a send. Leases recover after a crash; failure logs contain a structured event and dispatch ID without bodies or tokens. Deploy one API replica for now. A multiple-replica deployment would require shared realtime fan-out; that infrastructure is intentionally deferred. Published outbox records currently remain in PostgreSQL; retention/pruning belongs in the release operations checklist.
+The transactional-outbox dispatcher is nudged after a committed send and remembers nudges received while a dispatch is active. A single worker drains additional pages immediately, yielding to the event loop after at most four 50-event claim pages. Empty queues stop the worker; failures stop immediate retries. The existing 1.5-second safety timer and expiring leases recover deferred work after failures or a crash. Each event still rechecks conversation access; shutdown cancels continuations and prevents publication after an outstanding access check returns. Failure logs contain a structured event and dispatch ID without bodies or tokens.
+
+Local synthetic verification on 21 October 2026 used actual Socket.IO clients with in-memory persistence, plus an actual TanStack Query client with a controlled request fixture:
+
+| Scenario                                            | Before                          | After                        |
+| --------------------------------------------------- | ------------------------------- | ---------------------------- |
+| Second commit during an active dispatch, three runs | 1,486–1,499 ms to hint delivery | Under 1 ms in each run       |
+| 125 already-committed outbox events, one run        | 2,988 ms to drain               | 4 ms; all 125 hints received |
+| 125 hints for a populated, active inbox             | 125 request starts, 124 aborts  | 1 request start, no aborts   |
+
+These results isolate scheduling/request amplification, not PostgreSQL throughput, deployed-network latency, delivery receipts, or native frame rate. Regression tests additionally cover concurrent flushes, arrivals during an empty claim, yielding larger backlogs, empty/error recovery, trailing inbox refreshes, account isolation, and shutdown cleanup. No database migration is needed for these scheduling fixes.
+
+Deploy one API replica for now. A multiple-replica deployment would require shared realtime fan-out; that infrastructure is intentionally deferred. Published outbox records currently remain in PostgreSQL; retention/pruning belongs in the release operations checklist.
 
 Run the rollback-only live persistence check from `packages/database`:
 
