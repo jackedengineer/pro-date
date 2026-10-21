@@ -581,6 +581,8 @@ The implemented onboarding journey is intentionally resumable. Each primary acti
 7. Prompts offer twenty curated founder-, developer-, design-, and Gen-Z-aware conversation starters without turning safety or validation copy into jargon. A profile requires three distinct answers; each must contain at least five words or 30 characters, with a 280-character maximum.
 8. Completing three answers stores normalized relational rows and advances to `REVIEW`. The real profile preview respects visibility settings and supports direct section edits. Publication atomically rechecks profile completeness and advances to `COMPLETE`; published members can open discovery or review their profile again.
 
+Own-profile review shows the lead photo and every remaining uploaded photo in profile order. The trailing gallery measures its container and gives each photo an explicit 4:5 clipping frame, avoiding collapsed percentage-sized native images inside a scroll view. Four-photo, six-photo, narrow-layout and published-profile review cases have regression coverage; the iPhone remains the final visual acceptance check.
+
 The location request sends exact latitude/longitude over the authenticated API for distance calculations. No profile response contains those coordinates, and the mobile UI explains the distinction between the private stored point and the public city/region label before requesting permission.
 
 Implementation references: [Expo Location for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/location/), [Expo UI universal Picker for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/ui/universal/picker/), and [Drizzle PostGIS geography points](https://orm.drizzle.team/docs/guides/postgis-geometry-point).

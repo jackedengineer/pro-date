@@ -5,8 +5,9 @@ import {
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
 import Pencil from 'lucide-react-native/icons/pencil';
+import { useState } from 'react';
 import { useReducedMotionPreference } from '../../theme/motion';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '../../components/app-text';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
@@ -74,6 +75,10 @@ export function ProfilePreviewCard({
   review,
 }: ProfilePreviewCardProps) {
   const reducedMotion = useReducedMotionPreference();
+  const { width: viewportWidth } = useWindowDimensions();
+  const [galleryWidth, setGalleryWidth] = useState<number | null>(null);
+  const availableWidth = galleryWidth ?? viewportWidth - spacing.lg * 2 - 2;
+  const thumbnailWidth = Math.max(0, (availableWidth - spacing.md * 2 - spacing.sm) / 2);
   const { profile } = review;
   const leadPhoto = review.photos[0];
   const visibleDetails = [
@@ -162,19 +167,28 @@ export function ProfilePreviewCard({
         <AppText variant="button">Your photos</AppText>
         <EditButton label="Photos" onPress={onEditPhotos} />
       </View>
-      <View style={styles.photoStrip}>
+      <View
+        onLayout={(event) => setGalleryWidth(event.nativeEvent.layout.width)}
+        style={styles.photoStrip}
+        testID="review-photo-gallery"
+      >
         {review.photos.slice(1).map((photo, index) => (
-          <Image
-            accessibilityIgnoresInvertColors
-            accessibilityLabel={`Profile photo ${index + 2} preview`}
-            cachePolicy="memory-disk"
-            contentFit="cover"
-            contentPosition="center"
+          <View
             key={photo.id}
-            source={{ uri: photo.deliveryUrl }}
-            style={styles.thumbnail}
-            transition={reducedMotion ? 0 : 180}
-          />
+            style={[styles.thumbnail, { width: thumbnailWidth, height: thumbnailWidth * 1.25 }]}
+            testID={`review-photo-frame-${index + 1}`}
+          >
+            <Image
+              accessibilityIgnoresInvertColors
+              accessibilityLabel={`Profile photo ${index + 2} preview`}
+              cachePolicy="memory-disk"
+              contentFit="cover"
+              contentPosition="center"
+              source={{ uri: photo.deliveryUrl }}
+              style={StyleSheet.absoluteFill}
+              transition={reducedMotion ? 0 : 180}
+            />
+          </View>
         ))}
       </View>
     </View>
@@ -277,10 +291,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.family.medium,
   },
   thumbnail: {
-    aspectRatio: 4 / 5,
     backgroundColor: colors.plumSoft,
     borderRadius: radii.sm,
-    width: '48%',
+    overflow: 'hidden',
+    position: 'relative',
   },
   sectionHeader: {
     flexDirection: 'row',
