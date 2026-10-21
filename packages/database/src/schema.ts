@@ -5,6 +5,7 @@ import {
   check,
   customType,
   date,
+  foreignKey,
   index,
   integer,
   pgEnum,
@@ -227,6 +228,7 @@ export const messages = pgTable(
   (table) => [
     unique('messages_sender_intent_unique').on(table.senderId, table.clientId),
     unique('messages_conversation_sequence_unique').on(table.conversationId, table.sequence),
+    unique('messages_conversation_id_unique').on(table.conversationId, table.id),
     check('messages_body_check', sql`char_length(btrim(${table.body})) between 1 and 2000`),
     check('messages_sequence_check', sql`${table.sequence} > 0`),
     index('messages_sender_created_idx').on(table.senderId, table.createdAt),
@@ -244,6 +246,28 @@ export const messageOutbox = pgTable(
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index('message_outbox_pending_idx').on(table.publishedAt, table.leasedUntil)],
+);
+
+// Composite references prevent attaching private context from another conversation.
+// Source: https://orm.drizzle.team/docs/indexes-constraints#foreign-key
+export const messageReplies = pgTable(
+  'message_replies',
+  {
+    messageId: uuid('message_id').primaryKey(),
+    conversationId: uuid('conversation_id').notNull(),
+    replyToMessageId: uuid('reply_to_message_id').notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.conversationId, table.messageId],
+      foreignColumns: [messages.conversationId, messages.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.conversationId, table.replyToMessageId],
+      foreignColumns: [messages.conversationId, messages.id],
+    }).onDelete('cascade'),
+    check('message_replies_no_self_check', sql`${table.messageId} <> ${table.replyToMessageId}`),
+  ],
 );
 
 export const notificationSettings = pgTable(

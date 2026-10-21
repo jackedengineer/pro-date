@@ -23,7 +23,12 @@ import {
 export class DiscoveryError extends Error {
   constructor(
     readonly code:
-      'NOT_FOUND' | 'CONFLICT' | 'INVALID_CURSOR' | 'RATE_LIMITED' | 'VALIDATION_ERROR',
+      | 'NOT_FOUND'
+      | 'CONFLICT'
+      | 'INVALID_CURSOR'
+      | 'RATE_LIMITED'
+      | 'VALIDATION_ERROR'
+      | 'PROFILE_UNAVAILABLE',
     readonly status: number,
     message: string,
   ) {

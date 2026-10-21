@@ -1,5 +1,8 @@
 import {
   actionResponseSchema,
+  chatCapabilitiesResponseSchema,
+  messageContextQuerySchema,
+  messageContextResponseSchema,
   conversationResponseSchema,
   conversationsResponseSchema,
   inboxQuerySchema,
@@ -76,6 +79,25 @@ export function createMessagingRouter(options: {
     );
     response.json(
       conversationResponseSchema.parse({ data, requestId: options.requestId(request) }),
+    );
+  });
+  router.get('/conversations/:id/capabilities', async (request, response) => {
+    const data = await options.service!.capabilities(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+    );
+    response.json(
+      chatCapabilitiesResponseSchema.parse({ data, requestId: options.requestId(request) }),
+    );
+  });
+  router.get('/conversations/:id/message-context', async (request, response) => {
+    const page = await options.service!.contexts(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+      input(messageContextQuerySchema, request.query).ids,
+    );
+    response.json(
+      messageContextResponseSchema.parse({ ...page, requestId: options.requestId(request) }),
     );
   });
   router.get('/conversations/:id/messages', async (request, response) => {

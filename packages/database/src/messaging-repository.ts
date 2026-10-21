@@ -1,9 +1,14 @@
-import type { Message, MessageHistoryQuery, SendMessage } from '@pro-date/contracts';
+import type {
+  Message,
+  MessageContext,
+  MessageHistoryQuery,
+  SendMessage,
+} from '@pro-date/contracts';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { ProDateDatabase } from './client.js';
 import { DiscoveryError, type PagePosition } from './discovery-repository.js';
-import { matches, messageOutbox, messages, users } from './schema.js';
+import { matches, messageOutbox, messageReplies, messages, users } from './schema.js';
 import { buildEnqueueNotifications } from './notification-job-repository.js';
 
 type Transaction = Parameters<Parameters<ProDateDatabase['transaction']>[0]>[0];
@@ -128,12 +133,59 @@ function assemble(row: Record<string, unknown>): ConversationRecord {
 
 export function createMessagingRepository(
   database: ProDateDatabase | Transaction,
-  notifications: { notificationsEnabled: boolean; expoProjectId: string | null } = {
+  notifications: {
+    notificationsEnabled: boolean;
+    expoProjectId: string | null;
+    repliesEnabled?: boolean;
+  } = {
     notificationsEnabled: false,
     expoProjectId: null,
   },
 ) {
   return {
+    async capabilities(this: void, viewerId: string, id: string) {
+      await database.transaction((tx) => requireConversationAccess(tx, viewerId, id, false));
+      return { replies: notifications.repliesEnabled === true, reactions: false };
+    },
+    async contexts(this: void, viewerId: string, id: string, ids: string[]) {
+      return database.transaction(async (tx) => {
+        await requireConversationAccess(tx, viewerId, id, false);
+        if (!notifications.repliesEnabled)
+          throw new DiscoveryError(
+            'PROFILE_UNAVAILABLE',
+            503,
+            'Message context is unavailable right now.',
+          );
+        const rows = (
+          await tx.execute<
+            {
+              messageId: string;
+              targetId: string | null;
+              senderId: string | null;
+              excerpt: string | null;
+            } & Record<string, unknown>
+          >(sql`
+          select m.id as "messageId", target.id as "targetId", target.sender_id as "senderId", left(target.body, 120) as excerpt
+          from messages m left join message_replies r on r.message_id = m.id and r.conversation_id = m.conversation_id
+          left join messages target on target.id = r.reply_to_message_id and target.conversation_id = m.conversation_id
+          where m.conversation_id = ${id}::uuid and m.id in (${sql.join(
+            ids.map((value) => sql`${value}::uuid`),
+            sql`, `,
+          )})
+        `)
+        ).rows;
+        const data: MessageContext[] = rows.map((row) => ({
+          messageId: row.messageId,
+          revision: 0,
+          replyTo:
+            row.targetId === null
+              ? null
+              : { messageId: row.targetId, senderId: row.senderId!, excerpt: row.excerpt! },
+          reactions: [],
+        }));
+        return { data, revision: 0 };
+      });
+    },
     async conversations(this: void, viewerId: string, limit: number, position?: PagePosition) {
       return (
         await database.execute(conversationQuery(viewerId, undefined, position, limit))
@@ -167,15 +219,45 @@ export function createMessagingRepository(
     async send(this: void, viewerId: string, id: string, input: SendMessage): Promise<Message> {
       return database.transaction(async (tx) => {
         const match = await requireConversationAccess(tx, viewerId, id, true);
+        if (input.replyToMessageId !== undefined && !notifications.repliesEnabled)
+          throw new DiscoveryError(
+            'PROFILE_UNAVAILABLE',
+            503,
+            'Replies are unavailable right now.',
+          );
         const [existing] = await tx
           .select()
           .from(messages)
           .where(and(eq(messages.senderId, viewerId), eq(messages.clientId, input.clientId)))
           .limit(1);
         if (existing !== undefined) {
-          if (existing.conversationId !== id || existing.body !== input.body)
+          const target = notifications.repliesEnabled
+            ? (
+                await tx.execute<{ replyToMessageId: string } & Record<string, unknown>>(
+                  sql`select reply_to_message_id as "replyToMessageId" from message_replies where message_id = ${existing.id}::uuid`,
+                )
+              ).rows[0]?.replyToMessageId
+            : undefined;
+          if (
+            existing.conversationId !== id ||
+            existing.body !== input.body ||
+            target !== input.replyToMessageId
+          )
             throw new DiscoveryError('CONFLICT', 409, 'That message identifier was already used.');
           return toMessage(existing);
+        }
+        if (input.replyToMessageId !== undefined) {
+          const target = (
+            await tx.execute(
+              sql`select id from messages where conversation_id = ${id}::uuid and id = ${input.replyToMessageId}::uuid and sequence <= ${match.lastMessageSequence}`,
+            )
+          ).rows[0];
+          if (target === undefined)
+            throw new DiscoveryError(
+              'VALIDATION_ERROR',
+              422,
+              'Choose a saved message in this conversation to reply to.',
+            );
         }
         const [{ count }] = (
           await tx.execute<{ count: number } & Record<string, unknown>>(sql`
@@ -192,9 +274,21 @@ export function createMessagingRepository(
         await tx.update(matches).set({ lastMessageSequence: sequence }).where(eq(matches.id, id));
         const [message] = await tx
           .insert(messages)
-          .values({ conversationId: id, senderId: viewerId, ...input, sequence })
+          .values({
+            conversationId: id,
+            senderId: viewerId,
+            clientId: input.clientId,
+            body: input.body,
+            sequence,
+          })
           .returning();
         if (message === undefined) throw new Error('Message persistence failed.');
+        if (input.replyToMessageId !== undefined)
+          await tx.insert(messageReplies).values({
+            messageId: message.id,
+            conversationId: id,
+            replyToMessageId: input.replyToMessageId,
+          });
         await tx.insert(messageOutbox).values({ messageId: message.id });
         if (notifications.notificationsEnabled && notifications.expoProjectId !== null) {
           const recipientId =

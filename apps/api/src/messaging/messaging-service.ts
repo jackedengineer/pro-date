@@ -40,6 +40,9 @@ export function createMessagingService(
       },
     });
   return {
+    capabilities: (viewerId: string, id: string) => repository.capabilities(viewerId, id),
+    contexts: (viewerId: string, id: string, ids: string[]) =>
+      repository.contexts(viewerId, id, ids),
     async conversations(this: void, viewerId: string, query: InboxQuery) {
       const scope = `conversations:${viewerId}`;
       const position =

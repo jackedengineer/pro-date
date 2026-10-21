@@ -41,6 +41,7 @@ const profilePromptRepository = createProfilePromptRepository(database);
 const profileRepository = createProfileRepository(database);
 const profilePromptService = createProfilePromptService(profilePromptRepository);
 const messagingRepository = createMessagingRepository(database, {
+  repliesEnabled: environment.chatRepliesEnabled,
   notificationsEnabled: environment.notificationsEnabled,
   expoProjectId: environment.expoProjectId,
 });

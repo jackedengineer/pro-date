@@ -20,6 +20,8 @@ const message = {
 };
 function setup(subject: string | null = 'clerk-test') {
   const service: MessagingService = {
+    capabilities: vi.fn().mockResolvedValue({ replies: true, reactions: false }),
+    contexts: vi.fn().mockResolvedValue({ data: [], revision: 0 }),
     conversations: vi.fn().mockResolvedValue({ data: [], nextCursor: null }),
     conversation: vi.fn(),
     history: vi.fn().mockResolvedValue({
@@ -45,6 +47,18 @@ function setup(subject: string | null = 'clerk-test') {
   return { app, service };
 }
 describe('private messaging routes', () => {
+  it('authenticates opt-in context and validates bounded IDs before service access', async () => {
+    const anonymous = setup(null);
+    await request(anonymous.app).get(`/v1/conversations/${id}/capabilities`).expect(401);
+    await request(anonymous.app)
+      .get(`/v1/conversations/${id}/message-context?ids=${id}`)
+      .expect(401);
+    const { app, service } = setup();
+    await request(app).get(`/v1/conversations/${id}/capabilities`).expect(200);
+    await request(app).get(`/v1/conversations/${id}/message-context?ids=${id}`).expect(200);
+    await request(app).get(`/v1/conversations/${id}/message-context?ids=invalid`).expect(422);
+    expect(service.contexts).toHaveBeenCalledExactlyOnceWith(viewerId, id, [id]);
+  });
   it('requires Clerk authentication for history, send, and inbox', async () => {
     const { app, service } = setup(null);
     await request(app).get('/v1/conversations').expect(401);

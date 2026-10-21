@@ -301,6 +301,12 @@ On your iPhone, check Requests → Merge → Merged → open a chat, and also co
 
 Rollback is application-first: redeploy the previous application while leaving the additive tables/columns intact. Dropping message tables would destroy history and is not a routine rollback. Never delete migration records on a populated database.
 
+## Quoted replies and message interactions
+
+The additive reply API keeps existing message, history and inbox responses unchanged. New clients discover per-conversation capabilities and request bounded message context separately. Reply targets are resolved on the server, must belong to the same conversation, and become part of the sender's immutable retry intent. Quotes contain only a short excerpt, not a recursively nested message tree.
+
+`0014_message-replies` is **prepared only**, not applied or live-database verified. `CHAT_REPLIES_ENABLED=false` is the default; disabled paths never query reply-link storage. Apply and verify the migration only with the database owner's approval before enabling the flag. The supporting unique constraint must precede the composite foreign keys; assess DDL locks before applying to populated data. No actual environment file is changed by this implementation.
+
 ## Chat notification preferences
 
 The first notification slice adds **Chat notifications** inside a conversation and **Notifications** in Merged. Both open a scrollable settings sheet with account-owned choices, save/error states, and accessible full-row switches. Every chat defaults to silent. An account-wide pause preserves individual chat opt-ins; muting or pausing cancels pending delivery jobs without replay on resume. Preference revisions change only when the desired state changes, so equivalent PATCH retries do not re-enable old work.
