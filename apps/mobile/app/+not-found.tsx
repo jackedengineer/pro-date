@@ -24,10 +24,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   link: {
-    color: colors.coralPressed,
+    color: colors.plum,
     fontSize: 16,
     fontWeight: '600',
     marginTop: spacing.md,
+    minHeight: 48,
+    paddingVertical: spacing.md,
   },
   screen: {
     justifyContent: 'center',

@@ -92,7 +92,7 @@ describe('ProfileReviewScreen', () => {
       />,
     );
 
-    expect(await view.findByText("Preview the profile you're shipping.")).toBeTruthy();
+    expect(await view.findByText('Looking like you?')).toBeTruthy();
     expect(view.getByTestId('review-lead-photo')).toHaveProp('contentFit', 'cover');
     expect(view.getByText(/Avery,/)).toBeTruthy();
     expect(view.getByText('Bengaluru, Karnataka')).toBeTruthy();

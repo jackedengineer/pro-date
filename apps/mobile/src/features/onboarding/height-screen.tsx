@@ -62,10 +62,10 @@ export function HeightScreen({ initialValue, onBack, onSave }: HeightScreenProps
       }
       onBack={isSaving ? undefined : onBack}
     >
-      <AppText variant="eyebrow">Profile metadata</AppText>
+      <AppText variant="eyebrow">The details</AppText>
       <AppText variant="display">Add your height.</AppText>
       <AppText style={styles.supportingText}>
-        No weird commentary, no ranking algorithm—just an optional profile detail.
+        One more detail about you. Choose whether it appears on your profile below.
       </AppText>
 
       <View style={styles.pickerCard}>
@@ -132,6 +132,7 @@ const styles = StyleSheet.create({
   },
   switch: {
     alignSelf: 'center',
+    flexShrink: 0,
   },
   visibilityCopy: {
     flex: 1,
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
   },
   visibilityRow: {
     alignItems: 'center',
-    backgroundColor: colors.sand,
+    backgroundColor: colors.plumSoft,
     borderRadius: radii.md,
     flexDirection: 'row',
     gap: spacing.md,

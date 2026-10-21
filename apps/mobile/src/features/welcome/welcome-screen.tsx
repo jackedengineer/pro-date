@@ -1,4 +1,5 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import Heart from 'lucide-react-native/icons/heart';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
@@ -11,46 +12,52 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
   return (
-    <Screen style={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.brandMark} />
-        <AppText style={styles.wordmark} variant="button">
-          ProDate
-        </AppText>
-      </View>
-
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={styles.art}
-      >
-        <View style={styles.orbitLarge} />
-        <View style={styles.orbitSmall} />
-        <View style={styles.promptCard}>
-          <AppText variant="eyebrow">Profile prompt</AppText>
-          <AppText style={styles.prompt} variant="title">
-            A perfect Sunday looks like…
+    <Screen>
+      <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.brandMark}>
+            <Heart size={18} color={colors.plum} strokeWidth={2} />
+          </View>
+          <AppText style={styles.wordmark} variant="button">
+            ProDate
           </AppText>
-          <View style={styles.answerPill}>
-            <View style={styles.answerDot} />
-            <AppText style={styles.answer} variant="caption">
-              Long walks + excellent coffee
+        </View>
+
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={styles.art}
+        >
+          <View style={styles.orbitLarge} />
+          <View style={styles.orbitSmall} />
+          <View style={styles.promptCard}>
+            <AppText variant="eyebrow">Beyond the bio</AppText>
+            <AppText style={styles.prompt} variant="title">
+              A perfect Sunday looks like…
             </AppText>
+            <View style={styles.answerPill}>
+              <View style={styles.answerDot} />
+              <AppText style={styles.answer} variant="caption">
+                Long walks + excellent coffee
+              </AppText>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.content}>
-        <AppText variant="display">Meet people, not profiles.</AppText>
-        <AppText style={styles.subtitle}>Thoughtful prompts. Real conversation.</AppText>
-      </View>
-
-      <View style={styles.footer}>
-        <AppButton label="Get started" onPress={onGetStarted} />
-        <AppText style={styles.terms} variant="caption">
-          By continuing, you confirm you are 18 or older.
-        </AppText>
-      </View>
+        <View style={styles.content}>
+          <AppText variant="hero">Meet people, not profiles.</AppText>
+          <AppText style={styles.subtitle}>Thoughtful prompts. Real conversation.</AppText>
+          <AppText style={styles.subtitle}>
+            For curious minds with a life beyond their tabs.
+          </AppText>
+        </View>
+        <View style={styles.footer}>
+          <AppButton label="Get started" onPress={onGetStarted} />
+          <AppText style={styles.terms} variant="caption">
+            By continuing, you confirm you are 18 or older.
+          </AppText>
+        </View>
+      </ScrollView>
     </Screen>
   );
 }
@@ -79,14 +86,17 @@ const styles = StyleSheet.create({
   },
   art: {
     justifyContent: 'center',
-    minHeight: 270,
+    minHeight: 240,
+    marginTop: spacing.md,
     position: 'relative',
   },
   brandMark: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.pill,
-    height: 12,
-    width: 12,
+    backgroundColor: colors.plumSoft,
+    borderRadius: radii.sm,
+    height: 36,
+    width: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     gap: spacing.md,
@@ -94,6 +104,7 @@ const styles = StyleSheet.create({
   footer: {
     gap: spacing.md,
     marginTop: 'auto',
+    paddingTop: spacing.xl,
   },
   header: {
     alignItems: 'center',
@@ -105,7 +116,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     height: 116,
     position: 'absolute',
-    right: -26,
+    right: 0,
     top: 8,
     width: 116,
   },
@@ -128,15 +139,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     padding: spacing.lg,
-    shadowColor: colors.plum,
-    shadowOffset: { height: 12, width: 0 },
-    shadowOpacity: 0.09,
-    shadowRadius: 24,
+    boxShadow: '0px 6px 16px rgba(90, 46, 79, 0.05)',
   },
   screen: {
-    gap: spacing.xl,
+    flexGrow: 1,
+    gap: spacing.lg,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
   },
   subtitle: {
     color: colors.muted,

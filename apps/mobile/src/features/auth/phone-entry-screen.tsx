@@ -1,12 +1,8 @@
 import { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { FormScrollView } from '../../components/form-scroll-view';
+import { IconButton } from '../../components/icon-button';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 import { AppButton } from '../../components/app-button';
@@ -51,21 +47,13 @@ export function PhoneEntryScreen({
 
   return (
     <Screen style={styles.screen}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-      >
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={12}
+      <FormScrollView>
+        <IconButton
+          label="Go back"
+          icon={ArrowLeft}
           onPress={onBack}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-        >
-          <AppText style={styles.backIcon} variant="title">
-            ←
-          </AppText>
-        </Pressable>
+          style={{ alignSelf: 'flex-start' }}
+        />
 
         <View style={styles.content}>
           <AppText variant="eyebrow">Your account</AppText>
@@ -75,6 +63,7 @@ export function PhoneEntryScreen({
           </AppText>
 
           <View style={styles.fieldGroup}>
+            <AppText variant="button">Phone number</AppText>
             <View style={styles.phoneField}>
               <View style={styles.countryCode}>
                 <AppText variant="button">+91</AppText>
@@ -116,36 +105,19 @@ export function PhoneEntryScreen({
             accessibilityLabel={isSubmitting ? 'Sending code' : 'Continue'}
             disabled={e164PhoneNumber === null || isSubmitting}
             label={isSubmitting ? 'Sending code…' : 'Continue'}
+            loading={isSubmitting}
             onPress={continueWithPhoneNumber}
           />
         </View>
-      </KeyboardAvoidingView>
+      </FormScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  backButtonPressed: {
-    backgroundColor: colors.plumSoft,
-  },
-  backIcon: {
-    fontFamily: typography.family.body,
-    fontSize: 25,
-    lineHeight: 29,
-  },
   content: {
     gap: spacing.md,
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
   },
   countryCode: {
     borderRightColor: colors.border,
@@ -177,12 +149,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 0,
   },
-  keyboardView: {
-    flex: 1,
-  },
   phoneField: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',

@@ -44,12 +44,13 @@ export function LocationScreen({ captureLocation, onBack, onSave }: LocationScre
             </View>
           )}
           <AppText style={styles.syncText} variant="caption">
-            Foreground access only · Editable anytime
+            Location access only while using the app
           </AppText>
           <AppButton
             accessibilityLabel={isSaving ? 'Finding your location' : 'Use my location'}
             disabled={isSaving}
             label={isSaving ? 'Locating…' : 'Use my location'}
+            loading={isSaving}
             onPress={() => void save()}
           />
         </>
@@ -59,7 +60,7 @@ export function LocationScreen({ captureLocation, onBack, onSave }: LocationScre
       <AppText variant="eyebrow">Discovery radius</AppText>
       <AppText variant="display">Set your discovery area.</AppText>
       <AppText style={styles.supportingText}>
-        We use your location to queue relevant people nearby—not to broadcast where you are.
+        Find people nearby. Your exact location is never shown on your profile.
       </AppText>
 
       <View style={styles.privacyCard}>
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   privacyCard: {
-    backgroundColor: colors.sand,
+    backgroundColor: colors.plumSoft,
     borderRadius: radii.md,
     gap: spacing.md,
     marginTop: spacing.md,

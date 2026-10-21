@@ -6,29 +6,12 @@ export const styles = StyleSheet.create({
   autosaveText: {
     textAlign: 'center',
   },
-  backButton: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  backButtonPressed: {
-    backgroundColor: colors.plumSoft,
-  },
-  backIcon: {
-    fontFamily: typography.family.body,
-    fontSize: 25,
-    lineHeight: 29,
-  },
   characterCount: {
     fontVariant: ['tabular-nums'],
   },
   content: {
     gap: spacing.md,
-    marginTop: spacing.xl,
+    marginTop: spacing.xs,
   },
   errorMessage: {
     backgroundColor: colors.dangerSoft,
@@ -48,6 +31,7 @@ export const styles = StyleSheet.create({
   },
   fieldMeta: {
     flexDirection: 'row',
+    gap: spacing.sm,
     justifyContent: 'space-between',
   },
   footer: {
@@ -61,7 +45,7 @@ export const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderRadius: radii.md,
     borderWidth: 1,
     color: colors.ink,
@@ -73,9 +57,6 @@ export const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: colors.plum,
-  },
-  keyboardView: {
-    flex: 1,
   },
   progress: {
     flex: 1,

@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   fill: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.plum,
     borderRadius: radii.pill,
     height: '100%',
   },

@@ -1,6 +1,8 @@
 import { DateTimePicker as ExpoDateTimePicker } from '@expo/ui/community/datetime-picker';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { IconButton } from '../../components/icon-button';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
@@ -92,18 +94,12 @@ export function BirthdayScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           {onBack === undefined ? null : (
-            <Pressable
-              accessibilityLabel="Back to name"
-              accessibilityRole="button"
-              disabled={isSaving}
-              hitSlop={8}
+            <IconButton
+              label="Back to name"
+              icon={ArrowLeft}
               onPress={onBack}
-              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            >
-              <AppText style={styles.backIcon} variant="title">
-                ←
-              </AppText>
-            </Pressable>
+              disabled={isSaving}
+            />
           )}
           <View style={styles.progress}>
             <OnboardingProgress current={2} total={9} />
@@ -111,10 +107,10 @@ export function BirthdayScreen({
         </View>
 
         <View style={styles.content}>
-          <AppText variant="eyebrow">Profile config</AppText>
+          <AppText variant="eyebrow">The basics</AppText>
           <AppText variant="display">One quick age check.</AppText>
           <AppText style={styles.supportingText}>
-            ProDate is 18+. We verify that rule on our servers.
+            You need to be 18 or older to use ProDate.
           </AppText>
 
           <View style={styles.privacyCard}>
@@ -127,7 +123,7 @@ export function BirthdayScreen({
           </View>
 
           <View style={styles.dateCard}>
-            <AppText variant="caption">Birthday input</AppText>
+            <AppText variant="caption">Your birthday</AppText>
             <AppText
               accessibilityLabel={`Selected birthday ${formattedBirthDate}`}
               style={styles.dateValue}
@@ -187,12 +183,13 @@ export function BirthdayScreen({
 
         <View style={styles.footer}>
           <AppText style={styles.supportingText} variant="caption">
-            Draft sync is on
+            Saved when you continue
           </AppText>
           <AppButton
             accessibilityLabel={isSaving ? 'Saving birthday' : 'Save birthday and continue'}
             disabled={!hasSelectedDate || isSaving}
-            label={isSaving ? 'Committing…' : 'Commit & continue'}
+            label={isSaving ? 'Saving…' : 'Save & continue'}
+            loading={isSaving}
             onPress={() => void save()}
           />
         </View>

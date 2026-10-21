@@ -1,12 +1,9 @@
 import { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { FormScrollView } from '../../components/form-scroll-view';
+import { IconButton } from '../../components/icon-button';
+import { TextField } from '../../components/text-field';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
@@ -42,21 +39,13 @@ export function EmailEntryScreen({
 
   return (
     <Screen style={styles.screen}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-      >
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={12}
+      <FormScrollView>
+        <IconButton
+          label="Go back"
+          icon={ArrowLeft}
           onPress={onBack}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-        >
-          <AppText style={styles.backIcon} variant="title">
-            ←
-          </AppText>
-        </Pressable>
+          style={{ alignSelf: 'flex-start' }}
+        />
 
         <View style={styles.content}>
           <AppText variant="eyebrow">Your account</AppText>
@@ -66,7 +55,8 @@ export function EmailEntryScreen({
           </AppText>
 
           <View style={styles.fieldGroup}>
-            <TextInput
+            <AppText variant="button">Email address</AppText>
+            <TextField
               accessibilityHint="Enter the email address you want to use for ProDate"
               accessibilityLabel="Email address"
               autoCapitalize="none"
@@ -103,36 +93,19 @@ export function EmailEntryScreen({
             accessibilityLabel={isSubmitting ? 'Sending code' : 'Continue'}
             disabled={!canContinue}
             label={isSubmitting ? 'Sending code…' : 'Continue'}
+            loading={isSubmitting}
             onPress={continueWithEmailAddress}
           />
         </View>
-      </KeyboardAvoidingView>
+      </FormScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  backButtonPressed: {
-    backgroundColor: colors.plumSoft,
-  },
-  backIcon: {
-    fontFamily: typography.family.body,
-    fontSize: 25,
-    lineHeight: 29,
-  },
   content: {
     gap: spacing.md,
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
   },
   errorMessage: {
     backgroundColor: colors.dangerSoft,
@@ -152,7 +125,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderRadius: radii.md,
     borderWidth: 1,
     color: colors.ink,
@@ -161,9 +134,6 @@ const styles = StyleSheet.create({
     minHeight: 60,
     paddingHorizontal: spacing.md,
     paddingVertical: 0,
-  },
-  keyboardView: {
-    flex: 1,
   },
   screen: {
     paddingHorizontal: spacing.lg,

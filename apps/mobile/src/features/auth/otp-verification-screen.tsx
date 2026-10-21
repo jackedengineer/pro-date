@@ -1,12 +1,9 @@
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { FormScrollView } from '../../components/form-scroll-view';
+import { IconButton } from '../../components/icon-button';
+import { TextField } from '../../components/text-field';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
@@ -54,21 +51,13 @@ export function OtpVerificationScreen({
 
   return (
     <Screen style={styles.screen}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-      >
-        <Pressable
-          accessibilityLabel={changeDestinationAccessibilityLabel}
-          accessibilityRole="button"
-          hitSlop={12}
+      <FormScrollView>
+        <IconButton
+          label={changeDestinationAccessibilityLabel}
+          icon={ArrowLeft}
           onPress={onBack}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-        >
-          <AppText style={styles.backIcon} variant="title">
-            ←
-          </AppText>
-        </Pressable>
+          style={{ alignSelf: 'flex-start' }}
+        />
 
         <View style={styles.content}>
           <AppText variant="eyebrow">Secure verification</AppText>
@@ -79,7 +68,7 @@ export function OtpVerificationScreen({
           </AppText>
 
           <View style={styles.fieldGroup}>
-            <TextInput
+            <TextField
               accessibilityHint="Enter the six-digit verification code"
               accessibilityLabel="Verification code"
               autoComplete="one-time-code"
@@ -130,42 +119,25 @@ export function OtpVerificationScreen({
             accessibilityLabel={isSubmitting ? 'Verifying code' : 'Verify code'}
             disabled={!canSubmit}
             label={isSubmitting ? 'Verifying…' : 'Verify code'}
+            loading={isSubmitting}
             onPress={submitCode}
           />
         </View>
-      </KeyboardAvoidingView>
+      </FormScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  backButtonPressed: {
-    backgroundColor: colors.plumSoft,
-  },
-  backIcon: {
-    fontFamily: typography.family.body,
-    fontSize: 25,
-    lineHeight: 29,
-  },
   codeInput: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderRadius: radii.md,
     borderWidth: 1,
     color: colors.ink,
     fontFamily: typography.family.display,
     fontSize: 30,
-    letterSpacing: spacing.md,
+    letterSpacing: 8,
     minHeight: 68,
     paddingHorizontal: spacing.lg,
     textAlign: 'center',
@@ -175,7 +147,7 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: spacing.md,
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
   },
   errorMessage: {
     backgroundColor: colors.dangerSoft,
@@ -191,9 +163,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 'auto',
-  },
-  keyboardView: {
-    flex: 1,
   },
   destination: {
     fontFamily: typography.family.medium,

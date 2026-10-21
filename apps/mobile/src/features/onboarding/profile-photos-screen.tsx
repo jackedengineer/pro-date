@@ -4,6 +4,11 @@ import {
   type ProfilePhoto,
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
+import Plus from 'lucide-react-native/icons/plus';
+import X from 'lucide-react-native/icons/x';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import { useReducedMotionPreference } from '../../theme/motion';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -58,6 +63,7 @@ export function ProfilePhotosScreen({
   removePhoto,
   uploadPhoto,
 }: ProfilePhotosScreenProps) {
+  const reducedMotion = useReducedMotionPreference();
   const { width: viewportWidth } = useWindowDimensions();
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -209,18 +215,17 @@ export function ProfilePhotosScreen({
     >
       <View style={styles.headingRow}>
         <View style={styles.headingCopy}>
-          <AppText variant="eyebrow">Visual commit</AppText>
-          <AppText variant="display">Show the build, not just the bio.</AppText>
+          <AppText variant="eyebrow">Your photos</AppText>
+          <AppText variant="display">A little more you.</AppText>
         </View>
         <View style={styles.countPill}>
           <AppText style={styles.countText} variant="caption">
-            {photos.length} / {PROFILE_PHOTO_MAX_COUNT} committed
+            {photos.length} / {PROFILE_PHOTO_MAX_COUNT} added
           </AppText>
         </View>
       </View>
       <AppText style={styles.supportingText}>
-        Add at least four clear photos. Give the grid range—face, full frame, and a life beyond the
-        laptop.
+        Add four to six photos. A clear face, your favourite places, and life beyond the laptop.
       </AppText>
 
       {isLoading ? (
@@ -269,7 +274,7 @@ export function ProfilePhotosScreen({
                     ) : (
                       <>
                         <View style={styles.addIcon}>
-                          <AppText style={styles.addIconText}>+</AppText>
+                          <Plus size={24} color={colors.plum} />
                         </View>
                         <AppText style={styles.addLabel} variant="caption">
                           {index === 0 ? 'Add lead photo' : `Add photo ${index + 1}`}
@@ -285,14 +290,15 @@ export function ProfilePhotosScreen({
 
             return (
               <View
-                accessibilityLabel={
-                  index === 0 ? 'Lead profile photo' : `Profile photo ${index + 1}`
-                }
-                accessible
                 key={currentPhoto.id}
+                testID={`profile-photo-slot-${index}`}
                 style={[styles.photoCard, photoCardSize]}
               >
                 <Image
+                  accessible
+                  accessibilityLabel={
+                    index === 0 ? 'Lead profile photo' : `Profile photo ${index + 1}`
+                  }
                   accessibilityIgnoresInvertColors
                   cachePolicy="memory-disk"
                   contentFit="cover"
@@ -300,7 +306,7 @@ export function ProfilePhotosScreen({
                   source={{ uri: currentPhoto.deliveryUrl }}
                   style={StyleSheet.absoluteFill}
                   testID={`profile-photo-image-${index}`}
-                  transition={180}
+                  transition={reducedMotion ? 0 : 180}
                 />
                 <View pointerEvents="none" style={styles.imageOutline} />
                 <View style={styles.photoHeader}>
@@ -313,14 +319,13 @@ export function ProfilePhotosScreen({
                     accessibilityLabel={`Remove photo ${index + 1}`}
                     accessibilityRole="button"
                     disabled={activePosition !== null || isSaving}
-                    hitSlop={4}
                     onPress={() => confirmRemove(currentPhoto, index)}
                     style={styles.removeButton}
                   >
                     {activePosition === index ? (
                       <ActivityIndicator color={colors.ink} size="small" />
                     ) : (
-                      <AppText style={styles.removeText}>×</AppText>
+                      <X size={20} color={colors.ink} />
                     )}
                   </Pressable>
                 </View>
@@ -329,14 +334,13 @@ export function ProfilePhotosScreen({
                     accessibilityLabel={`Move photo ${index + 1} earlier`}
                     accessibilityRole="button"
                     disabled={photoOrderIndex === 0 || activePosition !== null || isSaving}
-                    hitSlop={4}
                     onPress={() => movePhoto(photoOrderIndex, -1)}
                     style={[
                       styles.reorderButton,
                       photoOrderIndex === 0 && styles.reorderButtonDisabled,
                     ]}
                   >
-                    <AppText style={styles.reorderText}>←</AppText>
+                    <ArrowLeft size={18} color={colors.ink} />
                   </Pressable>
                   <Pressable
                     accessibilityLabel={`Move photo ${index + 1} later`}
@@ -344,14 +348,13 @@ export function ProfilePhotosScreen({
                     disabled={
                       photoOrderIndex === photos.length - 1 || activePosition !== null || isSaving
                     }
-                    hitSlop={4}
                     onPress={() => movePhoto(photoOrderIndex, 1)}
                     style={[
                       styles.reorderButton,
                       photoOrderIndex === photos.length - 1 && styles.reorderButtonDisabled,
                     ]}
                   >
-                    <AppText style={styles.reorderText}>→</AppText>
+                    <ArrowRight size={18} color={colors.ink} />
                   </Pressable>
                 </View>
               </View>
@@ -361,7 +364,7 @@ export function ProfilePhotosScreen({
       ) : (
         <View accessibilityRole="alert" accessible style={styles.errorCard}>
           <AppText style={styles.errorTitle} variant="title">
-            Upload lane unavailable
+            Photos unavailable
           </AppText>
           <AppText style={styles.errorText}>{loadError}</AppText>
           <AppButton label="Retry loading photos" onPress={() => void refresh()} />
@@ -380,12 +383,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
   },
-  addIconText: {
-    color: colors.plum,
-    fontFamily: typography.family.medium,
-    fontSize: 26,
-    lineHeight: 29,
-  },
   addLabel: {
     color: colors.plum,
     fontFamily: typography.family.medium,
@@ -393,9 +390,9 @@ const styles = StyleSheet.create({
   },
   cardPressed: {
     backgroundColor: colors.plumSoft,
-    transform: [{ scale: 0.96 }],
   },
   countPill: {
+    alignSelf: 'flex-start',
     backgroundColor: colors.sand,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
@@ -407,7 +404,7 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderStyle: 'dashed',
     borderWidth: 1,
   },
@@ -443,12 +440,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   headingCopy: {
-    flex: 1,
     gap: spacing.sm,
   },
   headingRow: {
     alignItems: 'flex-start',
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: spacing.sm,
   },
   loadingCard: {
@@ -490,15 +486,15 @@ const styles = StyleSheet.create({
   positionText: {
     color: colors.white,
     fontFamily: typography.family.medium,
-    fontSize: 10,
+    fontSize: 12,
   },
   reorderButton: {
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
     borderRadius: radii.pill,
-    height: 36,
+    height: 44,
     justifyContent: 'center',
-    width: 36,
+    width: 44,
   },
   reorderButtonDisabled: {
     opacity: 0.38,
@@ -510,24 +506,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.sm,
   },
-  reorderText: {
-    color: colors.ink,
-    fontFamily: typography.family.medium,
-    fontSize: 18,
-    lineHeight: 21,
-  },
   removeButton: {
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
     borderRadius: radii.pill,
-    height: 36,
+    height: 44,
     justifyContent: 'center',
-    width: 36,
-  },
-  removeText: {
-    color: colors.ink,
-    fontSize: 24,
-    lineHeight: 27,
+    width: 44,
   },
   supportingText: {
     color: colors.muted,

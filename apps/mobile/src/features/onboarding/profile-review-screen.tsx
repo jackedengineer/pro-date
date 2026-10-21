@@ -118,7 +118,11 @@ export function ProfileReviewScreen({
         {onDiscover === undefined ? null : (
           <AppButton label="Explore profiles" onPress={onDiscover} />
         )}
-        <AppButton label="Review my profile" onPress={() => setIsReviewingPublished(true)} />
+        <AppButton
+          variant="secondary"
+          label="Review my profile"
+          onPress={() => setIsReviewingPublished(true)}
+        />
       </OnboardingStepLayout>
     );
   }
@@ -142,6 +146,7 @@ export function ProfileReviewScreen({
               accessibilityLabel={isPublishing ? 'Publishing profile' : 'Publish profile'}
               disabled={review.missingSections.length > 0 || isPublishing}
               label={isPublishing ? 'Publishing…' : 'Publish profile'}
+              loading={isPublishing}
               onPress={() => void publish()}
             />
           </View>
@@ -149,10 +154,10 @@ export function ProfileReviewScreen({
       }
     >
       <AppText variant="eyebrow">Final review</AppText>
-      <AppText variant="display">{"Preview the profile you're shipping."}</AppText>
+      <AppText variant="display">Looking like you?</AppText>
       <AppText style={styles.supportingText}>
-        This is your discovery card. Check the visible details, photo order, and every conversation
-        hook before publishing.
+        Here’s what people will see. Check your details, photos, and conversation starters before
+        going live.
       </AppText>
 
       {isLoading ? (
@@ -173,7 +178,7 @@ export function ProfileReviewScreen({
           {review.missingSections.length === 0 ? null : (
             <View accessibilityRole="alert" accessible style={styles.errorCard}>
               <AppText style={styles.errorTitle} variant="title">
-                A few commits are missing
+                A few details are missing
               </AppText>
               <AppText style={styles.errorText}>
                 Finish {review.missingSections.map((section) => section.toLowerCase()).join(', ')}

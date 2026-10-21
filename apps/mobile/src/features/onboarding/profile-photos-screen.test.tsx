@@ -39,7 +39,7 @@ describe('ProfilePhotosScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(view.getByText('3 / 6 committed')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('3 / 6 added')).toBeTruthy());
     expect(view.getByLabelText('Lead profile photo')).toBeTruthy();
     expect(view.getByRole('button', { name: 'Add photo 4' })).toBeTruthy();
     expect(view.getByRole('button', { name: 'Commit photos and continue' })).toBeDisabled();
@@ -62,7 +62,7 @@ describe('ProfilePhotosScreen', () => {
     });
 
     await waitFor(() => {
-      expect(view.getByLabelText('Lead profile photo')).toHaveStyle({
+      expect(view.getByTestId('profile-photo-slot-0')).toHaveStyle({
         height: 190,
         width: 152,
       });
@@ -79,6 +79,11 @@ describe('ProfilePhotosScreen', () => {
       position: 'absolute',
       right: 0,
       top: 0,
+    });
+    expect(view.getByTestId('profile-photo-slot-0')).not.toHaveProp('accessible', true);
+    expect(view.getByRole('button', { name: 'Remove photo 1' })).toHaveStyle({
+      width: 44,
+      height: 44,
     });
   });
 
@@ -169,7 +174,7 @@ describe('ProfilePhotosScreen', () => {
       />,
     );
 
-    await waitFor(() => expect(view.getByText('4 / 6 committed')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('4 / 6 added')).toBeTruthy());
     await fireEvent.press(view.getByRole('button', { name: 'Move photo 2 earlier' }));
     await fireEvent.press(view.getByRole('button', { name: 'Commit photos and continue' }));
 

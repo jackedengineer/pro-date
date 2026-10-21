@@ -62,7 +62,7 @@ describe('BirthdayScreen', () => {
     );
 
     expect(view.getByText('One quick age check.')).toBeTruthy();
-    expect(view.getByText('ProDate is 18+. We verify that rule on our servers.')).toBeTruthy();
+    expect(view.getByText('You need to be 18 or older to use ProDate.')).toBeTruthy();
     expect(
       view.getByText('Your full birthday stays private. Only your age appears on your profile.'),
     ).toBeTruthy();

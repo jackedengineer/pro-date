@@ -65,7 +65,10 @@ describe('ProfilePromptsScreen', () => {
     await waitFor(() => expect(view.getByLabelText('Answer prompt 1')).toBeTruthy());
     await fireEvent.changeText(view.getByLabelText('Answer prompt 1'), 'Coffee.');
 
-    expect(view.getByText('1 / 5 words or 7 / 30 characters · 7 / 280 max')).toBeTruthy();
+    expect(view.getByText('Keep going · 5 words or 30 characters')).toBeTruthy();
+    expect(view.getByText('7 / 280')).toBeTruthy();
+    expect(view.getAllByText('Ready')[0]).toHaveProp('accessibilityLiveRegion', 'polite');
+    expect(view.getByText('7 / 280')).not.toHaveProp('accessibilityLiveRegion', 'polite');
     expect(view.getByRole('button', { name: 'Commit prompts and continue' })).toBeDisabled();
   });
 

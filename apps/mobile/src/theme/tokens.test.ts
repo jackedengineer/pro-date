@@ -22,4 +22,8 @@ describe('readable visual tokens', () => {
     expect(contrast(colors.muted, colors.background)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(colors.muted, colors.surface)).toBeGreaterThanOrEqual(4.5);
   });
+  it('keeps input edges distinguishable from their surfaces', () => {
+    expect(contrast(colors.fieldBorder, colors.surface)).toBeGreaterThanOrEqual(3);
+    expect(contrast(colors.fieldBorder, colors.background)).toBeGreaterThanOrEqual(3);
+  });
 });

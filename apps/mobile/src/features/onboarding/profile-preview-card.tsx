@@ -4,6 +4,8 @@ import {
   type RelationshipIntent,
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
+import Pencil from 'lucide-react-native/icons/pencil';
+import { useReducedMotionPreference } from '../../theme/motion';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../components/app-text';
@@ -52,6 +54,7 @@ function EditButton({ label, onPress }: { label: string; onPress: () => void }) 
       onPress={onPress}
       style={({ pressed }) => [styles.editButton, pressed && styles.editButtonPressed]}
     >
+      <Pencil size={14} color={colors.plum} />
       <AppText style={styles.editText} variant="caption">
         {label}
       </AppText>
@@ -70,6 +73,7 @@ export function ProfilePreviewCard({
   onEditPrompts,
   review,
 }: ProfilePreviewCardProps) {
+  const reducedMotion = useReducedMotionPreference();
   const { profile } = review;
   const leadPhoto = review.photos[0];
   const visibleDetails = [
@@ -91,30 +95,23 @@ export function ProfilePreviewCard({
             source={{ uri: leadPhoto.deliveryUrl }}
             style={StyleSheet.absoluteFill}
             testID="review-lead-photo"
-            transition={180}
+            transition={reducedMotion ? 0 : 180}
           />
-          <View style={styles.photoScrim} />
-          <View style={styles.photoTitle}>
-            <AppText style={styles.name} variant="title">
-              {profile.displayName},{' '}
-              {profile.birthDate === null ? '—' : calculateAge(profile.birthDate)}
-            </AppText>
-            {profile.locationLabel === null ? null : (
-              <AppText style={styles.location}>{profile.locationLabel}</AppText>
-            )}
-          </View>
         </View>
       )}
-
+      <View style={styles.photoTitle}>
+        <AppText style={styles.name} variant="title">
+          {profile.displayName},{' '}
+          {profile.birthDate === null ? '—' : calculateAge(profile.birthDate)}
+        </AppText>
+        {profile.locationLabel === null ? null : (
+          <AppText style={styles.location}>{profile.locationLabel}</AppText>
+        )}
+      </View>
       <View style={styles.editRow}>
         <EditButton label="Name" onPress={onEditName} />
         <EditButton label="Birthday" onPress={onEditBirthday} />
-        <EditButton label="Identity" onPress={onEditIdentity} />
-        <EditButton label="Height" onPress={onEditHeight} />
-        <EditButton label="Preferences" onPress={onEditPreferences} />
         <EditButton label="Location" onPress={onEditLocation} />
-        <EditButton label="Photos" onPress={onEditPhotos} />
-        <EditButton label="Prompts" onPress={onEditPrompts} />
       </View>
 
       {visibleDetails.length === 0 ? null : (
@@ -128,6 +125,10 @@ export function ProfilePreviewCard({
           ))}
         </View>
       )}
+      <View style={styles.editRow}>
+        <EditButton label="Identity" onPress={onEditIdentity} />
+        <EditButton label="Height" onPress={onEditHeight} />
+      </View>
 
       {profile.relationshipIntent === null ? null : (
         <View style={styles.intentCard}>
@@ -135,6 +136,14 @@ export function ProfilePreviewCard({
           <AppText>{intentLabels[profile.relationshipIntent]}</AppText>
         </View>
       )}
+      <View style={styles.editRow}>
+        <EditButton label="Preferences" onPress={onEditPreferences} />
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <AppText variant="button">Conversation starters</AppText>
+        <EditButton label="Prompts" onPress={onEditPrompts} />
+      </View>
 
       {review.prompts.map((answer) => {
         const prompt = PROFILE_PROMPT_CATALOGUE.find((item) => item.id === answer.promptId);
@@ -149,6 +158,10 @@ export function ProfilePreviewCard({
         );
       })}
 
+      <View style={styles.sectionHeader}>
+        <AppText variant="button">Your photos</AppText>
+        <EditButton label="Photos" onPress={onEditPhotos} />
+      </View>
       <View style={styles.photoStrip}>
         {review.photos.slice(1).map((photo, index) => (
           <Image
@@ -160,7 +173,7 @@ export function ProfilePreviewCard({
             key={photo.id}
             source={{ uri: photo.deliveryUrl }}
             style={styles.thumbnail}
-            transition={180}
+            transition={reducedMotion ? 0 : 180}
           />
         ))}
       </View>
@@ -195,12 +208,12 @@ const styles = StyleSheet.create({
   },
   editButton: {
     alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    borderRadius: radii.sm,
     justifyContent: 'center',
     minHeight: 44,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   editButtonPressed: {
     backgroundColor: colors.plumSoft,
@@ -231,27 +244,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   location: {
-    color: colors.white,
+    color: colors.muted,
   },
   name: {
-    color: colors.white,
-  },
-  photoScrim: {
-    bottom: 0,
-    backgroundColor: 'rgba(18, 10, 16, 0.22)',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
+    color: colors.ink,
   },
   photoStrip: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
   },
   photoTitle: {
     gap: spacing.xs,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   promptAnswer: {
     fontFamily: typography.family.medium,
@@ -274,6 +280,14 @@ const styles = StyleSheet.create({
     aspectRatio: 4 / 5,
     backgroundColor: colors.plumSoft,
     borderRadius: radii.sm,
-    flex: 1,
+    width: '48%',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
   },
 });
