@@ -20,6 +20,13 @@ const message = {
 };
 function setup(subject: string | null = 'clerk-test') {
   const service: MessagingService = {
+    interactionChanges: vi.fn().mockResolvedValue({ data: [], latestRevision: 0, nextRevision: 0 }),
+    setReaction: vi.fn().mockResolvedValue({
+      messageId: id,
+      revision: 1,
+      replyTo: null,
+      reactions: [{ userId: viewerId, reaction: 'HEART', revision: 1 }],
+    }),
     capabilities: vi.fn().mockResolvedValue({ replies: true, reactions: false }),
     contexts: vi.fn().mockResolvedValue({ data: [], revision: 0 }),
     conversations: vi.fn().mockResolvedValue({ data: [], nextCursor: null }),
@@ -47,6 +54,36 @@ function setup(subject: string | null = 'clerk-test') {
   return { app, service };
 }
 describe('private messaging routes', () => {
+  it('rejects forged reaction ownership, custom emoji and unbounded change cursors', async () => {
+    const { app, service } = setup();
+    await request(app)
+      .put(`/v1/conversations/${id}/messages/${id}/reaction`)
+      .send({ reaction: 'HEART', expectedRevision: 0, userId: id })
+      .expect(422);
+    await request(app)
+      .put(`/v1/conversations/${id}/messages/${id}/reaction`)
+      .send({ reaction: 'CUSTOM', expectedRevision: 0 })
+      .expect(422);
+    await request(app)
+      .put(`/v1/conversations/${id}/messages/${id}/reaction`)
+      .send({ reaction: 'HEART', expectedRevision: 0 })
+      .expect(200);
+    expect(service.setReaction).toHaveBeenCalledExactlyOnceWith(viewerId, id, id, {
+      reaction: 'HEART',
+      expectedRevision: 0,
+    });
+    await request(app)
+      .get(`/v1/conversations/${id}/interaction-changes?afterRevision=0&limit=500`)
+      .expect(422);
+    await request(app)
+      .get(`/v1/conversations/${id}/interaction-changes?afterRevision=0`)
+      .expect(200);
+    const anonymous = setup(null);
+    await request(anonymous.app)
+      .put(`/v1/conversations/${id}/messages/${id}/reaction`)
+      .send({ reaction: null, expectedRevision: 1 })
+      .expect(401);
+  });
   it('authenticates opt-in context and validates bounded IDs before service access', async () => {
     const anonymous = setup(null);
     await request(anonymous.app).get(`/v1/conversations/${id}/capabilities`).expect(401);

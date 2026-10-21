@@ -270,6 +270,84 @@ export const messageReplies = pgTable(
   ],
 );
 
+export const conversationInteractions = pgTable(
+  'conversation_interactions',
+  {
+    conversationId: uuid('conversation_id')
+      .primaryKey()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    revision: bigint('revision', { mode: 'number' }).default(0).notNull(),
+  },
+  (table) => [
+    check(
+      'conversation_interactions_revision_check',
+      sql`${table.revision} between 0 and 9007199254740991`,
+    ),
+  ],
+);
+
+export const messageReactions = pgTable(
+  'message_reactions',
+  {
+    conversationId: uuid('conversation_id').notNull(),
+    messageId: uuid('message_id').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: varchar('kind', { length: 8 }),
+    revision: bigint('revision', { mode: 'number' }).notNull(),
+    changedRevision: bigint('changed_revision', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.userId] }),
+    foreignKey({
+      columns: [table.conversationId, table.messageId],
+      foreignColumns: [messages.conversationId, messages.id],
+    }).onDelete('cascade'),
+    check(
+      'message_reactions_kind_check',
+      sql`${table.kind} is null or ${table.kind} in ('HEART','LAUGH','LOVE','FIRE','CLAP','LIKE')`,
+    ),
+    check(
+      'message_reactions_revision_check',
+      sql`${table.revision} between 1 and 9007199254740991 and ${table.changedRevision} between 1 and 9007199254740991`,
+    ),
+  ],
+);
+
+// These records are both the durable replay feed and the leased publication outbox.
+export const messageInteractionEvents = pgTable(
+  'message_interaction_events',
+  {
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    revision: bigint('revision', { mode: 'number' }).notNull(),
+    messageId: uuid('message_id').notNull(),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .default(sql`clock_timestamp()`)
+      .notNull(),
+    leasedUntil: timestamp('leased_until', { mode: 'date', withTimezone: true }),
+    publishedAt: timestamp('published_at', { mode: 'date', withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.conversationId, table.revision] }),
+    foreignKey({
+      columns: [table.conversationId, table.messageId],
+      foreignColumns: [messages.conversationId, messages.id],
+    }).onDelete('cascade'),
+    index('interaction_events_pending_idx').on(table.publishedAt, table.leasedUntil),
+    index('interaction_events_actor_created_idx').on(table.actorId, table.createdAt),
+    check(
+      'interaction_events_revision_check',
+      sql`${table.revision} between 1 and 9007199254740991`,
+    ),
+  ],
+);
+
 export const notificationSettings = pgTable(
   'notification_settings',
   {

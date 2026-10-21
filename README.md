@@ -309,6 +309,12 @@ The additive reply API keeps existing message, history and inbox responses uncha
 
 When enabled, right-swipe or use the accessible Reply action on a saved message. A cancellable quote appears above the composer. Reply targets and previews are persisted alongside the outgoing intent before the draft clears; retry and restart retain the same UUID and target. SQLite upgrades are additive, account-scoped, and preserve old plain-text queued messages. Do not downgrade to an older binary with newly queued replies: it cannot understand their intent. Native swipe/scroll/keyboard and screen-reader acceptance still require a physical device; automated tests do not establish frame rate or gesture feel.
 
+### Curated reactions and recovery
+
+Reactions use six semantic choices: ❤️ 😂 🥰 🔥 👏 👍. Each member has one versioned choice per saved message; selecting it again removes it, and choosing another replaces it. Desired-state writes carry an expected actor revision, preserving removal tombstones so a stale retry cannot resurrect an older choice. Equivalent retries/no-ops do not spend quota or create another event. A separate limit allows 60 actual changes/minute/account under the existing ordered membership locks.
+
+`0015_message-reactions` is **prepared only**, not applied or live-database verified. It follows `0014` and adds relational state, an independent conversation interaction revision, and durable change/outbox metadata. `CHAT_REACTIONS_ENABLED=false` stays the default. Reaction changes never update text-message sequence, chat activity, Your turn/Their turn, or notification jobs. Authenticated Socket.IO hints contain only conversation ID and interaction revision; bounded authorized REST replay repairs missed hints, following [Socket.IO's delivery guarantees](https://socket.io/docs/v4/delivery-guarantees/). Retain the change feed until an explicit retention/reset policy is designed; do not prune it ad hoc.
+
 ## Chat notification preferences
 
 The first notification slice adds **Chat notifications** inside a conversation and **Notifications** in Merged. Both open a scrollable settings sheet with account-owned choices, save/error states, and accessible full-row switches. Every chat defaults to silent. An account-wide pause preserves individual chat opt-ins; muting or pausing cancels pending delivery jobs without replay on resume. Preference revisions change only when the desired state changes, so equivalent PATCH retries do not re-enable old work.

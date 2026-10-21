@@ -1,5 +1,9 @@
 import {
   actionResponseSchema,
+  interactionChangesQuerySchema,
+  interactionChangesResponseSchema,
+  messageReactionResponseSchema,
+  setMessageReactionSchema,
   chatCapabilitiesResponseSchema,
   messageContextQuerySchema,
   messageContextResponseSchema,
@@ -98,6 +102,27 @@ export function createMessagingRouter(options: {
     );
     response.json(
       messageContextResponseSchema.parse({ ...page, requestId: options.requestId(request) }),
+    );
+  });
+  router.get('/conversations/:id/interaction-changes', async (request, response) => {
+    const page = await options.service!.interactionChanges(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+      input(interactionChangesQuerySchema, request.query),
+    );
+    response.json(
+      interactionChangesResponseSchema.parse({ ...page, requestId: options.requestId(request) }),
+    );
+  });
+  router.put('/conversations/:id/messages/:messageId/reaction', async (request, response) => {
+    const data = await options.service!.setReaction(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+      input(z.uuid(), request.params.messageId),
+      input(setMessageReactionSchema, request.body),
+    );
+    response.json(
+      messageReactionResponseSchema.parse({ data, requestId: options.requestId(request) }),
     );
   });
   router.get('/conversations/:id/messages', async (request, response) => {

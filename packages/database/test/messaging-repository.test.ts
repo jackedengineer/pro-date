@@ -126,6 +126,23 @@ describe('first-commit notification intents', () => {
     ).rejects.toMatchObject({ status: 503 });
     expect(test.queries.some((query) => query.includes('message_replies'))).toBe(false);
   });
+  it('never reads reaction state or its outbox when the feature is disabled', async () => {
+    const test = setup();
+    const repository = createMessagingRepository(test.database);
+    expect(await repository.claimInteractionEvents()).toEqual([]);
+    await expect(
+      repository.setReaction(viewer, conversation, viewer, {
+        reaction: 'HEART',
+        expectedRevision: 0,
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(
+      test.queries.some(
+        (query) =>
+          query.includes('message_reactions') || query.includes('message_interaction_events'),
+      ),
+    ).toBe(false);
+  });
   it('rejects reuse of a saved intent with a different reply target', async () => {
     const test = setup(true, conversation);
     await expect(
