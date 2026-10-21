@@ -114,28 +114,47 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
     socket.on('disconnect', () => clearTimeout(expiry));
   });
   let pending: Promise<void> | null = null;
+  let requested = false;
+  let continuation: ReturnType<typeof setImmediate> | null = null;
   async function dispatch() {
-    const events = await options.repository.claimEvents();
-    for (const event of events) {
-      if (stopped) return;
-      // Do not publish a queued hint once the pair is blocked or unmatched.
-      if (await options.repository.canAccess(event.firstUserId, event.conversationId)) {
-        io.to([`user:${event.firstUserId}`, `user:${event.secondUserId}`]).emit(
-          'conversation:changed',
-          {
-            conversationId: event.conversationId,
-            sequence: event.sequence,
-          },
-        );
+    // Drain bursts promptly, but yield after at most four 50-event claim pages.
+    for (let page = 0; page < 4 && !stopped; page++) {
+      requested = false;
+      const events = await options.repository.claimEvents();
+      for (const event of events) {
+        if (stopped) return;
+        // Recheck each event: access may be revoked while a backlog is draining.
+        const allowed = await options.repository.canAccess(event.firstUserId, event.conversationId);
+        if (stopped) return;
+        if (allowed) {
+          io.to([`user:${event.firstUserId}`, `user:${event.secondUserId}`]).emit(
+            'conversation:changed',
+            {
+              conversationId: event.conversationId,
+              sequence: event.sequence,
+            },
+          );
+        }
+        await options.repository.completeEvent(event.messageId);
       }
-      await options.repository.completeEvent(event.messageId);
+      // A commit can arrive even while an empty claim is in flight.
+      if (events.length === 0 && !requested) return;
     }
+    requested = true;
   }
   function flush(): Promise<void> {
     if (stopped) return Promise.resolve();
+    requested = true;
     if (pending !== null) return pending;
-    pending = dispatch()
+    if (continuation !== null) {
+      clearImmediate(continuation);
+      continuation = null;
+    }
+    pending = Promise.resolve()
+      .then(dispatch)
       .catch((failure: unknown) => {
+        // Do not spin on a failed claim/write; the timer and lease handle recovery.
+        requested = false;
         options.logger.warn(
           {
             event: 'messaging_outbox_deferred',
@@ -147,6 +166,13 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
       })
       .finally(() => {
         pending = null;
+        if (requested && !stopped) {
+          continuation = setImmediate(() => {
+            continuation = null;
+            void flush();
+          });
+          continuation.unref();
+        }
       });
     return pending;
   }
@@ -171,6 +197,7 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
       stopped = true;
       clearInterval(timer);
       clearInterval(telemetry);
+      if (continuation !== null) clearImmediate(continuation);
       for (const cancel of pendingAdmissions) cancel();
       await pending;
       await new Promise<void>((resolve) => {
