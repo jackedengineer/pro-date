@@ -5,6 +5,7 @@ import {
   type Message,
   type MessageContext,
   type MessageQuote,
+  type ReactionKind,
 } from '@pro-date/contracts';
 import { ApiRequestError } from '../../api/http-client';
 import type { MessagingApi } from '../../api/messaging';
@@ -18,6 +19,8 @@ export type ChatRow = Omit<Message, 'id' | 'sequence'> & {
   messageId: string | null;
   context: MessageContext | null;
   replyTo: MessageQuote | null;
+  reactionPending: boolean;
+  reactionError: string | null;
 };
 export interface ThreadSnapshot {
   conversation: Conversation | null;
@@ -36,6 +39,11 @@ export class ChatThread {
   private messages: Message[] = [];
   private outgoing: OutgoingMessage[] = [];
   private contexts = new Map<string, MessageContext>();
+  private reactionPending = new Set<string>();
+  private reactionErrors = new Map<string, string>();
+  private interactionCursor: number | null = null;
+  private interactionSync: Promise<void> | null = null;
+  private interactionsDirty = false;
   private statuses = new Map<string, ChatRow['status']>();
   private listeners = new Set<() => void>();
   private snapshot: ThreadSnapshot = {
@@ -109,6 +117,8 @@ export class ChatThread {
       messageId: m.id,
       context: this.contexts.get(m.id) ?? null,
       replyTo: this.contexts.get(m.id)?.replyTo ?? null,
+      reactionPending: this.reactionPending.has(m.id),
+      reactionError: this.reactionErrors.get(m.id) ?? null,
     }));
     for (const pending of this.outgoing)
       if (!confirmed.has(`${this.ownerId}:${pending.clientId}`))
@@ -120,6 +130,8 @@ export class ChatThread {
           messageId: null,
           context: null,
           replyTo: pending.replyTo ?? null,
+          reactionPending: false,
+          reactionError: null,
           status:
             this.statuses.get(pending.clientId) ?? (pending.failure === null ? 'queued' : 'failed'),
         });
@@ -135,6 +147,8 @@ export class ChatThread {
           old.failure === row.failure &&
           old.context === row.context &&
           old.replyTo === row.replyTo &&
+          old.reactionPending === row.reactionPending &&
+          old.reactionError === row.reactionError &&
           old.body === row.body
           ? old
           : row;
@@ -380,6 +394,7 @@ export class ChatThread {
         }
         if (page.nextAfterSequence === null) break;
       } while (this.enabled && !this.disposed);
+      await this.syncInteractions();
     } catch (failure: unknown) {
       if (this.disposed || this.snapshot.unavailable) return;
       if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
@@ -392,30 +407,192 @@ export class ChatThread {
       this.controllers.delete(request);
     }
   }
-  private async refreshContexts(ids: string[], signal: AbortSignal) {
+  private async mergeContexts(data: MessageContext[], signal: AbortSignal) {
+    if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
+    const loaded = new Set(this.messages.map((message) => message.id));
+    const changed = data.filter((context) => {
+      const current = this.contexts.get(context.messageId);
+      return (
+        loaded.has(context.messageId) &&
+        (current === undefined ||
+          (current.revision <= context.revision &&
+            JSON.stringify(current) !== JSON.stringify(context)))
+      );
+    });
+    if (changed.length === 0) return;
+    await this.storage.saveContexts(this.id, changed);
+    if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
+    for (const context of changed) {
+      const current = this.contexts.get(context.messageId);
+      if (current === undefined || current.revision <= context.revision)
+        this.contexts.set(context.messageId, context);
+    }
+    this.publish();
+  }
+  private async refreshContexts(ids: string[], signal: AbortSignal): Promise<boolean> {
     if (
       ids.length === 0 ||
       (!this.snapshot.capabilities.replies && !this.snapshot.capabilities.reactions)
     )
-      return;
+      return false;
     try {
       const page = await this.api.contexts(this.id, ids, signal);
-      if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
-      await this.storage.saveContexts(this.id, page.data);
-      if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
-      for (const context of page.data) {
-        const current = this.contexts.get(context.messageId);
-        if (current === undefined || current.revision <= context.revision)
-          this.contexts.set(context.messageId, context);
-      }
+      if (signal.aborted || this.disposed || this.snapshot.unavailable) return false;
+      await this.mergeContexts(page.data, signal);
+      if (signal.aborted || this.disposed || this.snapshot.unavailable) return false;
       this.publish({ contextError: null });
+      return ids.every((id) => page.data.some((context) => context.messageId === id));
     } catch (failure: unknown) {
-      if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
+      if (signal.aborted || this.disposed || this.snapshot.unavailable) return false;
       if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
       else
         this.publish({
           contextError: 'Couldn’t refresh message details. Try refreshing the conversation.',
         });
+      return false;
+    }
+  }
+  syncInteractions(): Promise<void> {
+    if (
+      !this.enabled ||
+      this.disposed ||
+      this.snapshot.unavailable ||
+      !this.snapshot.capabilities.reactions
+    )
+      return Promise.resolve();
+    if (this.interactionSync !== null) {
+      this.interactionsDirty = true;
+      return this.interactionSync;
+    }
+    this.interactionsDirty = false;
+    this.interactionSync = this.synchronizeInteractions().finally(() => {
+      this.interactionSync = null;
+      if (this.interactionsDirty && this.enabled && !this.disposed) void this.syncInteractions();
+    });
+    return this.interactionSync;
+  }
+  private async synchronizeInteractions() {
+    const request = new AbortController();
+    this.controllers.add(request);
+    try {
+      if (this.interactionCursor === null) {
+        const covered = new Set<string>();
+        let baseline: number | null = null;
+        // Keep the FIRST atomic watermark: later batches/ACKs must not skip earlier changes.
+        // New messages accepted while building the baseline are included before publishing its cursor.
+        for (;;) {
+          const ids = this.messages
+            .filter((message) => !covered.has(message.id))
+            .slice(0, 50)
+            .map((message) => message.id);
+          if (ids.length === 0) break;
+          const page = await this.api.contexts(this.id, ids, request.signal);
+          if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+          if (!ids.every((id) => page.data.some((context) => context.messageId === id)))
+            throw new Error('Incomplete message context.');
+          baseline ??= page.revision;
+          await this.mergeContexts(page.data, request.signal);
+          if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+          for (const id of ids) covered.add(id);
+        }
+        this.interactionCursor = baseline ?? 0;
+      }
+      for (let pageIndex = 0; pageIndex < 4; pageIndex++) {
+        const cursor: number = this.interactionCursor;
+        const page = await this.api.interactionChanges(this.id, cursor, request.signal);
+        if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+        if (
+          page.nextRevision < cursor ||
+          page.nextRevision > page.latestRevision ||
+          (page.nextRevision === cursor && page.latestRevision > cursor)
+        )
+          throw new Error('Invalid reaction cursor.');
+        await this.mergeContexts(page.data, request.signal);
+        if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+        this.interactionCursor = page.nextRevision;
+        this.publish({ contextError: null });
+        if (page.nextRevision === page.latestRevision) return;
+      }
+      this.interactionsDirty = true;
+    } catch (failure: unknown) {
+      if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      else {
+        if (failure instanceof ApiRequestError && failure.code === 'INVALID_CURSOR')
+          this.interactionCursor = null;
+        this.interactionsDirty = false;
+        this.publish({
+          contextError: 'Couldn’t sync reactions. Refresh the conversation to try again.',
+        });
+      }
+    } finally {
+      this.controllers.delete(request);
+    }
+  }
+  async setReaction(messageId: string, reaction: ReactionKind) {
+    if (
+      !this.enabled ||
+      !this.snapshot.capabilities.reactions ||
+      this.disposed ||
+      this.snapshot.unavailable ||
+      this.reactionPending.has(messageId) ||
+      this.reactionErrors.has(messageId)
+    )
+      return;
+    const context = this.contexts.get(messageId);
+    if (context === undefined || !this.messages.some((message) => message.id === messageId)) return;
+    const current = context.reactions.find((state) => state.userId === this.ownerId);
+    const request = new AbortController();
+    this.controllers.add(request);
+    this.reactionPending.add(messageId);
+    this.publish();
+    try {
+      const result = await this.api.setReaction(
+        this.id,
+        messageId,
+        {
+          reaction: current?.reaction === reaction ? null : reaction,
+          expectedRevision: current?.revision ?? 0,
+        },
+        request.signal,
+      );
+      if (this.disposed || this.snapshot.unavailable) return;
+      // A mutation ACK updates only this row, never the durable replay cursor.
+      await this.mergeContexts([result], request.signal);
+      if (request.signal.aborted) throw new Error('Reaction outcome unknown.');
+    } catch (failure: unknown) {
+      if (this.disposed || this.snapshot.unavailable) return;
+      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      else
+        this.reactionErrors.set(
+          messageId,
+          'Couldn’t confirm this reaction. Refresh it before trying again.',
+        );
+    } finally {
+      this.controllers.delete(request);
+      this.reactionPending.delete(messageId);
+      this.publish();
+    }
+  }
+  async refreshReaction(messageId: string) {
+    if (
+      !this.enabled ||
+      this.disposed ||
+      this.snapshot.unavailable ||
+      this.reactionPending.has(messageId)
+    )
+      return;
+    const request = new AbortController();
+    this.controllers.add(request);
+    this.reactionPending.add(messageId);
+    this.publish();
+    try {
+      if (await this.refreshContexts([messageId], request.signal))
+        this.reactionErrors.delete(messageId);
+    } finally {
+      this.controllers.delete(request);
+      this.reactionPending.delete(messageId);
+      this.publish();
     }
   }
   async loadOlder() {
@@ -457,6 +634,9 @@ export class ChatThread {
     this.messages = [];
     this.outgoing = [];
     this.contexts.clear();
+    this.reactionPending.clear();
+    this.reactionErrors.clear();
+    this.interactionCursor = null;
     this.statuses.clear();
     this.olderCursor = null;
     this.watermark = null;

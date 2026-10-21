@@ -1,5 +1,9 @@
 import { useAuth } from '@clerk/expo';
-import { conversationChangedSchema, type Conversation } from '@pro-date/contracts';
+import {
+  conversationChangedSchema,
+  conversationInteractionsChangedSchema,
+  type Conversation,
+} from '@pro-date/contracts';
 import {
   focusManager,
   onlineManager,
@@ -111,6 +115,11 @@ export class MessagingRuntime {
     const thread = this.threads.get(id);
     if (thread !== undefined) void thread.sync();
     this.inboxRefresh.request();
+  }
+  interactionHint(id: string) {
+    // Reaction-only hints must not invalidate the inbox or change turn/activity semantics.
+    const thread = this.threads.get(id);
+    if (thread !== undefined) void thread.syncInteractions();
   }
   setEnabled(enabled: boolean) {
     if (this.disposed) return;
@@ -270,6 +279,10 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
         socket.on('conversation:changed', (value: unknown) => {
           const parsed = conversationChangedSchema.safeParse(value);
           if (parsed.success) runtime.hint(parsed.data.conversationId);
+        });
+        socket.on('conversation:interactions-changed', (value: unknown) => {
+          const parsed = conversationInteractionsChangedSchema.safeParse(value);
+          if (parsed.success) runtime.interactionHint(parsed.data.conversationId);
         });
         socket.on('disconnect', (reason) => {
           if (reason === 'io server disconnect') recovery.expired();

@@ -5,6 +5,8 @@ import { colors } from '../../theme/tokens';
 import type { ChatRow } from './chat-thread';
 import { QuotedMessage } from './message-quote';
 import { SwipeToReply } from './swipe-to-reply';
+import { MessageReactions } from './message-reactions';
+import type { ReactionKind } from '@pro-date/contracts';
 
 export const MessageBubble = memo(function MessageBubble({
   row,
@@ -13,6 +15,11 @@ export const MessageBubble = memo(function MessageBubble({
   remove,
   reply,
   reducedMotion,
+  ownerId,
+  online,
+  actions,
+  react,
+  refreshReaction,
 }: {
   row: ChatRow;
   mine: boolean;
@@ -20,6 +27,11 @@ export const MessageBubble = memo(function MessageBubble({
   remove: (id: string) => void;
   reply: ((id: string) => void) | null;
   reducedMotion: boolean;
+  ownerId: string;
+  online: boolean;
+  actions: ((id: string) => void) | null;
+  react: ((id: string, kind: ReactionKind) => void) | null;
+  refreshReaction: (id: string) => void;
 }) {
   const time = new Date(row.createdAt).toLocaleTimeString([], {
     hour: 'numeric',
@@ -40,15 +52,32 @@ export const MessageBubble = memo(function MessageBubble({
       <Pressable
         style={[styles.bubble, mine ? styles.outgoing : styles.incoming]}
         accessible
-        accessibilityActions={reply === null ? [] : [{ name: 'reply', label: 'Reply' }]}
+        accessibilityActions={[
+          ...(reply === null || row.messageId === null ? [] : [{ name: 'reply', label: 'Reply' }]),
+          ...(actions === null || row.messageId === null
+            ? []
+            : [{ name: 'react', label: 'React to message' }]),
+        ]}
         onAccessibilityAction={(event) => {
           if (event.nativeEvent.actionName === 'reply' && row.messageId !== null)
             reply?.(row.messageId);
+          if (event.nativeEvent.actionName === 'react' && row.messageId !== null)
+            actions?.(row.messageId);
         }}
         onLongPress={
-          reply !== null && row.messageId !== null ? () => reply(row.messageId!) : undefined
+          row.messageId !== null && (actions !== null || reply !== null)
+            ? () => (actions ?? reply)?.(row.messageId!)
+            : undefined
         }
-        accessibilityHint={reply === null ? undefined : 'Swipe right or long press to reply'}
+        accessibilityHint={
+          row.messageId === null
+            ? undefined
+            : actions !== null
+              ? 'Long press for reactions and message actions'
+              : reply === null
+                ? undefined
+                : 'Swipe right or long press to reply'
+        }
       >
         {row.replyTo === null ? null : <QuotedMessage quote={row.replyTo} light={mine} />}
         <AppText style={mine ? styles.light : undefined}>{row.body}</AppText>
@@ -57,6 +86,13 @@ export const MessageBubble = memo(function MessageBubble({
           {mine ? ` · ${state}` : ''}
         </AppText>
       </Pressable>
+      <MessageReactions
+        row={row}
+        ownerId={ownerId}
+        online={online}
+        react={react}
+        refresh={refreshReaction}
+      />
       {mine && row.status === 'failed' ? (
         <View style={styles.failure}>
           <AppText variant="caption" style={styles.error}>

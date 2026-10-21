@@ -2,6 +2,13 @@ import {
   conversationResponseSchema,
   chatCapabilitiesResponseSchema,
   messageContextResponseSchema,
+  messageContextQuerySchema,
+  interactionChangesResponseSchema,
+  messageReactionResponseSchema,
+  setMessageReactionSchema,
+  type SetMessageReaction,
+  type MessageContexts,
+  type InteractionChanges,
   conversationsResponseSchema,
   messageHistoryResponseSchema,
   messageResponseSchema,
@@ -12,25 +19,78 @@ import {
   type SendMessage,
   currentUserResponseSchema,
 } from '@pro-date/contracts';
-import { createHttpClient } from './http-client';
+import { ApiRequestError, createHttpClient } from './http-client';
 
 export function createMessagingApi(options: Parameters<typeof createHttpClient>[0]) {
   const request = createHttpClient(options);
   const path = (id: string) => `/v1/conversations/${encodeURIComponent(id)}`;
   return {
-    async capabilities(id: string, signal?: AbortSignal) {
+    async interactionChanges(
+      this: void,
+      id: string,
+      afterRevision: number,
+      signal?: AbortSignal,
+    ): Promise<InteractionChanges> {
+      return request(
+        `${path(id)}/interaction-changes?afterRevision=${afterRevision}&limit=50`,
+        interactionChangesResponseSchema,
+        { signal: signal ?? null },
+      );
+    },
+    async setReaction(
+      this: void,
+      id: string,
+      messageId: string,
+      input: SetMessageReaction,
+      signal?: AbortSignal,
+    ) {
+      const result = (
+        await request(
+          `${path(id)}/messages/${encodeURIComponent(messageId)}/reaction`,
+          messageReactionResponseSchema,
+          {
+            method: 'PUT',
+            body: JSON.stringify(setMessageReactionSchema.parse(input)),
+            signal: signal ?? null,
+          },
+        )
+      ).data;
+      if (result.messageId !== messageId)
+        throw new ApiRequestError(
+          'The server sent an unexpected response. Refresh before trying again.',
+          502,
+          'INVALID_RESPONSE',
+          false,
+        );
+      return result;
+    },
+    async capabilities(this: void, id: string, signal?: AbortSignal) {
       return (
         await request(`${path(id)}/capabilities`, chatCapabilitiesResponseSchema, {
           signal: signal ?? null,
         })
       ).data;
     },
-    async contexts(id: string, ids: string[], signal?: AbortSignal) {
-      return request(
+    async contexts(
+      this: void,
+      id: string,
+      ids: string[],
+      signal?: AbortSignal,
+    ): Promise<MessageContexts> {
+      messageContextQuerySchema.parse({ ids: ids.join(',') });
+      const page = await request(
         `${path(id)}/message-context?ids=${encodeURIComponent(ids.join(','))}`,
         messageContextResponseSchema,
         { signal: signal ?? null },
       );
+      if (page.data.some((context) => !ids.includes(context.messageId)))
+        throw new ApiRequestError(
+          'The server sent an unexpected response. Refresh before trying again.',
+          502,
+          'INVALID_RESPONSE',
+          false,
+        );
+      return page;
     },
     async conversations(cursor?: string, signal?: AbortSignal) {
       const page = await request(

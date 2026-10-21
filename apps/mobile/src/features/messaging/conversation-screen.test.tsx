@@ -101,6 +101,8 @@ function setup(cachedConversation: Conversation | null = conversation) {
   };
   const unmatch = jest.fn();
   const api: MessagingApi = {
+    interactionChanges: jest.fn(),
+    setReaction: jest.fn(),
     capabilities: jest.fn().mockResolvedValue({ replies: false, reactions: false }),
     contexts: jest.fn().mockResolvedValue({ data: [], revision: 0 }),
     conversation: jest.fn().mockResolvedValue(conversation),

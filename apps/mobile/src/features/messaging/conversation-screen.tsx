@@ -35,6 +35,9 @@ import { ProfileSafetySheet } from '../discovery/profile-safety-sheet';
 import type { ChatRow, ThreadSnapshot } from './chat-thread';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
+import { ReactionPicker } from './reaction-picker';
+import type { ReactionKind } from '@pro-date/contracts';
+import { triggerFeedback } from '../../theme/feedback';
 import { useMessaging } from './messaging-provider';
 import { NotificationSettingsButton } from '../notifications/notification-settings-sheet';
 
@@ -81,6 +84,7 @@ export function ConversationScreen({ id }: { id: string }) {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [composerHeight, setComposerHeight] = useState(80);
+  const [actionMessageId, setActionMessageId] = useState<string | null>(null);
   useEffect(() => runtime!.watch(id), [runtime, id]);
   const handleFailure = useCallback(
     (failure: unknown) =>
@@ -102,6 +106,24 @@ export function ConversationScreen({ id }: { id: string }) {
   const send = useCallback((body: string) => thread.send(body), [thread]);
   const reply = useCallback((messageId: string) => thread.selectReply(messageId), [thread]);
   const cancelReply = useCallback(() => thread.selectReply(null), [thread]);
+  const openMessageActions = useCallback((messageId: string) => {
+    Keyboard.dismiss();
+    setActionMessageId(messageId);
+  }, []);
+  const react = useCallback(
+    (messageId: string, kind: ReactionKind) => {
+      setActionMessageId(null);
+      if (!reducedMotion) triggerFeedback('selection');
+      void thread.setReaction(messageId, kind);
+    },
+    [thread, reducedMotion],
+  );
+  const refreshReaction = useCallback(
+    (messageId: string) => {
+      void thread.refreshReaction(messageId);
+    },
+    [thread],
+  );
   const renderMessage = useCallback(
     ({ item }: { item: ChatRow }) => (
       <MessageBubble
@@ -111,9 +133,26 @@ export function ConversationScreen({ id }: { id: string }) {
         remove={remove}
         reply={state.capabilities.replies ? reply : null}
         reducedMotion={reducedMotion}
+        ownerId={runtime!.ownerId}
+        online={state.online}
+        actions={state.capabilities.reactions ? openMessageActions : null}
+        react={state.capabilities.reactions ? react : null}
+        refreshReaction={refreshReaction}
       />
     ),
-    [runtime, retry, remove, state.capabilities.replies, reply, reducedMotion],
+    [
+      runtime,
+      retry,
+      remove,
+      state.capabilities.replies,
+      state.capabilities.reactions,
+      state.online,
+      reply,
+      reducedMotion,
+      openMessageActions,
+      react,
+      refreshReaction,
+    ],
   );
   const scrollConfig = useMemo(
     () => ({ padding, offset: insets.bottom, onEnd: setAtEnd }),
@@ -253,6 +292,7 @@ export function ConversationScreen({ id }: { id: string }) {
             }}
           >
             <MessageComposer
+              key={`${runtime!.ownerId}:${id}`}
               onSend={send}
               disabled={state.loading || state.unavailable || state.conversation === null}
               bottomInset={insets.bottom}
@@ -262,6 +302,27 @@ export function ConversationScreen({ id }: { id: string }) {
           </View>
         </KeyboardStickyView>
       </View>
+      <ReactionPicker
+        row={
+          state.unavailable || !state.capabilities.reactions
+            ? null
+            : (state.rows.find((row) => row.messageId === actionMessageId) ?? null)
+        }
+        ownerId={runtime!.ownerId}
+        online={state.online}
+        bottomInset={insets.bottom}
+        onClose={() => setActionMessageId(null)}
+        onReply={
+          state.capabilities.replies
+            ? (messageId) => {
+                setActionMessageId(null);
+                reply(messageId);
+              }
+            : null
+        }
+        onReact={react}
+        onRefresh={refreshReaction}
+      />
       {safety && state.conversation !== null ? (
         <ProfileSafetySheet
           profile={state.conversation.member}

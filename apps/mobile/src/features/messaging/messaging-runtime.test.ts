@@ -33,7 +33,14 @@ it('cancels an older inbox fetch immediately when a conversation is revoked', as
   });
   const unsubscribe = observer.subscribe(() => {});
   const storage = {
-    read: () => Promise.resolve({ conversation: null, messages: [], outgoing: [] }),
+    read: () =>
+      Promise.resolve({
+        conversation: null,
+        messages: [],
+        outgoing: [],
+        contexts: [],
+        capabilities: null,
+      }),
     clear: () => Promise.resolve(),
   } as unknown as Dependencies[3];
   const runtime = new MessagingRuntime(
