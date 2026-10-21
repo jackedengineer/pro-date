@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../components/app-text';
 import { colors } from '../../theme/tokens';
@@ -7,6 +7,7 @@ import { QuotedMessage } from './message-quote';
 import { SwipeToReply } from './swipe-to-reply';
 import { MessageReactions } from './message-reactions';
 import type { ReactionKind } from '@pro-date/contracts';
+import type { MessageAnchor } from './reaction-picker-layout';
 
 export const MessageBubble = memo(function MessageBubble({
   row,
@@ -29,10 +30,28 @@ export const MessageBubble = memo(function MessageBubble({
   reducedMotion: boolean;
   ownerId: string;
   online: boolean;
-  actions: ((id: string) => void) | null;
+  actions: ((id: string, anchor?: MessageAnchor) => void) | null;
   react: ((id: string, kind: ReactionKind) => void) | null;
   refreshReaction: (id: string) => void;
 }) {
+  const bubble = useRef<View>(null);
+  const openActions = () => {
+    if (row.messageId === null) return;
+    const messageId = row.messageId;
+    if (actions === null) {
+      reply?.(messageId);
+      return;
+    }
+    if (bubble.current === null) {
+      actions(messageId);
+      return;
+    }
+    // Measure only on intent, never on every recycled list row/layout pass.
+    // https://reactnative.dev/docs/0.86/the-new-architecture/layout-measurements#measureinwindowcallback
+    bubble.current.measureInWindow((x, y, width, height) => {
+      actions(messageId, width > 0 && height > 0 ? { x, y, width, height } : undefined);
+    });
+  };
   const time = new Date(row.createdAt).toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
@@ -50,6 +69,7 @@ export const MessageBubble = memo(function MessageBubble({
   const content = (
     <View style={[styles.row, mine ? styles.right : styles.left]}>
       <Pressable
+        ref={bubble}
         style={[styles.bubble, mine ? styles.outgoing : styles.incoming]}
         accessible
         accessibilityActions={[
@@ -65,9 +85,7 @@ export const MessageBubble = memo(function MessageBubble({
             actions?.(row.messageId);
         }}
         onLongPress={
-          row.messageId !== null && (actions !== null || reply !== null)
-            ? () => (actions ?? reply)?.(row.messageId!)
-            : undefined
+          row.messageId !== null && (actions !== null || reply !== null) ? openActions : undefined
         }
         accessibilityHint={
           row.messageId === null
