@@ -5,6 +5,8 @@ import {
   type RelationshipIntent,
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
+import Heart from 'lucide-react-native/icons/heart';
+import { useReducedMotionPreference } from '../../theme/motion';
 import { useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -54,6 +56,7 @@ export function DiscoveryProfileCard({
   profile: DiscoveryProfile;
   onLike?: ((target: PullRequestTarget) => void) | undefined;
 }) {
+  const reducedMotion = useReducedMotionPreference();
   const { width } = useWindowDimensions();
   const details = [
     profile.genderIdentity,
@@ -69,7 +72,7 @@ export function DiscoveryProfileCard({
         onPress={() => onLike(target)}
         style={({ pressed }) => [styles.likeButton, pressed && styles.pressed]}
       >
-        <AppText style={styles.heart}>♡</AppText>
+        <Heart size={24} color={colors.plum} strokeWidth={1.8} />
       </Pressable>
     );
   return (
@@ -95,7 +98,7 @@ export function DiscoveryProfileCard({
                 cachePolicy="memory-disk"
                 source={{ uri: photo.deliveryUrl }}
                 style={StyleSheet.absoluteFill}
-                transition={150}
+                transition={reducedMotion ? 0 : 150}
                 testID={`discovery-photo-${index}`}
               />
               {likeButton(`Like photo ${index + 1}`, {
@@ -167,7 +170,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  heart: { color: colors.plum, fontSize: 30, lineHeight: 36 },
   pressed: { backgroundColor: colors.plumSoft },
   details: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   pill: {
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   question: { color: colors.plum, fontFamily: typography.family.medium },
-  answer: { fontSize: 22, lineHeight: 32, fontFamily: typography.family.medium },
+  answer: { fontSize: 20, lineHeight: 30, fontFamily: typography.family.medium },
   promptAction: { height: 52, marginRight: -spacing.md, marginBottom: -spacing.md },
   targetPhoto: {
     width: '100%',

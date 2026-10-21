@@ -1,6 +1,7 @@
 import type { DiscoveryProfile, PullRequestTarget, SendPullRequest } from '@pro-date/contracts';
 import { useRef, useState } from 'react';
-import { Keyboard, StyleSheet, TextInput } from 'react-native';
+import { Keyboard, StyleSheet } from 'react-native';
+import { TextField } from '../../components/text-field';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
@@ -49,14 +50,14 @@ export function PullRequestComposer({
   };
   return (
     <DiscoverySheet title={`A hello for ${profile.displayName}`} onClose={onClose} busy={busy}>
-      <AppText variant="title">Something worth a pull request.</AppText>
+      <AppText variant="title">Start with something specific.</AppText>
       <AppText style={styles.muted}>
         A pull request is a like on this {target.type === 'PHOTO' ? 'photo' : 'prompt'}. Add a
         little context, or let the like speak for itself.
       </AppText>
       <TargetPreview target={target} />
       <AppText variant="button">Opening comment · optional</AppText>
-      <TextInput
+      <TextField
         accessibilityLabel="Opening comment (optional)"
         editable={!busy}
         value={comment}
@@ -77,6 +78,7 @@ export function PullRequestComposer({
       <AppButton
         label={busy ? 'Sending…' : 'Send pull request'}
         disabled={busy}
+        loading={busy}
         onPress={() => void send()}
       />
     </DiscoverySheet>
@@ -87,7 +89,7 @@ const styles = StyleSheet.create({
   counter: { textAlign: 'right' },
   input: {
     minHeight: 120,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderWidth: 1,
     borderRadius: radii.md,
     backgroundColor: colors.surface,

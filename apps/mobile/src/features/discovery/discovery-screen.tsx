@@ -1,5 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
+import Compass from 'lucide-react-native/icons/compass';
+import GitPullRequest from 'lucide-react-native/icons/git-pull-request';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
+import UserRound from 'lucide-react-native/icons/user-round';
+import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
+import { IconButton } from '../../components/icon-button';
 
 import type { DiscoveryActions, DiscoveryFilters } from '../../api/discovery';
 import { AppText } from '../../components/app-text';
@@ -8,12 +14,11 @@ import { colors, spacing } from '../../theme/tokens';
 import { ConnectionList } from './connection-list';
 import { DiscoveryFeed } from './discovery-feed';
 import { DiscoveryFiltersSheet } from './discovery-filters-sheet';
-import { QuietButton } from './discovery-shared';
 
 const tabs = [
-  { id: 'discover', label: 'Discover', icon: '⌕' },
-  { id: 'requests', label: 'Requests', icon: '⑂' },
-  { id: 'merged', label: 'Merged', icon: '✓' },
+  { id: 'discover', label: 'Discover', icon: Compass },
+  { id: 'requests', label: 'Requests', icon: GitPullRequest },
+  { id: 'merged', label: 'Merged', icon: MessageCircle },
 ] as const;
 export type DiscoveryTab = (typeof tabs)[number]['id'];
 export function DiscoveryScreen({
@@ -54,14 +59,18 @@ export function DiscoveryScreen({
         <AppText variant="title" style={styles.headerTitle}>
           {tab === 'discover' ? 'ProDate' : tab === 'requests' ? 'Pull requests' : 'Merged'}
         </AppText>
-        <QuietButton label="My profile" onPress={onOpenProfile} />
+        <IconButton label="My profile" icon={UserRound} onPress={onOpenProfile} />
       </View>
       {tab === 'discover' ? (
         <View style={styles.filters}>
           <AppText style={styles.filterText} variant="caption">
             Within {filters.radiusKm} km · Ages {filters.minAge}–{filters.maxAge}
           </AppText>
-          <QuietButton label="Preferences" onPress={() => setShowFilters(true)} />
+          <IconButton
+            label="Preferences"
+            icon={SlidersHorizontal}
+            onPress={() => setShowFilters(true)}
+          />
         </View>
       ) : null}
       <View style={styles.body}>
@@ -92,9 +101,13 @@ export function DiscoveryScreen({
               pressed && styles.pressed,
             ]}
           >
-            <AppText style={styles.icon} accessibilityElementsHidden>
-              {item.icon}
-            </AppText>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <item.icon
+                size={22}
+                color={tab === item.id ? colors.plum : colors.muted}
+                strokeWidth={tab === item.id ? 2.2 : 1.7}
+              />
+            </View>
             <AppText style={tab === item.id ? styles.activeLabel : undefined} variant="caption">
               {item.label}
             </AppText>
@@ -141,6 +154,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
+    backgroundColor: colors.surface,
   },
   tab: {
     flex: 1,
@@ -149,9 +163,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 12,
     padding: spacing.sm,
+    gap: spacing.xs,
   },
   activeTab: { backgroundColor: colors.plumSoft },
   pressed: { opacity: 0.65 },
-  icon: { fontSize: 24, lineHeight: 28, color: colors.plum },
   activeLabel: { color: colors.plum },
 });

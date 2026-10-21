@@ -2,6 +2,8 @@ import type { DiscoveryProfile, IncomingPullRequest } from '@pro-date/contracts'
 import { Image } from 'expo-image';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import Shield from 'lucide-react-native/icons/shield';
+import { IconButton } from '../../components/icon-button';
 
 import type { DiscoveryActions } from '../../api/discovery';
 import { AppButton } from '../../components/app-button';
@@ -97,28 +99,44 @@ export function ConnectionList({
                 </View>
               </View>
               <TargetPreview target={item.target} />
-              {item.comment.length === 0 ? null : <AppText>“{item.comment}”</AppText>}
-              <QuietButton
-                label={`View ${profile.displayName}'s profile`}
-                onPress={() => setSelected(profile)}
-                disabled={busyId !== null}
-              />
-              <AppButton
-                label={busyId === item.id ? 'Saving…' : 'Merge'}
-                accessibilityLabel={`Merge request from ${profile.displayName}`}
-                disabled={busyId !== null}
-                onPress={() => void respond(item.id, 'MERGED')}
-              />
-              <QuietButton
-                label={`Decline request from ${profile.displayName}`}
-                disabled={busyId !== null}
-                onPress={() => void respond(item.id, 'DECLINED')}
-              />
-              <QuietButton
-                label={`Report or block ${profile.displayName}`}
-                onPress={() => setSafety(profile)}
-                disabled={busyId !== null}
-              />
+              {item.comment.length === 0 ? null : (
+                <View style={styles.comment}>
+                  <AppText>“{item.comment}”</AppText>
+                </View>
+              )}
+              <View style={styles.actions}>
+                <QuietButton
+                  label={`View ${profile.displayName}'s profile`}
+                  onPress={() => setSelected(profile)}
+                  disabled={busyId !== null}
+                />
+                <IconButton
+                  label={`Report or block ${profile.displayName}`}
+                  icon={Shield}
+                  onPress={() => setSafety(profile)}
+                  disabled={busyId !== null}
+                />
+              </View>
+              <View style={styles.actions}>
+                <View style={styles.action}>
+                  <AppButton
+                    label={busyId === item.id ? 'Saving…' : 'Merge'}
+                    accessibilityLabel={`Merge request from ${profile.displayName}`}
+                    disabled={busyId !== null}
+                    loading={busyId === item.id}
+                    onPress={() => void respond(item.id, 'MERGED')}
+                  />
+                </View>
+                <View style={styles.action}>
+                  <AppButton
+                    variant="secondary"
+                    label="Decline"
+                    accessibilityLabel={`Decline request from ${profile.displayName}`}
+                    disabled={busyId !== null}
+                    onPress={() => void respond(item.id, 'DECLINED')}
+                  />
+                </View>
+              </View>
             </View>
           );
         })}
@@ -163,4 +181,13 @@ export function ConnectionList({
 const styles = StyleSheet.create({
   avatar: { width: 64, height: 80, borderRadius: radii.sm, backgroundColor: colors.plumSoft },
   name: { flex: 1 },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  action: { flexGrow: 1, flexBasis: 120 },
+  comment: { padding: 16, backgroundColor: colors.plumSoft, borderRadius: radii.sm },
 });

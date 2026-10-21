@@ -1,6 +1,8 @@
 import { discoveryQuerySchema } from '@pro-date/contracts';
 import { useState } from 'react';
-import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
+import Check from 'lucide-react-native/icons/check';
+import { TextField } from '../../components/text-field';
 
 import type { DiscoveryFilters } from '../../api/discovery';
 import { AppButton } from '../../components/app-button';
@@ -31,16 +33,28 @@ export function DiscoveryFiltersSheet({
       <AppText variant="button">Maximum distance</AppText>
       <View style={styles.radii}>
         {[25, 50, 100, 200].map((value) => (
-          <View style={radiusKm === value ? styles.selected : undefined} key={value}>
-            <QuietButton label={`${value} km`} onPress={() => setRadiusKm(value)} />
-          </View>
+          <Pressable
+            key={value}
+            accessibilityRole="radio"
+            accessibilityLabel={`${value} km`}
+            accessibilityState={{ checked: radiusKm === value }}
+            onPress={() => setRadiusKm(value)}
+            style={({ pressed }) => [
+              styles.radius,
+              radiusKm === value && styles.selected,
+              pressed && styles.selected,
+            ]}
+          >
+            {radiusKm === value ? <Check size={16} color={colors.plum} /> : null}
+            <AppText variant="button">{value} km</AppText>
+          </Pressable>
         ))}
       </View>
       <AppText variant="button">Age range</AppText>
       <View style={styles.ageRow}>
         <View style={styles.ageField}>
           <AppText variant="caption">From</AppText>
-          <TextInput
+          <TextField
             accessibilityLabel="Minimum age"
             keyboardType="number-pad"
             maxLength={2}
@@ -51,7 +65,7 @@ export function DiscoveryFiltersSheet({
         </View>
         <View style={styles.ageField}>
           <AppText variant="caption">To</AppText>
-          <TextInput
+          <TextField
             accessibilityLabel="Maximum age"
             keyboardType="number-pad"
             maxLength={2}
@@ -84,7 +98,19 @@ export function DiscoveryFiltersSheet({
 }
 const styles = StyleSheet.create({
   radii: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  selected: { backgroundColor: colors.plumSoft, borderRadius: radii.pill },
+  selected: { backgroundColor: colors.plumSoft, borderColor: colors.plum },
+  radius: {
+    minHeight: 48,
+    minWidth: 100,
+    padding: 12,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.fieldBorder,
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   ageRow: { flexDirection: 'row', gap: spacing.md },
   ageField: { flex: 1, gap: spacing.sm },
   input: {
@@ -92,7 +118,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     backgroundColor: colors.surface,
     color: colors.ink,
     fontFamily: typography.family.body,

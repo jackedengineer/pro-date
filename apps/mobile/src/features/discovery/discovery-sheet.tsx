@@ -1,10 +1,13 @@
 import type { PropsWithChildren } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
+import X from 'lucide-react-native/icons/x';
+import { IconButton } from '../../components/icon-button';
+import { FormScrollView } from '../../components/form-scroll-view';
+import { useReducedMotionPreference } from '../../theme/motion';
 
 import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
 import { spacing } from '../../theme/tokens';
-import { QuietButton } from './discovery-shared';
 
 export function DiscoverySheet({
   children,
@@ -12,9 +15,10 @@ export function DiscoverySheet({
   onClose,
   busy = false,
 }: PropsWithChildren<{ title: string; onClose: () => void; busy?: boolean }>) {
+  const reducedMotion = useReducedMotionPreference();
   return (
     <Modal
-      animationType="slide"
+      animationType={reducedMotion ? 'none' : 'slide'}
       presentationStyle="pageSheet"
       onRequestClose={() => {
         if (!busy) onClose();
@@ -25,16 +29,9 @@ export function DiscoverySheet({
           <AppText style={styles.title} variant="button">
             {title}
           </AppText>
-          <QuietButton label="Close" onPress={onClose} disabled={busy} />
+          <IconButton label="Close" icon={X} onPress={onClose} disabled={busy} />
         </View>
-        <ScrollView
-          automaticallyAdjustKeyboardInsets
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.content}
-        >
-          {children}
-        </ScrollView>
+        <FormScrollView contentContainerStyle={styles.content}>{children}</FormScrollView>
       </Screen>
     </Modal>
   );
