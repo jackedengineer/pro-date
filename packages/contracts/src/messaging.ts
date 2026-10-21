@@ -1,7 +1,88 @@
 import { z } from 'zod';
 
 export const messageBodySchema = z.string().trim().min(1).max(2000);
-export const sendMessageSchema = z.strictObject({ clientId: z.uuid(), body: messageBodySchema });
+export const sendMessageSchema = z.strictObject({
+  clientId: z.uuid(),
+  body: messageBodySchema,
+  replyToMessageId: z.uuid().optional(),
+});
+
+export const chatCapabilitiesSchema = z.strictObject({
+  replies: z.boolean(),
+  reactions: z.boolean(),
+});
+export const messageQuoteSchema = z.strictObject({
+  messageId: z.uuid(),
+  senderId: z.uuid(),
+  excerpt: z.string().min(1).max(240),
+});
+export const reactionKindSchema = z.enum(['HEART', 'LAUGH', 'LOVE', 'FIRE', 'CLAP', 'LIKE']);
+export const reactionStateSchema = z.strictObject({
+  userId: z.uuid(),
+  reaction: reactionKindSchema.nullable(),
+  revision: z.number().int().nonnegative(),
+});
+export const messageContextSchema = z.strictObject({
+  messageId: z.uuid(),
+  revision: z.number().int().nonnegative(),
+  replyTo: messageQuoteSchema.nullable(),
+  reactions: z.array(reactionStateSchema).max(2),
+});
+export const messageContextQuerySchema = z.strictObject({
+  ids: z
+    .string()
+    .max(1849)
+    .transform((value) => value.split(','))
+    .pipe(
+      z
+        .array(z.uuid())
+        .min(1)
+        .max(50)
+        .refine((ids) => new Set(ids).size === ids.length),
+    ),
+});
+export const chatCapabilitiesResponseSchema = z.strictObject({
+  data: chatCapabilitiesSchema,
+  requestId: z.uuid(),
+});
+export const messageContextResponseSchema = z.strictObject({
+  data: z.array(messageContextSchema).max(50),
+  revision: z.number().int().nonnegative(),
+  requestId: z.uuid(),
+});
+export const setMessageReactionSchema = z.strictObject({
+  reaction: reactionKindSchema.nullable(),
+  expectedRevision: z.number().int().nonnegative(),
+});
+export const interactionChangesQuerySchema = z.strictObject({
+  afterRevision: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+  limit: z.coerce.number().int().min(1).max(50).default(50),
+});
+export const interactionChangesResponseSchema = z.strictObject({
+  data: z.array(messageContextSchema).max(50),
+  nextRevision: z.number().int().nonnegative(),
+  latestRevision: z.number().int().nonnegative(),
+  requestId: z.uuid(),
+});
+export const messageReactionResponseSchema = z.strictObject({
+  data: messageContextSchema,
+  requestId: z.uuid(),
+});
+export const conversationInteractionsChangedSchema = z.strictObject({
+  conversationId: z.uuid(),
+  revision: z.number().int().positive(),
+});
+export type ChatCapabilities = z.infer<typeof chatCapabilitiesSchema>;
+export type MessageQuote = z.infer<typeof messageQuoteSchema>;
+export type MessageContext = z.infer<typeof messageContextSchema>;
+export type ReactionKind = z.infer<typeof reactionKindSchema>;
+export type SetMessageReaction = z.infer<typeof setMessageReactionSchema>;
+export type InteractionChangesQuery = z.infer<typeof interactionChangesQuerySchema>;
+export type MessageContexts = Omit<z.infer<typeof messageContextResponseSchema>, 'requestId'>;
+export type InteractionChanges = Omit<
+  z.infer<typeof interactionChangesResponseSchema>,
+  'requestId'
+>;
 export const messageHistoryQuerySchema = z
   .strictObject({
     limit: z.coerce.number().int().min(1).max(50).default(50),

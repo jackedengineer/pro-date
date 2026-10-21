@@ -8,6 +8,8 @@ const apiEnvironmentSchema = z.object({
 });
 
 const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
+  CHAT_REPLIES_ENABLED: z.enum(['true', 'false']).default('false'),
+  CHAT_REACTIONS_ENABLED: z.enum(['true', 'false']).default('false'),
   NOTIFICATIONS_ENABLED: z.enum(['true', 'false']).default('false'),
   PUSH_ENABLED: z.enum(['true', 'false']).default('false'),
   EXPO_PUSH_ACCESS_TOKEN: z.preprocess(
@@ -48,6 +50,8 @@ export interface ApiEnvironment {
 }
 
 export interface ApiServiceEnvironment extends ApiEnvironment {
+  chatRepliesEnabled: boolean;
+  chatReactionsEnabled: boolean;
   notificationsEnabled: boolean;
   pushEnabled: boolean;
   expoPushAccessToken: string | null;
@@ -88,6 +92,8 @@ export function readApiServiceEnvironment(
       : null;
 
   return {
+    chatRepliesEnabled: environment.CHAT_REPLIES_ENABLED === 'true',
+    chatReactionsEnabled: environment.CHAT_REACTIONS_ENABLED === 'true',
     notificationsEnabled: environment.NOTIFICATIONS_ENABLED === 'true',
     pushEnabled: environment.PUSH_ENABLED === 'true',
     expoPushAccessToken: environment.EXPO_PUSH_ACCESS_TOKEN ?? null,

@@ -57,6 +57,30 @@ describe('chat storage SQL against a real SQLite engine', () => {
       .mockResolvedValue(bridge as unknown as SQLite.SQLiteDatabase);
   });
   afterEach(() => database.close());
+  it('upgrades old outgoing rows without losing intents and persists reply context across restart', async () => {
+    database.exec(
+      'CREATE TABLE chat_outgoing (owner TEXT NOT NULL, conversation_id TEXT NOT NULL, client_id TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL, failure TEXT, PRIMARY KEY(owner, client_id))',
+    );
+    database
+      .prepare('INSERT INTO chat_outgoing VALUES (?,?,?,?,?,?)')
+      .run(owner, id, clientId, pending.body, pending.createdAt, null);
+    const first = await openChatStorage(owner);
+    expect((await first.read(id)).outgoing).toEqual([pending]);
+    await first.remove(clientId);
+    const replyTo = { messageId: owner, senderId: owner, excerpt: 'A saved thought' };
+    await first.enqueue({ ...pending, replyTo });
+    await first.saveCapabilities(id, { replies: true, reactions: false });
+    await first.saveMessages(id, [message]);
+    await first.saveContexts(id, [{ messageId: owner, revision: 0, replyTo, reactions: [] }]);
+    await first.enqueue({ ...pending, replyTo });
+    await first.close(false);
+    const second = await openChatStorage(owner);
+    expect((await second.read(id)).outgoing[0]?.replyTo).toEqual(replyTo);
+    expect((await second.read(id)).contexts[0]?.replyTo).toEqual(replyTo);
+    await second.clear(id);
+    expect((await second.read(id)).contexts).toEqual([]);
+    await second.close(false);
+  });
   it('hydrates only the signed-in account mapping and recent cached inbox', async () => {
     const storage = await openChatStorage(owner, 'clerk-test-owner');
     const summary = {

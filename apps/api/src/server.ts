@@ -41,6 +41,8 @@ const profilePromptRepository = createProfilePromptRepository(database);
 const profileRepository = createProfileRepository(database);
 const profilePromptService = createProfilePromptService(profilePromptRepository);
 const messagingRepository = createMessagingRepository(database, {
+  repliesEnabled: environment.chatRepliesEnabled,
+  reactionsEnabled: environment.chatReactionsEnabled,
   notificationsEnabled: environment.notificationsEnabled,
   expoProjectId: environment.expoProjectId,
 });
@@ -130,6 +132,7 @@ const app = createApiApp({
 
 const server = createServer(app);
 const messagingRealtime = createMessagingRealtime(server, {
+  interactionsEnabled: environment.chatReactionsEnabled,
   repository: messagingRepository,
   logger,
   authenticate: async (token) => {

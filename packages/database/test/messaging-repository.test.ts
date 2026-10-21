@@ -35,7 +35,7 @@ describe('messaging persistence boundaries', () => {
 });
 
 describe('first-commit notification intents', () => {
-  function setup(replay = false) {
+  function setup(replay = false, replyToMessageId?: string, missingTarget = false) {
     const message = {
       id: conversation,
       conversationId: conversation,
@@ -67,20 +67,30 @@ describe('first-commit notification intents', () => {
     const execute = vi.fn((query: Parameters<PgDialect['sqlToQuery']>[0]) => {
       const text = dialect.sqlToQuery(query).sql;
       queries.push(text);
-      return Promise.resolve({ rows: text.includes('count(*)') ? [{ count: 0 }] : [{}] });
+      return Promise.resolve({
+        rows: text.includes('count(*)')
+          ? [{ count: 0 }]
+          : text.includes('message_replies')
+            ? [{ replyToMessageId }]
+            : missingTarget && text.includes('select id from messages')
+              ? []
+              : [{}],
+      });
     });
+    const insert = vi.fn((table: unknown) => ({
+      values: vi.fn(() =>
+        table === messages ? { returning: () => Promise.resolve([message]) } : Promise.resolve(),
+      ),
+    }));
     const tx = {
       select,
       execute,
       update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
-      insert: (table: unknown) => ({
-        values: () =>
-          table === messages ? { returning: () => Promise.resolve([message]) } : Promise.resolve(),
-      }),
+      insert,
     };
     const transaction = vi.fn((run: (value: typeof tx) => Promise<unknown>) => run(tx));
     const database = { transaction } as unknown as ProDateDatabase;
-    return { database, transaction, queries, input: { clientId: viewer, body: 'hello' } };
+    return { database, transaction, queries, insert, input: { clientId: viewer, body: 'hello' } };
   }
   it('adds recipient intents inside the message transaction, not after committing it', async () => {
     const test = setup();
@@ -105,5 +115,64 @@ describe('first-commit notification intents', () => {
     const test = setup();
     await createMessagingRepository(test.database).send(viewer, conversation, test.input);
     expect(test.queries.some((query) => query.includes('message_notification_jobs'))).toBe(false);
+  });
+  it('rejects a reply before touching unprepared tables when disabled', async () => {
+    const test = setup();
+    await expect(
+      createMessagingRepository(test.database).send(viewer, conversation, {
+        ...test.input,
+        replyToMessageId: conversation,
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(test.queries.some((query) => query.includes('message_replies'))).toBe(false);
+  });
+  it('never reads reaction state or its outbox when the feature is disabled', async () => {
+    const test = setup();
+    const repository = createMessagingRepository(test.database);
+    expect(await repository.claimInteractionEvents()).toEqual([]);
+    await expect(
+      repository.setReaction(viewer, conversation, viewer, {
+        reaction: 'HEART',
+        expectedRevision: 0,
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(
+      test.queries.some(
+        (query) =>
+          query.includes('message_reactions') || query.includes('message_interaction_events'),
+      ),
+    ).toBe(false);
+  });
+  it('rejects reuse of a saved intent with a different reply target', async () => {
+    const test = setup(true, conversation);
+    await expect(
+      createMessagingRepository(test.database, {
+        notificationsEnabled: false,
+        expoProjectId: null,
+        repliesEnabled: true,
+      }).send(viewer, conversation, test.input),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+  it('returns an identical reply replay without new writes or quota checks', async () => {
+    const test = setup(true, viewer);
+    await createMessagingRepository(test.database, {
+      notificationsEnabled: false,
+      expoProjectId: null,
+      repliesEnabled: true,
+    }).send(viewer, conversation, { ...test.input, replyToMessageId: viewer });
+    expect(test.insert).not.toHaveBeenCalled();
+    expect(test.queries.some((query) => query.includes('count(*)'))).toBe(false);
+  });
+  it('rejects a target outside this conversation before inserting a message', async () => {
+    const test = setup(false, undefined, true);
+    await expect(
+      createMessagingRepository(test.database, {
+        notificationsEnabled: false,
+        expoProjectId: null,
+        repliesEnabled: true,
+      }).send(viewer, conversation, { ...test.input, replyToMessageId: viewer }),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(test.insert).not.toHaveBeenCalled();
+    expect(test.queries.some((query) => query.includes('conversation_id ='))).toBe(true);
   });
 });

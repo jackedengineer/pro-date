@@ -15,6 +15,49 @@ function socketEvent(socket: Socket, event: string) {
   );
 }
 describe('authenticated realtime hints', () => {
+  it('delivers body-free interaction hints without creating new-message events', async () => {
+    const http = createServer();
+    const completeInteractionEvent = vi.fn();
+    const repository = {
+      claimEvents: vi.fn().mockResolvedValue([]),
+      claimInteractionEvents: vi
+        .fn()
+        .mockResolvedValueOnce([
+          { conversationId, revision: 9, firstUserId: first, secondUserId: second },
+        ])
+        .mockResolvedValue([]),
+      canAccess: vi.fn().mockResolvedValue(true),
+      completeInteractionEvent,
+    } as unknown as MessagingRepository;
+    const realtime = createMessagingRealtime(http, {
+      repository,
+      interactionsEnabled: true,
+      logger: pino({ level: 'silent' }),
+      authenticate: () => Promise.resolve({ userId: first, expiresAt: Date.now() + 60_000 }),
+    });
+    http.listen(0, '127.0.0.1');
+    await once(http, 'listening');
+    const address = http.address();
+    if (address === null || typeof address === 'string') throw new Error('Missing address');
+    const client = io(`http://127.0.0.1:${address.port}`, {
+      transports: ['websocket'],
+      auth: { token: first },
+      reconnection: false,
+    });
+    try {
+      await socketEvent(client, 'connect');
+      const messageHint = vi.fn();
+      client.on('conversation:changed', messageHint);
+      const received = socketEvent(client, 'conversation:interactions-changed');
+      await realtime.flush();
+      expect(await received).toEqual([{ conversationId, revision: 9 }]);
+      expect(completeInteractionEvent).toHaveBeenCalledWith(conversationId, 9);
+      expect(messageHint).not.toHaveBeenCalled();
+    } finally {
+      client.disconnect();
+      await realtime.close();
+    }
+  });
   it('releases reservations when transport closes during middleware and never admits late credentials', async () => {
     const http = createServer();
     let settle: (value: { userId: string; expiresAt: number }) => void = () => {};

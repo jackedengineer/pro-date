@@ -1,5 +1,12 @@
 import {
   actionResponseSchema,
+  interactionChangesQuerySchema,
+  interactionChangesResponseSchema,
+  messageReactionResponseSchema,
+  setMessageReactionSchema,
+  chatCapabilitiesResponseSchema,
+  messageContextQuerySchema,
+  messageContextResponseSchema,
   conversationResponseSchema,
   conversationsResponseSchema,
   inboxQuerySchema,
@@ -76,6 +83,46 @@ export function createMessagingRouter(options: {
     );
     response.json(
       conversationResponseSchema.parse({ data, requestId: options.requestId(request) }),
+    );
+  });
+  router.get('/conversations/:id/capabilities', async (request, response) => {
+    const data = await options.service!.capabilities(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+    );
+    response.json(
+      chatCapabilitiesResponseSchema.parse({ data, requestId: options.requestId(request) }),
+    );
+  });
+  router.get('/conversations/:id/message-context', async (request, response) => {
+    const page = await options.service!.contexts(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+      input(messageContextQuerySchema, request.query).ids,
+    );
+    response.json(
+      messageContextResponseSchema.parse({ ...page, requestId: options.requestId(request) }),
+    );
+  });
+  router.get('/conversations/:id/interaction-changes', async (request, response) => {
+    const page = await options.service!.interactionChanges(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+      input(interactionChangesQuerySchema, request.query),
+    );
+    response.json(
+      interactionChangesResponseSchema.parse({ ...page, requestId: options.requestId(request) }),
+    );
+  });
+  router.put('/conversations/:id/messages/:messageId/reaction', async (request, response) => {
+    const data = await options.service!.setReaction(
+      response.locals.viewerId as string,
+      input(z.uuid(), request.params.id),
+      input(z.uuid(), request.params.messageId),
+      input(setMessageReactionSchema, request.body),
+    );
+    response.json(
+      messageReactionResponseSchema.parse({ data, requestId: options.requestId(request) }),
     );
   });
   router.get('/conversations/:id/messages', async (request, response) => {

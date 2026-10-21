@@ -4,6 +4,8 @@ import {
   type InboxQuery,
   type MessageHistoryQuery,
   type SendMessage,
+  type SetMessageReaction,
+  type InteractionChangesQuery,
 } from '@pro-date/contracts';
 import {
   DiscoveryError,
@@ -40,6 +42,22 @@ export function createMessagingService(
       },
     });
   return {
+    interactionChanges: (viewerId: string, id: string, query: InteractionChangesQuery) =>
+      repository.interactionChanges(viewerId, id, query),
+    async setReaction(
+      this: void,
+      viewerId: string,
+      id: string,
+      messageId: string,
+      input: SetMessageReaction,
+    ) {
+      const context = await repository.setReaction(viewerId, id, messageId, input);
+      onCommitted();
+      return context;
+    },
+    capabilities: (viewerId: string, id: string) => repository.capabilities(viewerId, id),
+    contexts: (viewerId: string, id: string, ids: string[]) =>
+      repository.contexts(viewerId, id, ids),
     async conversations(this: void, viewerId: string, query: InboxQuery) {
       const scope = `conversations:${viewerId}`;
       const position =

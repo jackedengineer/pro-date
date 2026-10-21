@@ -7,6 +7,7 @@ import { Server } from 'socket.io';
 import { RealtimeAdmission, type AdmissionLimits } from './realtime-admission.js';
 
 interface Options {
+  interactionsEnabled?: boolean;
   repository: MessagingRepository;
   authenticate: (token: string) => Promise<{ userId: string; expiresAt: number }>;
   logger: Logger;
@@ -25,7 +26,13 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
   // Native clients only, matching the REST API's existing browser-origin policy.
   const io = new Server<
     Record<string, never>,
-    { 'conversation:changed': (payload: ConversationChanged) => void },
+    {
+      'conversation:changed': (payload: ConversationChanged) => void;
+      'conversation:interactions-changed': (payload: {
+        conversationId: string;
+        revision: number;
+      }) => void;
+    },
     Record<string, never>,
     { userId: string; expiresAt: number }
   >(http, {
@@ -137,8 +144,22 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
         }
         await options.repository.completeEvent(event.messageId);
       }
+      const interactions = options.interactionsEnabled
+        ? await options.repository.claimInteractionEvents()
+        : [];
+      for (const event of interactions) {
+        if (stopped) return;
+        const allowed = await options.repository.canAccess(event.firstUserId, event.conversationId);
+        if (stopped) return;
+        if (allowed)
+          io.to([`user:${event.firstUserId}`, `user:${event.secondUserId}`]).emit(
+            'conversation:interactions-changed',
+            { conversationId: event.conversationId, revision: event.revision },
+          );
+        await options.repository.completeInteractionEvent(event.conversationId, event.revision);
+      }
       // A commit can arrive even while an empty claim is in flight.
-      if (events.length === 0 && !requested) return;
+      if (events.length === 0 && interactions.length === 0 && !requested) return;
     }
     requested = true;
   }

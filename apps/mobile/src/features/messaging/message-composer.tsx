@@ -1,4 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MessageQuote } from '@pro-date/contracts';
+import X from 'lucide-react-native/icons/x';
+import { IconButton } from '../../components/icon-button';
+import { QuotedMessage } from './message-quote';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import { AppText } from '../../components/app-text';
@@ -8,16 +12,24 @@ export function MessageComposer({
   onSend,
   disabled,
   bottomInset,
+  replyTo = null,
+  onCancelReply,
 }: {
   onSend: (body: string) => Promise<void>;
   disabled: boolean;
   bottomInset: number;
+  replyTo?: MessageQuote | null;
+  onCancelReply?: () => void;
 }) {
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const current = useRef('');
   const guard = useRef(false);
+  const input = useRef<TextInput>(null);
+  useEffect(() => {
+    if (replyTo !== null) input.current?.focus();
+  }, [replyTo]);
   const send = async () => {
     const text = current.current.trim();
     if (text.length === 0 || disabled || guard.current) return;
@@ -40,6 +52,14 @@ export function MessageComposer({
   };
   return (
     <View style={[styles.container, { paddingBottom: Math.max(10, bottomInset) }]}>
+      {replyTo === null ? null : (
+        <View style={styles.reply}>
+          <View style={styles.quote}>
+            <QuotedMessage quote={replyTo} />
+          </View>
+          <IconButton label="Cancel reply" icon={X} onPress={onCancelReply} />
+        </View>
+      )}
       {error === null ? null : (
         <AppText accessibilityRole="alert" style={styles.error} variant="caption">
           {error}
@@ -47,6 +67,7 @@ export function MessageComposer({
       )}
       <View style={styles.row}>
         <TextInput
+          ref={input}
           accessibilityLabel="Message"
           value={draft}
           onChangeText={(text) => {
@@ -90,6 +111,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  reply: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  quote: { flex: 1 },
   input: {
     flex: 1,
     minHeight: 48,

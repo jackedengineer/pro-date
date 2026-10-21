@@ -1,10 +1,21 @@
-import type { Message, MessageHistoryQuery, SendMessage } from '@pro-date/contracts';
+import type {
+  Message,
+  InteractionChangesQuery,
+  SetMessageReaction,
+  MessageHistoryQuery,
+  SendMessage,
+} from '@pro-date/contracts';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { ProDateDatabase } from './client.js';
 import { DiscoveryError, type PagePosition } from './discovery-repository.js';
-import { matches, messageOutbox, messages, users } from './schema.js';
+import { matches, messageOutbox, messageReplies, messages, users } from './schema.js';
 import { buildEnqueueNotifications } from './notification-job-repository.js';
+import {
+  buildInteractionChangesQuery,
+  readMessageContexts,
+  writeReaction,
+} from './message-interactions.js';
 
 type Transaction = Parameters<Parameters<ProDateDatabase['transaction']>[0]>[0];
 type MatchRow = typeof matches.$inferSelect;
@@ -128,12 +139,103 @@ function assemble(row: Record<string, unknown>): ConversationRecord {
 
 export function createMessagingRepository(
   database: ProDateDatabase | Transaction,
-  notifications: { notificationsEnabled: boolean; expoProjectId: string | null } = {
+  notifications: {
+    notificationsEnabled: boolean;
+    expoProjectId: string | null;
+    repliesEnabled?: boolean;
+    reactionsEnabled?: boolean;
+  } = {
     notificationsEnabled: false,
     expoProjectId: null,
   },
 ) {
   return {
+    async capabilities(this: void, viewerId: string, id: string) {
+      await database.transaction((tx) => requireConversationAccess(tx, viewerId, id, false));
+      return {
+        replies: notifications.repliesEnabled === true,
+        reactions: notifications.reactionsEnabled === true,
+      };
+    },
+    async contexts(this: void, viewerId: string, id: string, ids: string[]) {
+      return database.transaction(async (tx) => {
+        await requireConversationAccess(tx, viewerId, id, false);
+        if (!notifications.repliesEnabled && !notifications.reactionsEnabled)
+          throw new DiscoveryError(
+            'PROFILE_UNAVAILABLE',
+            503,
+            'Message context is unavailable right now.',
+          );
+        return readMessageContexts(tx, id, ids, notifications);
+      });
+    },
+    async setReaction(
+      this: void,
+      viewerId: string,
+      id: string,
+      messageId: string,
+      input: SetMessageReaction,
+    ) {
+      return database.transaction(async (tx) => {
+        await requireConversationAccess(tx, viewerId, id, true);
+        if (!notifications.reactionsEnabled)
+          throw new DiscoveryError(
+            'PROFILE_UNAVAILABLE',
+            503,
+            'Reactions are unavailable right now.',
+          );
+        await writeReaction(tx, viewerId, id, messageId, input);
+        const result = await readMessageContexts(tx, id, [messageId], notifications);
+        if (result.data[0] === undefined) throw unavailable();
+        return result.data[0];
+      });
+    },
+    async interactionChanges(
+      this: void,
+      viewerId: string,
+      id: string,
+      query: InteractionChangesQuery,
+    ) {
+      return database.transaction(async (tx) => {
+        await requireConversationAccess(tx, viewerId, id, false);
+        if (!notifications.reactionsEnabled)
+          throw new DiscoveryError(
+            'PROFILE_UNAVAILABLE',
+            503,
+            'Reactions are unavailable right now.',
+          );
+        const rows = (
+          await tx.execute<{ messageId: string; revision: number } & Record<string, unknown>>(
+            buildInteractionChangesQuery(id, query),
+          )
+        ).rows;
+        const ids = [...new Set(rows.slice(0, query.limit).map((row) => row.messageId))];
+        // The empty-page watermark is read under the same membership locks as populated pages.
+        const page =
+          ids.length > 0
+            ? await readMessageContexts(tx, id, ids, notifications)
+            : {
+                data: [],
+                revision:
+                  (
+                    await tx.execute<{ revision: number } & Record<string, unknown>>(
+                      sql`select revision::float8 as revision from conversation_interactions where conversation_id = ${id}::uuid`,
+                    )
+                  ).rows[0]?.revision ?? 0,
+              };
+        if (query.afterRevision > page.revision)
+          throw new DiscoveryError(
+            'INVALID_CURSOR',
+            422,
+            'Refresh this conversation to synchronize reactions.',
+          );
+        return {
+          data: page.data,
+          latestRevision: page.revision,
+          nextRevision: rows.length > query.limit ? rows[query.limit - 1]!.revision : page.revision,
+        };
+      });
+    },
     async conversations(this: void, viewerId: string, limit: number, position?: PagePosition) {
       return (
         await database.execute(conversationQuery(viewerId, undefined, position, limit))
@@ -167,15 +269,45 @@ export function createMessagingRepository(
     async send(this: void, viewerId: string, id: string, input: SendMessage): Promise<Message> {
       return database.transaction(async (tx) => {
         const match = await requireConversationAccess(tx, viewerId, id, true);
+        if (input.replyToMessageId !== undefined && !notifications.repliesEnabled)
+          throw new DiscoveryError(
+            'PROFILE_UNAVAILABLE',
+            503,
+            'Replies are unavailable right now.',
+          );
         const [existing] = await tx
           .select()
           .from(messages)
           .where(and(eq(messages.senderId, viewerId), eq(messages.clientId, input.clientId)))
           .limit(1);
         if (existing !== undefined) {
-          if (existing.conversationId !== id || existing.body !== input.body)
+          const target = notifications.repliesEnabled
+            ? (
+                await tx.execute<{ replyToMessageId: string } & Record<string, unknown>>(
+                  sql`select reply_to_message_id as "replyToMessageId" from message_replies where message_id = ${existing.id}::uuid`,
+                )
+              ).rows[0]?.replyToMessageId
+            : undefined;
+          if (
+            existing.conversationId !== id ||
+            existing.body !== input.body ||
+            target !== input.replyToMessageId
+          )
             throw new DiscoveryError('CONFLICT', 409, 'That message identifier was already used.');
           return toMessage(existing);
+        }
+        if (input.replyToMessageId !== undefined) {
+          const target = (
+            await tx.execute(
+              sql`select id from messages where conversation_id = ${id}::uuid and id = ${input.replyToMessageId}::uuid and sequence <= ${match.lastMessageSequence}`,
+            )
+          ).rows[0];
+          if (target === undefined)
+            throw new DiscoveryError(
+              'VALIDATION_ERROR',
+              422,
+              'Choose a saved message in this conversation to reply to.',
+            );
         }
         const [{ count }] = (
           await tx.execute<{ count: number } & Record<string, unknown>>(sql`
@@ -192,9 +324,21 @@ export function createMessagingRepository(
         await tx.update(matches).set({ lastMessageSequence: sequence }).where(eq(matches.id, id));
         const [message] = await tx
           .insert(messages)
-          .values({ conversationId: id, senderId: viewerId, ...input, sequence })
+          .values({
+            conversationId: id,
+            senderId: viewerId,
+            clientId: input.clientId,
+            body: input.body,
+            sequence,
+          })
           .returning();
         if (message === undefined) throw new Error('Message persistence failed.');
+        if (input.replyToMessageId !== undefined)
+          await tx.insert(messageReplies).values({
+            messageId: message.id,
+            conversationId: id,
+            replyToMessageId: input.replyToMessageId,
+          });
         await tx.insert(messageOutbox).values({ messageId: message.id });
         if (notifications.notificationsEnabled && notifications.expoProjectId !== null) {
           const recipientId =
@@ -242,6 +386,28 @@ export function createMessagingRepository(
         .update(messageOutbox)
         .set({ publishedAt: new Date(), leasedUntil: null })
         .where(eq(messageOutbox.messageId, messageId));
+    },
+    async claimInteractionEvents(this: void) {
+      if (!notifications.reactionsEnabled) return [];
+      return (
+        await database.execute<
+          {
+            conversationId: string;
+            revision: number;
+            firstUserId: string;
+            secondUserId: string;
+          } & Record<string, unknown>
+        >(sql`with pending as (
+        select conversation_id,revision from message_interaction_events where published_at is null and (leased_until is null or leased_until < clock_timestamp()) order by created_at limit 50 for update skip locked
+      ), claimed as (
+        update message_interaction_events e set leased_until = clock_timestamp() + interval '30 seconds' from pending p where e.conversation_id = p.conversation_id and e.revision = p.revision returning e.conversation_id,e.revision
+      ) select c.conversation_id as "conversationId", c.revision::float8 as revision, m.first_user_id as "firstUserId", m.second_user_id as "secondUserId" from claimed c join matches m on m.id = c.conversation_id`)
+      ).rows;
+    },
+    async completeInteractionEvent(this: void, id: string, revision: number) {
+      await database.execute(
+        sql`update message_interaction_events set published_at = clock_timestamp(), leased_until = null where conversation_id = ${id}::uuid and revision = ${revision}`,
+      );
     },
   };
 }
