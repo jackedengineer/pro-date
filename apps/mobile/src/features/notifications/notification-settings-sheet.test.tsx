@@ -58,8 +58,13 @@ function setup(chat = true) {
 }
 afterEach(async () => {
   await cleanup();
-  onlineManager.setOnline(true);
-  for (const client of clients.splice(0)) client.clear();
+  await act(async () => {
+    for (const client of clients.splice(0)) {
+      await client.cancelQueries();
+      client.clear();
+    }
+    onlineManager.setOnline(true);
+  });
 });
 describe('notification preference controls', () => {
   it('does not save a late opt-in after the sheet closes during device setup', async () => {
@@ -88,8 +93,11 @@ describe('notification preference controls', () => {
     await fireEvent.press(toggle);
     await waitFor(() => expect(api.saveConversation).toHaveBeenCalled());
     expect(enableDevice).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(toggle).not.toBeDisabled());
     await fireEvent.press(view.getByRole('switch', { name: 'Pause all chat notifications' }));
     await waitFor(() => expect(api.saveSettings).toHaveBeenCalled());
+    expect(await view.findByText('Preference saved. Push setup is still pending.')).toBeTruthy();
+    await waitFor(() => expect(toggle).not.toBeDisabled());
     expect(enableDevice).toHaveBeenCalledTimes(1);
   });
   it('offers system settings after denial and never claims this device is ready', async () => {
@@ -105,6 +113,9 @@ describe('notification preference controls', () => {
           'Notifications are off in your device settings. Chat preferences apply to your other devices.',
         ),
       ).toBeTruthy();
+      await waitFor(() =>
+        expect(view.getByRole('switch', { name: 'Notify me for this chat' })).not.toBeDisabled(),
+      );
       await fireEvent.press(
         view.getByRole('button', { name: 'Open device notification settings' }),
       );
@@ -167,6 +178,7 @@ describe('notification preference controls', () => {
     await waitFor(() => expect(toggle).not.toBeDisabled());
     await fireEvent.press(toggle);
     expect(await view.findByText('Couldn’t confirm this setting.')).toBeTruthy();
+    await waitFor(() => expect(toggle).not.toBeDisabled());
     expect(toggle).toHaveProp('accessibilityState', expect.objectContaining({ checked: false }));
   });
   it('pauses the account without mutating individual chats', async () => {
@@ -178,6 +190,7 @@ describe('notification preference controls', () => {
     await waitFor(() =>
       expect(api.saveSettings).toHaveBeenCalledWith(true, expect.any(AbortSignal)),
     );
+    await waitFor(() => expect(toggle).not.toBeDisabled());
     expect(api.saveConversation).not.toHaveBeenCalled();
   });
   it('blocks offline writes rather than silently queuing a preference change', async () => {

@@ -14,6 +14,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ClerkAuthProvider } from '../src/auth/clerk-auth-provider';
 import { resolveBootstrapState } from '../src/bootstrap/resolve-bootstrap-state';
 import { colors, spacing } from '../src/theme/tokens';
+import { MotionProvider, useReducedMotionPreference } from '../src/theme/motion';
 import { MessagingProvider } from '../src/features/messaging/messaging-provider';
 import { NotificationProvider } from '../src/features/notifications/notification-provider';
 
@@ -48,23 +49,32 @@ export default function RootLayout() {
           </View>
         ) : (
           <ClerkAuthProvider>
-            <KeyboardProvider>
-              <MessagingProvider>
-                <NotificationProvider>
-                  <Stack
-                    screenOptions={{
-                      animation: 'fade',
-                      contentStyle: styles.root,
-                      headerShown: false,
-                    }}
-                  />
-                </NotificationProvider>
-              </MessagingProvider>
-            </KeyboardProvider>
+            <MotionProvider>
+              <KeyboardProvider>
+                <MessagingProvider>
+                  <NotificationProvider>
+                    <AppStack />
+                  </NotificationProvider>
+                </MessagingProvider>
+              </KeyboardProvider>
+            </MotionProvider>
           </ClerkAuthProvider>
         )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function AppStack() {
+  const reduced = useReducedMotionPreference();
+  return (
+    <Stack
+      screenOptions={{
+        animation: reduced ? 'none' : 'slide_from_right',
+        contentStyle: styles.root,
+        headerShown: false,
+      }}
+    />
   );
 }
 

@@ -3,23 +3,6 @@ import { StyleSheet } from 'react-native';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 export const styles = StyleSheet.create({
-  backButton: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  backButtonPressed: {
-    backgroundColor: colors.plumSoft,
-  },
-  backIcon: {
-    fontFamily: typography.family.body,
-    fontSize: 25,
-    lineHeight: 29,
-  },
   content: {
     gap: spacing.md,
     marginTop: spacing.xl,
@@ -56,9 +39,6 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  keyboardView: {
-    flex: 1,
-  },
   picker: {
     alignSelf: 'stretch',
   },
@@ -77,7 +57,7 @@ export const styles = StyleSheet.create({
     color: colors.plum,
   },
   privacyCard: {
-    backgroundColor: colors.sand,
+    backgroundColor: colors.plumSoft,
     borderRadius: radii.md,
     gap: spacing.xs,
     padding: spacing.md,

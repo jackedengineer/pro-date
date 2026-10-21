@@ -40,7 +40,7 @@ export function ProfileOnboardingIntroScreen({ onContinue }: ProfileOnboardingIn
           <View style={styles.autosaveBadge}>
             <View style={styles.autosaveDot} />
             <AppText style={styles.autosaveText} variant="caption">
-              Draft sync: on
+              9 small steps
             </AppText>
           </View>
         </View>
@@ -48,13 +48,14 @@ export function ProfileOnboardingIntroScreen({ onContinue }: ProfileOnboardingIn
         <View style={styles.hero}>
           <AppText variant="display">Build a profile worth replying to.</AppText>
           <AppText style={styles.supportingText}>
-            Clear beats clever. Ship enough personality to make the first message easy.
+            A few details, your favourite photos, and three conversation starters. We’ll take it one
+            step at a time.
           </AppText>
         </View>
 
         <View style={styles.workflow}>
           <AppText style={styles.workflowLabel} variant="eyebrow">
-            The interaction model
+            How connections happen
           </AppText>
           {workflow.map((item) => (
             <View key={item.title} style={styles.workflowRow}>
@@ -74,7 +75,7 @@ export function ProfileOnboardingIntroScreen({ onContinue }: ProfileOnboardingIn
         <View style={styles.footer}>
           <AppButton label="Start building" onPress={onContinue} />
           <AppText style={styles.footerNote} variant="caption">
-            ~4 min · Edit anything before you ship
+            Review everything before your profile goes live.
           </AppText>
         </View>
       </ScrollView>
@@ -125,6 +126,8 @@ const styles = StyleSheet.create({
   topline: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
     justifyContent: 'space-between',
   },
   workflow: {
@@ -133,10 +136,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.xl,
     padding: spacing.md,
-    shadowColor: '#000000',
-    shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   workflowBadge: {
     alignItems: 'center',

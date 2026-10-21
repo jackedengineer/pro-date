@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { FormScrollView } from '../../components/form-scroll-view';
+import { IconButton } from '../../components/icon-button';
 
-import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { spacing } from '../../theme/tokens';
 import { OnboardingProgress } from './onboarding-progress';
 
 interface OnboardingStepLayoutProps {
@@ -21,26 +23,10 @@ export function OnboardingStepLayout({
 }: OnboardingStepLayoutProps) {
   return (
     <Screen style={styles.screen}>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
-        contentContainerStyle={styles.scrollContent}
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <FormScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           {onBack === undefined ? null : (
-            <Pressable
-              accessibilityLabel="Go to previous profile step"
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={onBack}
-              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            >
-              <AppText style={styles.backIcon} variant="title">
-                ←
-              </AppText>
-            </Pressable>
+            <IconButton label="Go to previous profile step" icon={ArrowLeft} onPress={onBack} />
           )}
           <View style={styles.progress}>
             <OnboardingProgress current={current} total={9} />
@@ -49,37 +35,20 @@ export function OnboardingStepLayout({
 
         <View style={styles.content}>{children}</View>
         <View style={styles.footer}>{footer}</View>
-      </ScrollView>
+      </FormScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  backButtonPressed: {
-    backgroundColor: colors.plumSoft,
-  },
-  backIcon: {
-    fontFamily: typography.family.body,
-    fontSize: 25,
-    lineHeight: 29,
-  },
   content: {
     gap: spacing.md,
-    marginTop: spacing.xl,
+    marginTop: spacing.xs,
   },
   footer: {
     gap: spacing.md,
     marginTop: 'auto',
-    paddingTop: spacing.xl,
+    paddingTop: spacing.lg,
   },
   header: {
     alignItems: 'center',

@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import Heart from 'lucide-react-native/icons/heart';
 import { AppText } from '../../components/app-text';
 import { colors, radii, spacing } from '../../theme/tokens';
 
@@ -40,9 +41,13 @@ export function ErrorNotice({ message }: { message: string | null }) {
 export function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <View style={sharedStyles.empty}>
-      <AppText style={sharedStyles.emptyIcon} accessibilityElementsHidden>
-        ⑂
-      </AppText>
+      <View
+        style={sharedStyles.emptyIcon}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Heart size={24} color={colors.plum} strokeWidth={1.6} />
+      </View>
       <AppText variant="title">{title}</AppText>
       <AppText style={sharedStyles.muted}>{body}</AppText>
     </View>
@@ -54,9 +59,7 @@ export const sharedStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   muted: { color: colors.muted },
   quietButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     minHeight: 48,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -69,7 +72,14 @@ export const sharedStyles = StyleSheet.create({
   error: { borderRadius: radii.sm, backgroundColor: colors.dangerSoft, padding: spacing.md },
   errorText: { color: colors.danger },
   empty: { paddingVertical: spacing.xl, gap: spacing.md },
-  emptyIcon: { color: colors.plum, fontSize: 40, lineHeight: 48 },
+  emptyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.md,
+    backgroundColor: colors.plumSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,

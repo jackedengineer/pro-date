@@ -82,9 +82,11 @@ export function MergedInbox({ onOpenConversation }: { onOpenConversation: (id: s
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={styles.intro}>
-            <AppText style={styles.muted}>Mutual interest. Open threads.</AppText>
-            <View style={styles.notifications}>
-              <NotificationSettingsButton runtime={runtime} />
+            <View style={styles.introHeading}>
+              <AppText style={styles.introCopy}>Good conversations start here.</AppText>
+              <View style={styles.notifications}>
+                <NotificationSettingsButton runtime={runtime} compact />
+              </View>
             </View>
             {offline ? (
               <AppText variant="caption" style={styles.muted}>
@@ -164,6 +166,8 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   content: { paddingBottom: spacing.lg },
   intro: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
+  introHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  introCopy: { color: colors.muted, flex: 1 },
   muted: { color: colors.muted },
   notifications: { alignSelf: 'flex-start' },
   section: {
@@ -172,7 +176,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.background,
+    backgroundColor: colors.plumSoft,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
@@ -184,8 +188,8 @@ const styles = StyleSheet.create({
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   skeletonAvatar: {
     width: 56,
-    height: 64,
-    borderRadius: radii.md,
+    height: 60,
+    borderRadius: radii.lg,
     backgroundColor: colors.plumSoft,
   },
   skeletonText: { flex: 1, gap: spacing.sm },

@@ -112,8 +112,8 @@ describe('ProfileOnboardingFlow', () => {
     );
 
     expect(view.getByText('Build a profile worth replying to.')).toBeTruthy();
-    expect(view.getByText('Draft sync: on')).toBeTruthy();
-    expect(view.getByText('The interaction model')).toBeTruthy();
+    expect(view.getByText('9 small steps')).toBeTruthy();
+    expect(view.getByText('How connections happen')).toBeTruthy();
     expect(view.getByText('Open a PR')).toBeTruthy();
     expect(view.getByText('Review PR')).toBeTruthy();
     expect(view.getByText('Merged')).toBeTruthy();
@@ -132,7 +132,7 @@ describe('ProfileOnboardingFlow', () => {
     );
 
     await fireEvent.press(view.getByRole('button', { name: 'Start building' }));
-    expect(view.getByText('What name are we shipping?')).toBeTruthy();
+    expect(view.getByText('What should we call you?')).toBeTruthy();
     expect(view.getByText('First name or chosen name—whatever feels most you.')).toBeTruthy();
     await fireEvent.changeText(view.getByLabelText('First name or chosen name'), 'A');
     await fireEvent.press(view.getByRole('button', { name: 'Save and continue' }));
@@ -370,7 +370,7 @@ describe('ProfileOnboardingFlow', () => {
     await fireEvent(view.getByTestId('height-picker'), 'valueChange', 173, 53);
     await fireEvent.press(view.getByRole('button', { name: 'Save height and continue' }));
 
-    await waitFor(() => expect(view.getByText('Show the build, not just the bio.')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('A little more you.')).toBeTruthy());
     expect(saveIdentity).toHaveBeenCalledWith({
       arePronounsVisible: true,
       genderIdentity: 'Non-binary',
@@ -390,9 +390,9 @@ describe('ProfileOnboardingFlow', () => {
     ['PREFERENCES', 'Who should make your queue?'],
     ['LOCATION', 'Set your discovery area.'],
     ['DETAILS', 'Add your height.'],
-    ['PHOTOS', 'Show the build, not just the bio.'],
+    ['PHOTOS', 'A little more you.'],
     ['PROMPTS', 'Give them something to reply to.'],
-    ['REVIEW', "Preview the profile you're shipping."],
+    ['REVIEW', 'Looking like you?'],
   ] as const)('resumes %s at its dedicated screen', async (onboardingStep, heading) => {
     const view = await render(
       <ProfileOnboardingFlow
@@ -427,8 +427,6 @@ describe('ProfileOnboardingFlow', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Save and continue' }));
 
     expect(saveDisplayName).toHaveBeenCalledWith('Avery K');
-    await waitFor(() =>
-      expect(view.getByText("Preview the profile you're shipping.")).toBeTruthy(),
-    );
+    await waitFor(() => expect(view.getByText('Looking like you?')).toBeTruthy());
   });
 });

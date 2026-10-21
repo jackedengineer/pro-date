@@ -27,12 +27,13 @@ export function ProfileStepFooter({
         </View>
       )}
       <AppText style={styles.syncText} variant="caption">
-        Draft sync is on
+        Saved when you continue
       </AppText>
       <AppButton
         accessibilityLabel={isSaving ? 'Saving profile details' : accessibilityLabel}
         disabled={disabled || isSaving}
-        label={isSaving ? 'Committing…' : 'Commit & continue'}
+        label={isSaving ? 'Saving…' : 'Save & continue'}
+        loading={isSaving}
         onPress={onPress}
       />
     </>

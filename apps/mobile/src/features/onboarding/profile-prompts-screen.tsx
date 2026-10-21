@@ -18,9 +18,13 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import X from 'lucide-react-native/icons/x';
+import { IconButton } from '../../components/icon-button';
+import { TextField } from '../../components/text-field';
+import { useReducedMotionPreference } from '../../theme/motion';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
@@ -59,12 +63,6 @@ function getPrompt(promptId: ProfilePromptId | null) {
   return PROFILE_PROMPT_CATALOGUE.find((prompt) => prompt.id === promptId);
 }
 
-function getWordCount(answer: string): number {
-  const trimmed = answer.trim();
-
-  return trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
-}
-
 function toInput(draft: PromptDraft[]): ProfilePromptAnswerInput[] {
   return draft.flatMap((item, position) =>
     item.promptId === null
@@ -78,6 +76,7 @@ export function ProfilePromptsScreen({
   loadPrompts,
   onBack,
 }: ProfilePromptsScreenProps) {
+  const reducedMotion = useReducedMotionPreference();
   const [draft, setDraft] = useState<PromptDraft[]>(emptyDraft);
   const [pickerPosition, setPickerPosition] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -199,8 +198,6 @@ export function ProfilePromptsScreen({
           <View style={styles.promptList}>
             {draft.map((item, position) => {
               const prompt = getPrompt(item.promptId);
-              const characterCount = item.answer.trim().length;
-              const wordCount = getWordCount(item.answer);
               const isAnswerValid =
                 item.promptId !== null &&
                 profilePromptAnswerInputSchema.safeParse({
@@ -235,11 +232,11 @@ export function ProfilePromptsScreen({
                     <AppText style={prompt === undefined ? styles.placeholder : styles.question}>
                       {prompt?.text ?? 'Choose a conversation starter'}
                     </AppText>
-                    <AppText style={styles.chevron}>›</AppText>
+                    <ChevronRight size={20} color={colors.plum} />
                   </Pressable>
                   {prompt === undefined ? null : (
                     <>
-                      <TextInput
+                      <TextField
                         accessibilityHint="Enter at least five words or 30 characters. Use Done to close the keyboard."
                         accessibilityLabel={`Answer prompt ${position + 1}`}
                         editable={!isSaving}
@@ -268,9 +265,12 @@ export function ProfilePromptsScreen({
                         style={isAnswerValid ? styles.validGuidance : styles.guidance}
                         variant="caption"
                       >
-                        {wordCount} / {PROFILE_PROMPT_ANSWER_MIN_WORDS} words or {characterCount} /{' '}
-                        {PROFILE_PROMPT_ANSWER_MIN_CHARACTERS} characters · {item.answer.length} /{' '}
-                        {PROFILE_PROMPT_ANSWER_MAX_CHARACTERS} max
+                        {isAnswerValid
+                          ? 'Ready'
+                          : `Keep going · ${PROFILE_PROMPT_ANSWER_MIN_WORDS} words or ${PROFILE_PROMPT_ANSWER_MIN_CHARACTERS} characters`}
+                      </AppText>
+                      <AppText style={styles.guidance} variant="caption">
+                        {item.answer.length} / {PROFILE_PROMPT_ANSWER_MAX_CHARACTERS}
                       </AppText>
                     </>
                   )}
@@ -290,7 +290,7 @@ export function ProfilePromptsScreen({
       </OnboardingStepLayout>
 
       <Modal
-        animationType="slide"
+        animationType={reducedMotion ? 'none' : 'slide'}
         onRequestClose={() => setPickerPosition(null)}
         presentationStyle="pageSheet"
         visible={pickerPosition !== null}
@@ -301,15 +301,11 @@ export function ProfilePromptsScreen({
               <AppText variant="eyebrow">Curated, not crowded</AppText>
               <AppText variant="title">Choose prompt {(pickerPosition ?? 0) + 1}</AppText>
             </View>
-            <Pressable
-              accessibilityLabel="Close prompt picker"
-              accessibilityRole="button"
-              hitSlop={8}
+            <IconButton
+              label="Close prompt picker"
+              icon={X}
               onPress={() => setPickerPosition(null)}
-              style={styles.closeButton}
-            >
-              <AppText style={styles.closeText}>×</AppText>
-            </Pressable>
+            />
           </View>
           <ScrollView
             contentContainerStyle={styles.catalogue}
@@ -353,7 +349,7 @@ export function ProfilePromptsScreen({
 const styles = StyleSheet.create({
   answerInput: {
     backgroundColor: colors.background,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderRadius: radii.sm,
     borderWidth: 1,
     color: colors.ink,
@@ -388,28 +384,12 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   category: {
+    flexShrink: 1,
     color: colors.plum,
     fontFamily: typography.family.medium,
   },
-  chevron: {
-    color: colors.plum,
-    fontSize: 28,
-    lineHeight: 30,
-  },
-  closeButton: {
-    alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  closeText: {
-    fontSize: 28,
-    lineHeight: 30,
-  },
   countPill: {
+    alignSelf: 'flex-start',
     backgroundColor: colors.sand,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.sm,
@@ -437,12 +417,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   headingCopy: {
-    flex: 1,
     gap: spacing.sm,
   },
   headingRow: {
     alignItems: 'flex-start',
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: spacing.sm,
   },
   loadingCard: {
@@ -488,6 +467,8 @@ const styles = StyleSheet.create({
   promptMeta: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
     justifyContent: 'space-between',
   },
   question: {

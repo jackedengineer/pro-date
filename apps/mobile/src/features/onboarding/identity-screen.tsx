@@ -1,6 +1,7 @@
 import type { IdentityUpdate } from '@pro-date/contracts';
 import { useState } from 'react';
-import { StyleSheet, Switch, TextInput, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
+import { TextField } from '../../components/text-field';
 
 import { AppText } from '../../components/app-text';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
@@ -113,7 +114,7 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
           selected={isCustomGender}
         />
         {isCustomGender ? (
-          <TextInput
+          <TextField
             accessibilityLabel="Describe your gender identity"
             autoCapitalize="sentences"
             editable={!isSaving}
@@ -163,7 +164,7 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
           selected={areCustomPronouns}
         />
         {areCustomPronouns ? (
-          <TextInput
+          <TextField
             accessibilityLabel="Describe your pronouns"
             autoCapitalize="none"
             editable={!isSaving}
@@ -242,18 +243,20 @@ const styles = StyleSheet.create({
   },
   switch: {
     alignSelf: 'center',
+    flexShrink: 0,
   },
   visibilityLabel: {
     flex: 1,
   },
   visibilityRow: {
     alignItems: 'center',
-    backgroundColor: colors.sand,
+    backgroundColor: colors.plumSoft,
     borderRadius: radii.md,
     flexDirection: 'row',
     gap: spacing.md,
     justifyContent: 'space-between',
     minHeight: 64,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
 });

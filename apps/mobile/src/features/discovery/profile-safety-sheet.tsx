@@ -1,6 +1,8 @@
 import type { DiscoveryProfile, ReportProfile } from '@pro-date/contracts';
 import { useRef, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
+import { TextField } from '../../components/text-field';
+import { SelectionControl } from '../onboarding/selection-control';
 
 import type { DiscoveryActions } from '../../api/discovery';
 import { AppButton } from '../../components/app-button';
@@ -64,19 +66,17 @@ export function ProfileSafetySheet({
       <AppText variant="button">What would you like to report?</AppText>
       <View style={styles.stack}>
         {reasons.map((item) => (
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: reason === item.value, disabled: busy }}
+          <SelectionControl
+            label={item.label}
+            mode="single"
+            selected={reason === item.value}
             disabled={busy}
             key={item.value}
             onPress={() => setReason(item.value)}
-            style={[styles.reason, reason === item.value && styles.selected]}
-          >
-            <AppText>{item.label}</AppText>
-          </Pressable>
+          />
         ))}
       </View>
-      <TextInput
+      <TextField
         accessibilityLabel="Report details (optional)"
         editable={!busy}
         value={details}
@@ -94,6 +94,8 @@ export function ProfileSafetySheet({
       <AppButton
         label={busy ? 'Saving…' : 'Report and block'}
         disabled={busy || reason === null}
+        loading={busy}
+        variant="danger"
         onPress={() => void save(true)}
       />
     </DiscoverySheet>
@@ -101,16 +103,6 @@ export function ProfileSafetySheet({
 }
 const styles = StyleSheet.create({
   stack: { gap: spacing.sm },
-  reason: {
-    minHeight: 48,
-    justifyContent: 'center',
-    borderRadius: radii.sm,
-    borderColor: colors.border,
-    borderWidth: 1,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  selected: { borderColor: colors.plum, backgroundColor: colors.plumSoft },
   input: {
     minHeight: 120,
     padding: spacing.md,
@@ -118,7 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     fontFamily: typography.family.body,
     fontSize: 16,
     lineHeight: 25,

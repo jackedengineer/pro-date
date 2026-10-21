@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import Check from 'lucide-react-native/icons/check';
+import { triggerFeedback } from '../../theme/feedback';
 
 import { AppText } from '../../components/app-text';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, radii, spacing } from '../../theme/tokens';
 
 interface SelectionControlProps {
   description?: string | undefined;
@@ -26,7 +28,11 @@ export function SelectionControl({
       accessibilityRole={mode === 'multiple' ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: selected, disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        if (disabled) return;
+        if (!selected || mode === 'multiple') triggerFeedback('selection');
+        onPress();
+      }}
       style={({ pressed }) => [
         styles.control,
         selected && styles.selected,
@@ -44,26 +50,27 @@ export function SelectionControl({
           </AppText>
         )}
       </View>
-      <View style={[styles.indicator, selected && styles.indicatorSelected]}>
-        {selected ? (
-          <AppText style={styles.check} variant="caption">
-            ✓
-          </AppText>
-        ) : null}
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={[
+          styles.indicator,
+          mode === 'multiple' && styles.square,
+          selected && styles.indicatorSelected,
+        ]}
+      >
+        {selected ? <Check size={16} color={colors.white} strokeWidth={2.5} /> : null}
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  check: {
-    color: colors.white,
-    fontFamily: typography.family.medium,
-  },
+  square: { borderRadius: 7 },
   control: {
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: 'row',

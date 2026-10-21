@@ -154,6 +154,7 @@ describe('conversation UI', () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     try {
       const view = await render(<Subject />);
+      await fireEvent.press(view.getByRole('button', { name: 'More chat options' }));
       await fireEvent.press(view.getByRole('button', { name: 'Unmatch' }));
       await act(() => {
         alert.mock.calls[0]?.[2]?.find((button) => button.text === 'Unmatch')?.onPress?.();
@@ -173,6 +174,7 @@ describe('conversation UI', () => {
     const { thread, block, storage } = setup();
     await thread.ready;
     const view = await render(<Subject />);
+    await fireEvent.press(view.getByRole('button', { name: 'More chat options' }));
     await fireEvent.press(view.getByRole('button', { name: 'Report or block' }));
     await fireEvent.press(view.getByRole('button', { name: 'Block this member' }));
     await waitFor(() => expect(block).toHaveBeenCalledWith(conversation.member.userId));
@@ -194,9 +196,13 @@ describe('conversation UI', () => {
         'Ship the first hello. A question about their profile is a good place to start.',
       ),
     ).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Report or block' })).toBeTruthy();
     expect(view.getByRole('button', { name: 'Chat notifications' })).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'Report or block' })).toBeNull();
+    await fireEvent.press(view.getByRole('button', { name: 'More chat options' }));
+    expect(view.getByRole('button', { name: 'Report or block' })).toBeTruthy();
     expect(view.getByRole('button', { name: 'Unmatch' })).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: 'More chat options' }));
+    expect(view.queryByRole('button', { name: 'Unmatch' })).toBeNull();
     await fireEvent.changeText(view.getByLabelText('Message'), 'A thoughtful hello.');
     await fireEvent.press(view.getByRole('button', { name: 'Send message' }));
     expect(await view.findByText('A thoughtful hello.')).toBeTruthy();
