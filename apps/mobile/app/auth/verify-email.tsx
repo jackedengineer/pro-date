@@ -67,7 +67,7 @@ function ConfiguredVerifyEmailRoute() {
         'Account setup needs another Clerk field. Check the dashboard sign-up requirements.',
       );
     } else {
-      setErrorMessage('This account needs an authentication step ProDate does not support yet.');
+      setErrorMessage('This account needs an authentication step Merge does not support yet.');
     }
 
     setActivity('idle');

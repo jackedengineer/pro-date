@@ -57,7 +57,7 @@ export function EmailEntryScreen({
           <View style={styles.fieldGroup}>
             <AppText variant="button">Email address</AppText>
             <TextField
-              accessibilityHint="Enter the email address you want to use for ProDate"
+              accessibilityHint="Enter the email address you want to use for Merge"
               accessibilityLabel="Email address"
               autoCapitalize="none"
               autoComplete="email"

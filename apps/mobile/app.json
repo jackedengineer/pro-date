@@ -1,6 +1,7 @@
 {
   "expo": {
-    "name": "ProDate",
+    "name": "Merge",
+    "icon": "./assets/brand/icon.png",
     "slug": "pro-date",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -11,14 +12,29 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.prodate.mobile"
+      "package": "com.prodate.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-foreground.png",
+        "monochromeImage": "./assets/brand/adaptive-monochrome.png",
+        "backgroundColor": "#5A2E4F"
+      }
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/brand/favicon.png"
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FAF8F5",
+          "image": "./assets/brand/splash.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
+        }
+      ],
       [
         "expo-notifications",
         { "defaultChannel": "messages", "enableBackgroundRemoteNotifications": false }
@@ -26,7 +42,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "ProDate uses your location to show relevant people nearby. Your exact location is never shown on your profile."
+          "locationWhenInUsePermission": "Merge uses your location to show relevant people nearby. Your exact location is never shown on your profile."
         }
       ],
       "expo-image",
@@ -35,7 +51,7 @@
         {
           "cameraPermission": false,
           "microphonePermission": false,
-          "photosPermission": "ProDate uses only the photos you choose to build your dating profile."
+          "photosPermission": "Merge uses only the photos you choose to build your dating profile."
         }
       ]
     ],

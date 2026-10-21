@@ -44,7 +44,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         {bootstrapState === 'error' ? (
           <View accessibilityRole="alert" style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>We couldn’t open ProDate.</Text>
+            <Text style={styles.errorTitle}>We couldn’t open Merge.</Text>
             <Text style={styles.errorBody}>Close the app and try again.</Text>
           </View>
         ) : (

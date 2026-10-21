@@ -45,7 +45,7 @@ function ConfiguredOnboardingRoute() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const bootstrap = useCallback(() => {
     if (apiBaseUrl === null) {
-      return Promise.reject(new Error('The ProDate API is not configured.'));
+      return Promise.reject(new Error('The Merge API is not configured.'));
     }
 
     return bootstrapCurrentUser({ apiBaseUrl, getToken });
@@ -53,7 +53,7 @@ function ConfiguredOnboardingRoute() {
   const saveDisplayName = useCallback(
     (displayName: string) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return saveProfileDisplayName({ apiBaseUrl, displayName, getToken });
@@ -63,7 +63,7 @@ function ConfiguredOnboardingRoute() {
   const saveBirthDate = useCallback(
     (birthDate: string) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return saveProfileBirthDate({ apiBaseUrl, birthDate, getToken });
@@ -73,7 +73,7 @@ function ConfiguredOnboardingRoute() {
   const saveIdentity = useCallback(
     (identity: IdentityUpdate) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return saveProfileIdentity({ apiBaseUrl, getToken, ...identity });
@@ -83,7 +83,7 @@ function ConfiguredOnboardingRoute() {
   const savePreferences = useCallback(
     (preferences: PreferencesUpdate) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return saveProfilePreferences({ apiBaseUrl, getToken, ...preferences });
@@ -93,7 +93,7 @@ function ConfiguredOnboardingRoute() {
   const saveLocation = useCallback(
     (location: LocationUpdate) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return saveProfileLocation({ apiBaseUrl, getToken, ...location });
@@ -103,7 +103,7 @@ function ConfiguredOnboardingRoute() {
   const saveHeight = useCallback(
     (height: HeightUpdate) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return saveProfileHeight({ apiBaseUrl, getToken, ...height });
@@ -112,7 +112,7 @@ function ConfiguredOnboardingRoute() {
   );
   const loadPhotos = useCallback(() => {
     if (apiBaseUrl === null) {
-      return Promise.reject(new Error('The ProDate API is not configured.'));
+      return Promise.reject(new Error('The Merge API is not configured.'));
     }
 
     return listProfilePhotos({ apiBaseUrl, getToken });
@@ -120,7 +120,7 @@ function ConfiguredOnboardingRoute() {
   const uploadPhoto = useCallback(
     (photo: LocalProfilePhoto, position: number) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return addProfilePhoto({ apiBaseUrl, getToken, photo, position });
@@ -130,7 +130,7 @@ function ConfiguredOnboardingRoute() {
   const completePhotos = useCallback(
     (photoIds: string[]) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return completeProfilePhotos({ apiBaseUrl, getToken, photoIds });
@@ -140,7 +140,7 @@ function ConfiguredOnboardingRoute() {
   const removePhoto = useCallback(
     (photoId: string) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return deleteProfilePhoto({ apiBaseUrl, getToken, photoId });
@@ -149,7 +149,7 @@ function ConfiguredOnboardingRoute() {
   );
   const loadPrompts = useCallback(() => {
     if (apiBaseUrl === null) {
-      return Promise.reject(new Error('The ProDate API is not configured.'));
+      return Promise.reject(new Error('The Merge API is not configured.'));
     }
 
     return listProfilePrompts({ apiBaseUrl, getToken });
@@ -157,7 +157,7 @@ function ConfiguredOnboardingRoute() {
   const completePrompts = useCallback(
     (prompts: ProfilePromptAnswerInput[]) => {
       if (apiBaseUrl === null) {
-        return Promise.reject(new Error('The ProDate API is not configured.'));
+        return Promise.reject(new Error('The Merge API is not configured.'));
       }
 
       return completeProfilePrompts({ apiBaseUrl, getToken, prompts });
@@ -166,14 +166,14 @@ function ConfiguredOnboardingRoute() {
   );
   const loadReview = useCallback(() => {
     if (apiBaseUrl === null) {
-      return Promise.reject(new Error('The ProDate API is not configured.'));
+      return Promise.reject(new Error('The Merge API is not configured.'));
     }
 
     return loadProfileReview({ apiBaseUrl, getToken });
   }, [getToken]);
   const publish = useCallback(() => {
     if (apiBaseUrl === null) {
-      return Promise.reject(new Error('The ProDate API is not configured.'));
+      return Promise.reject(new Error('The Merge API is not configured.'));
     }
 
     return publishProfile({ apiBaseUrl, getToken });

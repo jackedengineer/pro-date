@@ -79,7 +79,7 @@ export function CurrentUserBootstrapScreen({
         <ActivityIndicator color={colors.plum} size="large" />
         <AppText variant="title">Preparing your profile</AppText>
         <AppText style={styles.supportingText}>
-          We’re securely connecting your account to ProDate.
+          We’re securely connecting your account to Merge.
         </AppText>
       </View>
     </Screen>

@@ -59,7 +59,7 @@ function ConfiguredVerifyPhoneRoute() {
         'Account setup needs an unsupported Clerk field. Check the dashboard phone-only settings.',
       );
     } else {
-      setErrorMessage('This account needs an authentication step ProDate does not support yet.');
+      setErrorMessage('This account needs an authentication step Merge does not support yet.');
     }
 
     setActivity('idle');

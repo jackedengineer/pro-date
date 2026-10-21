@@ -237,7 +237,7 @@ export function NotificationSettingsSheet({
         </AppText>
       </View>
       <AppText variant="caption">
-        When push is connected, alerts will say “New message on ProDate.” No names or message
+        When push is connected, alerts will say “New message on Merge.” No names or message
         previews.
       </AppText>
       <NotificationDeviceStatus

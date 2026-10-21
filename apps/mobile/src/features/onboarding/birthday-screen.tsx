@@ -109,9 +109,7 @@ export function BirthdayScreen({
         <View style={styles.content}>
           <AppText variant="eyebrow">The basics</AppText>
           <AppText variant="display">One quick age check.</AppText>
-          <AppText style={styles.supportingText}>
-            You need to be 18 or older to use ProDate.
-          </AppText>
+          <AppText style={styles.supportingText}>You need to be 18 or older to use Merge.</AppText>
 
           <View style={styles.privacyCard}>
             <AppText style={styles.privacyTitle} variant="caption">

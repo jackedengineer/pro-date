@@ -1,18 +1,18 @@
-# ProDate
+# Merge
 
 ### A production-shaped, Hinge-inspired dating application built as an end-to-end mobile engineering project
 
-`ProDate` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
+`Merge` is an independent portfolio and learning project that recreates the core mechanics of a modern dating application with original branding, interaction design, and implementation. The goal is not a public launch; the goal is to build the complete system as close to a real product as practical: passwordless verification, profile creation, geospatial discovery, item-specific likes and comments, mutual matches, durable real-time messaging, push notifications, safety controls, test-store subscriptions, observability, and repeatable deployment.
 
 > **Project status:** authentication, profile onboarding, nearby discovery, item-specific engagement, and private text messaging are implemented. Members publish a profile with four to six photos and three curated prompt answers, like a particular photo or prompt, and merge or decline incoming pull requests. Merged is the single match-and-chat inbox, grouped into Your turn and Their turn; untouched matches appear for both members without needing a first message. Conversations support saved history, foreground realtime updates, and device-persisted outgoing messages. Pass, block, report, and unmatch are enforced by the Express API. Automated tests and rollback-only Neon integration checks cover the implementation; messaging still awaits physical-iPhone visual and release-performance acceptance. Email OTP remains the development path while India SMS enablement is pending with Clerk support. Push delivery, complete App Review safety operations, account lifecycle controls, and subscriptions are not complete.
 
 ## Product preview
 
-The following screenshots show the implemented welcome and email-entry screens, captured from the local React Native Web preview at 390 × 844 on 21 October 2026. They are **web layout evidence, not physical-iPhone screenshots or end-to-end authentication proof**. No OTP was sent during this capture.
+The following screenshots show the implemented welcome and email-entry layouts **before the Merge rename**, captured from the local React Native Web preview at 390 × 844 on 21 October 2026. The old product name is visible in these historical captures. They are **web layout evidence, not physical-iPhone screenshots or end-to-end authentication proof**. No OTP was sent during this capture.
 
-| Welcome                                                                                                                                | Email entry                                                                                                                         |
-| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| <img src="assets/screenshots/welcome-web.jpg" alt="ProDate welcome screen with a profile prompt and Get started action" width="230" /> | <img src="assets/screenshots/email-web.jpg" alt="ProDate passwordless email entry with an empty labeled email field" width="230" /> |
+| Welcome                                                                                                                                   | Email entry                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="assets/screenshots/welcome-web.jpg" alt="Pre-rename welcome layout with a profile prompt and Get started action" width="230" /> | <img src="assets/screenshots/email-web.jpg" alt="Pre-rename passwordless email entry with an empty labeled email field" width="230" /> |
 
 Authenticated onboarding, discovery, and messaging screenshots will follow physical-device review. They will use fictional profiles and redact private information. Concept mockups will never be presented as implemented product evidence.
 
@@ -25,6 +25,18 @@ The planned gallery will cover:
 | Match celebration  | Durable chat        | Block and report | Test entitlement |
 
 ## What this project demonstrates
+
+### Merge identity and native launch
+
+<img src="apps/mobile/assets/brand/icon.png" alt="Merge app icon: two plum-and-coral connection paths meeting at a heart" width="128" />
+
+Merge's original mark combines a merge branch with a small heart, using the interface's plum, coral and warm-white palette. The editable source is [merge-mark.svg](apps/mobile/assets/brand/merge-mark.svg). Checked-in PNG exports include an opaque 1024 × 1024 app icon, transparent Android adaptive/themed foregrounds, a transparent native splash mark, an in-app mark and a web favicon. These are lightweight static assets, not an animation library or an extra startup delay.
+
+The already-installed `expo-splash-screen` plugin keeps the native mark visible during existing font initialization, on the same warm-white background as the app. [Expo recommends validating the splash in a preview or production build](https://docs.expo.dev/develop/user-interface/splash-screen-and-app-icon/): Expo Go does not reproduce the final launch screen, and the installed launcher icon/name update only with a new native build. An Expo Go reload can verify in-app copy and the profile-photo fix immediately.
+
+The public name is **Merge**. The repository/workspace identifiers, Expo slug (`pro-date`), URL scheme (`prodate`), iOS/Android identifier (`com.prodate.mobile`), local storage keys and existing cloud linkage deliberately retain their original values. Renaming them would create a different app identity or strand existing local sessions/history. Notification routing, generic-preview privacy rules and backend behavior are unchanged; the client accepts both the new generic Merge preview and previously delivered generic legacy previews during the rename transition.
+
+### Engineering capabilities
 
 - A complete mobile journey from passwordless OTP through matching and messaging
 - A custom, accessible Expo interface rather than a generic component-library skin
@@ -96,15 +108,15 @@ The October UI refresh uses React Native primitives and core `StyleSheet` throug
 
 Presentation changes preserve the nine onboarding checkpoints, four-to-six-photo requirement, three prompt answers with **five words OR 30 characters**, item-specific likes, and the Your turn / Their turn inbox. Chat retains its existing virtualized list, stable scroll wrapper, sticky composer, device queue, and transport. No animation runs per arriving message. Core styles are not a substitute for release-build profiling; no frame-rate improvement is claimed without device measurements.
 
-ProDate is tech-native, not tech-exclusive. Developer and startup language gives key interaction states a distinctive voice, while authentication, personal questions, consent, safety, and payment language remains direct. A first-use explanation always accompanies a branded term.
+Merge is tech-native, not tech-exclusive. Developer and startup language gives key interaction states a distinctive voice, while authentication, personal questions, consent, safety, and payment language remains direct. A first-use explanation always accompanies a branded term.
 
-| Familiar action       | ProDate language | First-use meaning                     |
-| --------------------- | ---------------- | ------------------------------------- |
-| Send a like or reply  | Open a PR        | Send a thoughtful like or response    |
-| Review incoming likes | Review PR        | See who wants to connect              |
-| Mutual match          | Merged           | You matched and can start a thread    |
-| Pass                  | Pass             | Kept neutral rather than “rejected”   |
-| Safety actions        | Block / report   | Never renamed or softened with jargon |
+| Familiar action       | Merge language | First-use meaning                     |
+| --------------------- | -------------- | ------------------------------------- |
+| Send a like or reply  | Open a PR      | Send a thoughtful like or response    |
+| Review incoming likes | Review PR      | See who wants to connect              |
+| Mutual match          | Merged         | You matched and can start a thread    |
+| Pass                  | Pass           | Kept neutral rather than “rejected”   |
+| Safety actions        | Block / report | Never renamed or softened with jargon |
 
 ## System architecture
 
@@ -229,7 +241,7 @@ Open **Merged** in the bottom navigation and tap a connection to chat. There is 
 - **Your turn:** a mutual match with no messages, or a conversation whose latest saved message came from the other member. Untouched matches appear here for **both** members with a **Start the conversation** cue.
 - **Their turn:** the latest saved message came from you. This is a conversation cue, not a read or delivery receipt; locally queued or failed sends do not transfer the turn.
 - Each section orders loaded connections by recent activity. Counts describe loaded pages, not total matches; **Load more connections** follows the existing bounded server cursor. Overlapping pages are deduplicated using the newest confirmed message sequence, and empty sections are omitted.
-- Opening an untouched chat shows an original ProDate invitation to send the first hello, not an automatically sent message. Back, block, and unmatch return to Merged. Legacy `/messages` inbox links redirect to Merged; `/messages/[id]` remains the internal conversation-detail route.
+- Opening an untouched chat shows an original Merge invitation to send the first hello, not an automatically sent message. Back, block, and unmatch return to Merged. Legacy `/messages` inbox links redirect to Merged; `/messages/[id]` remains the internal conversation-detail route.
 
 The inbox reuses the account-scoped TanStack Query cache and SQLite summaries. Saved connections remain visible offline, and errors offer retry without hiding cached rows or claiming an unqueried inbox is empty. A single recycled [FlashList with typed section headers](https://shopify.github.io/flash-list/docs/guides/section-list/) avoids nesting separate lists. Message acknowledgments and realtime hints invalidate summaries; foreground fallback refresh runs every 15 seconds. New matches confirmed on the current device open Merged immediately; the other member discovers them on inbox fetch/refresh or foreground polling, not a new match push event. Message push is implemented behind disabled setup gates; physical-device delivery remains unverified.
 
@@ -366,7 +378,7 @@ Each newly committed text message creates one job per currently eligible recipie
 
 The private worker claims four jobs at a time with `FOR UPDATE SKIP LOCKED`, UUID-fenced 60-second leases, and a persisted attempt before external handoff. It rechecks publication, membership, block/unmatch, mute/pause revisions, device ownership/generation, project and expiry immediately before sending. No database lock is held across the network call. Retries use bounded jittered backoff, at most eight attempts, and a 24-hour intent lifetime. Credential failures open a five-minute circuit; shutdown stops new work and waits for in-flight work within a bounded deadline.
 
-The [Expo Push Service adapter](https://docs.expo.dev/push-notifications/sending-notifications/) uses Node's built-in HTTP client, fixed HTTPS endpoints, no redirects or hidden retries, a ten-second request/body deadline, and bounded, validated responses. Enhanced push authentication is required. Visible copy is always **ProDate / New message on ProDate.** Payload data contains only a schema version, event type, internal recipient/conversation/message UUIDs—never a name, text body, photo, session token or arbitrary URL. This minimizes previews; Expo and platform providers still receive routing metadata and the device token. It is not end-to-end encrypted notification delivery.
+The [Expo Push Service adapter](https://docs.expo.dev/push-notifications/sending-notifications/) uses Node's built-in HTTP client, fixed HTTPS endpoints, no redirects or hidden retries, a ten-second request/body deadline, and bounded, validated responses. Enhanced push authentication is required. Visible copy is always **Merge / New message on Merge.** Payload data contains only a schema version, event type, internal recipient/conversation/message UUIDs—never a name, text body, photo, session token or arbitrary URL. This minimizes previews; Expo and platform providers still receive routing metadata and the device token. It is not end-to-end encrypted notification delivery.
 
 Accepted tickets schedule separate receipt checks after 15 minutes; unresolved receipts expire after 23 hours and never trigger a blind resend. `DeviceNotRegistered` retires only the matching device generation. Housekeeping runs even with provider handoff paused: expired intents are terminal, resolved job/attempt metadata is pruned after seven days, and expired 30-day device tokens are removed. Minimal binding/version tombstones are retained for compare-and-swap replay protection and cascade on account deletion; automatic tombstone pruning/re-enrollment is not implemented. Logs contain outcome enums, timings, queue age and random worker/cycle correlation IDs, not private identifiers or provider response text.
 
@@ -421,7 +433,7 @@ This is a production-shaped project, not an operating public dating service. Its
 
 App Store compliance is a standing acceptance criterion even though this project is not currently intended for a public launch. Profile publishing is available for private development, but public discovery and messaging are explicitly blocked from submission until the user-generated-content safeguards required by [App Review Guideline 1.2](https://developer.apple.com/app-store/review/guidelines/) are implemented and verified: objectionable-content filtering, in-app reporting with a documented response process, immediate blocking, and published support contact information. The product will not use anonymous/random chat, objectifying hot-or-not mechanics, or hookup/pornographic positioning.
 
-Before any submission, ProDate must also provide in-app permanent account deletion that removes associated user-generated content, following [Apple's account deletion requirements](https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion); reconcile the App Privacy label with every first- and third-party data flow under [Apple's privacy guidance](https://developer.apple.com/app-store/user-privacy-and-data-use/); keep production review services live; and provide App Review with a fictional, fully accessible reviewer account plus accurate setup notes. Tracking is not part of the current architecture.
+Before any submission, Merge must also provide in-app permanent account deletion that removes associated user-generated content, following [Apple's account deletion requirements](https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion); reconcile the App Privacy label with every first- and third-party data flow under [Apple's privacy guidance](https://developer.apple.com/app-store/user-privacy-and-data-use/); keep production review services live; and provide App Review with a fictional, fully accessible reviewer account plus accurate setup notes. Tracking is not part of the current architecture.
 
 ## Repository structure (implemented and planned)
 
@@ -479,7 +491,7 @@ The API binds to `0.0.0.0:3000` by default; its liveness and readiness endpoints
 
 ## Configure Clerk passwordless OTP
 
-ProDate uses a custom Clerk flow so the interface remains fully native to the product while session tokens are encrypted through Expo SecureStore. Both routes work in Expo Go and use Clerk's privacy-preserving `signUpIfMissing` transfer: an email address or phone number is verified before the client learns whether it belongs to an existing or new account.
+Merge uses a custom Clerk flow so the interface remains fully native to the product while session tokens are encrypted through Expo SecureStore. Both routes work in Expo Go and use Clerk's privacy-preserving `signUpIfMissing` transfer: an email address or phone number is verified before the client learns whether it belongs to an existing or new account.
 
 1. Create a development application in the [Clerk Dashboard](https://dashboard.clerk.com/).
 2. Under **Native applications**, enable the Native API. Clerk notes that this public native pathway bypasses browser CAPTCHA challenges, so production abuse controls and rate limits must be reviewed before release.
@@ -509,7 +521,7 @@ ProDate uses a custom Clerk flow so the interface remains fully native to the pr
    pnpm dev:mobile
    ```
 
-The publishable key is intentionally available to the Expo bundle. Clerk secret keys are backend-only and must never be placed in `EXPO_PUBLIC_*`, the mobile app, or Git. Without a valid publishable key, ProDate remains runnable and shows a configuration message instead of using mock authentication.
+The publishable key is intentionally available to the Expo bundle. Clerk secret keys are backend-only and must never be placed in `EXPO_PUBLIC_*`, the mobile app, or Git. Without a valid publishable key, Merge remains runnable and shows a configuration message instead of using mock authentication.
 
 For cost-free development testing, enter an address such as `prodate+clerk_test@example.com` and use the fixed code `424242`. Clerk does not deliver an email for a `+clerk_test` address, and test addresses do not count against the development allowance. Real development addresses receive an actual message and are limited by Clerk's current development quota. Requiring email can cause a brand-new phone-only sign-up to report a missing email requirement; the combined new-user policy will be validated when India SMS is enabled, while existing phone sign-in remains available.
 
@@ -517,7 +529,7 @@ Implementation references: [Clerk Expo quickstart](https://clerk.com/docs/expo/g
 
 ## Configure Neon and backend authentication
 
-The API verifies Clerk session tokens and creates one private ProDate user row per Clerk subject. The mobile contract is `PUT /v1/users/me`; its response contains only the internal UUID and onboarding state.
+The API verifies Clerk session tokens and creates one private Merge user row per Clerk subject. The mobile contract is `PUT /v1/users/me`; its response contains only the internal UUID and onboarding state.
 
 1. Create a Neon project in the Singapore region and keep Postgres 17 or later selected.
 2. Copy the API environment template:
