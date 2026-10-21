@@ -1,6 +1,8 @@
 import { onlineManager, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Switch, View } from 'react-native';
+import Bell from 'lucide-react-native/icons/bell';
+import { IconButton } from '../../components/icon-button';
 import type { NotificationsApi } from '../../api/notifications';
 import { AppText } from '../../components/app-text';
 import { colors, radii, spacing } from '../../theme/tokens';
@@ -13,20 +15,33 @@ import { NotificationDeviceStatus } from './notification-device-status';
 export function NotificationSettingsButton({
   runtime,
   conversationId,
+  compact = false,
 }: {
   runtime: MessagingRuntime;
   conversationId?: string;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <QuietButton
-        label={conversationId === undefined ? 'Notifications' : 'Chat notifications'}
-        onPress={() => {
-          Keyboard.dismiss();
-          setOpen(true);
-        }}
-      />
+      {compact ? (
+        <IconButton
+          label={conversationId === undefined ? 'Notifications' : 'Chat notifications'}
+          icon={Bell}
+          onPress={() => {
+            Keyboard.dismiss();
+            setOpen(true);
+          }}
+        />
+      ) : (
+        <QuietButton
+          label={conversationId === undefined ? 'Notifications' : 'Chat notifications'}
+          onPress={() => {
+            Keyboard.dismiss();
+            setOpen(true);
+          }}
+        />
+      )}
       {open ? (
         <NotificationSettingsSheet
           key={`${runtime.ownerId}:${conversationId ?? 'all'}`}

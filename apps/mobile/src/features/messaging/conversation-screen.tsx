@@ -1,5 +1,9 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Image } from 'expo-image';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import Ellipsis from 'lucide-react-native/icons/ellipsis';
+import { IconButton } from '../../components/icon-button';
+import { useReducedMotionPreference } from '../../theme/motion';
 import { router } from 'expo-router';
 import {
   createContext,
@@ -65,6 +69,7 @@ const position = {
 const identify = (row: ChatRow) => row.key;
 const backToMerged = () => router.replace({ pathname: '/discover', params: { tab: 'merged' } });
 export function ConversationScreen({ id }: { id: string }) {
+  const reducedMotion = useReducedMotionPreference();
   const { runtime } = useMessaging();
   const thread = useMemo(() => runtime!.thread(id), [runtime, id]);
   const state = useSyncExternalStore(thread.subscribe, thread.getSnapshot);
@@ -73,6 +78,7 @@ export function ConversationScreen({ id }: { id: string }) {
   const list = useRef<FlashListRef<ChatRow>>(null);
   const [atEnd, setAtEnd] = useState(true);
   const [safety, setSafety] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [composerHeight, setComposerHeight] = useState(80);
   useEffect(() => runtime!.watch(id), [runtime, id]);
@@ -124,8 +130,8 @@ export function ConversationScreen({ id }: { id: string }) {
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={styles.header}>
-        <QuietButton label="Back to Merged" onPress={backToMerged} />
         <View style={styles.member}>
+          <IconButton label="Back to Merged" icon={ArrowLeft} onPress={backToMerged} />
           <Image
             source={state.conversation?.member.photoUrl ?? null}
             contentFit="cover"
@@ -144,15 +150,27 @@ export function ConversationScreen({ id }: { id: string }) {
             </AppText>
           </View>
           {!state.unavailable && state.conversation !== null ? (
-            <NotificationSettingsButton runtime={runtime!} conversationId={id} />
+            <NotificationSettingsButton runtime={runtime!} conversationId={id} compact />
           ) : null}
+          {state.conversation === null ? null : (
+            <IconButton
+              label="More chat options"
+              icon={Ellipsis}
+              accessibilityState={{ expanded: toolsOpen }}
+              onPress={() => {
+                Keyboard.dismiss();
+                setToolsOpen((value) => !value);
+              }}
+            />
+          )}
         </View>
-        {state.conversation === null ? null : (
+        {state.conversation === null || !toolsOpen ? null : (
           <View style={styles.tools}>
             <QuietButton
               label="Report or block"
               onPress={() => {
                 Keyboard.dismiss();
+                setToolsOpen(false);
                 setSafety(true);
               }}
             />
@@ -216,7 +234,7 @@ export function ConversationScreen({ id }: { id: string }) {
               <QuietButton
                 label="Jump to latest"
                 onPress={() => {
-                  void list.current?.scrollToEnd({ animated: true });
+                  void list.current?.scrollToEnd({ animated: !reducedMotion });
                 }}
               />
             </View>
@@ -284,14 +302,21 @@ const styles = StyleSheet.create({
   header: {
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 4,
     paddingBottom: 8,
   },
-  member: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 36, height: 42, borderRadius: 12, backgroundColor: colors.plumSoft },
+  member: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64 },
+  avatar: { width: 40, height: 40, borderRadius: 16, backgroundColor: colors.plumSoft },
   name: { flex: 1 },
-  tools: { flexDirection: 'row', justifyContent: 'space-between' },
+  tools: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    backgroundColor: colors.plumSoft,
+    borderRadius: 12,
+  },
   body: { flex: 1 },
   history: { paddingTop: 12 },
   sticky: { position: 'absolute', bottom: 0, left: 0, right: 0 },

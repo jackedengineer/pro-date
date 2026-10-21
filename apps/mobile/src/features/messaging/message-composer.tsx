@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import { AppText } from '../../components/app-text';
 import { colors, typography } from '../../theme/tokens';
 
@@ -56,7 +57,7 @@ export function MessageComposer({
           multiline
           maxLength={2000}
           submitBehavior="newline"
-          placeholder="A good hello goes a long way."
+          placeholder="Message…"
           placeholderTextColor={colors.muted}
           style={styles.input}
         />
@@ -72,9 +73,9 @@ export function MessageComposer({
             pressed && styles.pressed,
           ]}
         >
-          <AppText style={styles.arrow} accessibilityElementsHidden>
-            ↑
-          </AppText>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <ArrowUp size={24} color={colors.white} strokeWidth={2} />
+          </View>
         </Pressable>
       </View>
     </View>
@@ -82,7 +83,7 @@ export function MessageComposer({
 }
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: 10,
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.fieldBorder,
     fontFamily: typography.family.body,
     fontSize: 16,
     lineHeight: 24,
@@ -113,7 +114,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: colors.plum,
   },
-  arrow: { color: colors.white, fontSize: 28, lineHeight: 34 },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.7 },
   error: { color: colors.danger, marginBottom: 8 },

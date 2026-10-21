@@ -8,7 +8,13 @@
 
 ## Product preview
 
-Verified screenshots will be added after each workflow runs on the physical iPhone test path. They will use fictional seed profiles and redact phone numbers, exact locations, tokens, and other private data. Concept mockups will never be presented as implemented product evidence.
+The following screenshots show the implemented welcome and email-entry screens, captured from the local React Native Web preview at 390 × 844 on 21 October 2026. They are **web layout evidence, not physical-iPhone screenshots or end-to-end authentication proof**. No OTP was sent during this capture.
+
+| Welcome                                                                                                                                | Email entry                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="assets/screenshots/welcome-web.jpg" alt="ProDate welcome screen with a profile prompt and Get started action" width="230" /> | <img src="assets/screenshots/email-web.jpg" alt="ProDate passwordless email entry with an empty labeled email field" width="230" /> |
+
+Authenticated onboarding, discovery, and messaging screenshots will follow physical-device review. They will use fictional profiles and redact private information. Concept mockups will never be presented as implemented product evidence.
 
 The planned gallery will cover:
 
@@ -73,18 +79,22 @@ Not in V0: an admin moderation dashboard, identity verification, advanced recomm
 
 The interface will be original—not a traced or pixel-identical Hinge UI.
 
-| Area          | Direction                                                                                                         |
-| ------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Character     | Warm, editorial, calm, intentional, inclusive                                                                     |
-| Palette       | Off-white canvas, white surfaces, near-black text, coral primary accent, deep-plum secondary accent               |
-| Typography    | Manrope with a readable system-font fallback                                                                      |
-| Shape         | Tactile cards, 16–24 px surface radii, restrained elevation, generous touch targets                               |
-| Rhythm        | 8-point layout grid with optical 4-point adjustments                                                              |
-| Motion        | Purposeful 180–260 ms transitions, restrained springs, contextual haptics                                         |
-| Accessibility | Dynamic type, VoiceOver labels, WCAG AA contrast, reduced motion, 44-point minimum targets, non-color-only states |
-| Theme         | Light V0 theme with semantic tokens ready for a future dark theme                                                 |
+| Area          | Direction                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Character     | Warm, editorial, calm, intentional, inclusive                                                                       |
+| Palette       | Warm off-white canvas, white surfaces, near-black text, accessible deep-plum primary actions, coral highlights      |
+| Typography    | Manrope with a readable system-font fallback                                                                        |
+| Shape         | Tactile cards, 16–24 px surface radii, restrained elevation, generous touch targets                                 |
+| Rhythm        | 8-point layout grid with optical 4-point adjustments                                                                |
+| Motion        | Brief native-driven press feedback, short image fades, system-aware route transitions, deliberate selection haptics |
+| Accessibility | Dynamic type, VoiceOver labels, WCAG AA contrast, reduced motion, 44-point minimum targets, non-color-only states   |
+| Theme         | Light V0 theme with semantic tokens ready for a future dark theme                                                   |
 
-The initial internal component set includes `AppText`, `Button`, `IconButton`, `TextField`, `PhoneField`, `OtpField`, `Avatar`, `Badge`, `PhotoTile`, `PromptCard`, `ProfileCard`, `BottomSheet`, `ProgressBar`, `Screen`, `EmptyState`, `ErrorState`, `OfflineBanner`, `Toast`, and `Skeleton`.
+The implemented shared controls include `AppText`, `AppButton`, `IconButton`, `TextField`, `FormScrollView`, `Screen`, `SelectionControl`, `OnboardingProgress`, `DiscoverySheet`, `EmptyState`, and `ErrorNotice`. Phone and OTP inputs remain controlled native fields; there is no separate form framework or generic component kit.
+
+The October UI refresh uses React Native primitives and core `StyleSheet` throughout. [HeroUI Native](https://heroui.com/en/docs/native/components/button) is a reference for control hierarchy and states, not an installed dependency or copied component implementation. The only added packages are Expo Haptics, Lucide React Native, and React Native SVG. Icons use per-icon imports, one app-level listener follows changes to Reduce Motion, and haptic failures never interrupt an action. Primary buttons have explicit pending/disabled states; supporting text and input-edge contrast have regression tests. Forms use native keyboard insets on iOS and keyboard-aware resizing on Android; physical keyboard and large-text acceptance is still required.
+
+Presentation changes preserve the nine onboarding checkpoints, four-to-six-photo requirement, three prompt answers with **five words OR 30 characters**, item-specific likes, and the Your turn / Their turn inbox. Chat retains its existing virtualized list, stable scroll wrapper, sticky composer, device queue, and transport. No animation runs per arriving message. Core styles are not a substitute for release-build profiling; no frame-rate improvement is claimed without device measurements.
 
 ProDate is tech-native, not tech-exclusive. Developer and startup language gives key interaction states a distinctive voice, while authentication, personal questions, consent, safety, and payment language remains direct. A first-use explanation always accompanies a branded term.
 
@@ -169,18 +179,18 @@ The backend is a modular monolith deployed as two processes from one codebase: a
 
 Exact installed package versions are pinned in the workspace lockfile. Expo-native versions are checked against Expo SDK 57 with Expo CLI and Expo Doctor rather than inferred from semver alone. Planned integrations and delivery tooling below are not installed or operational yet.
 
-| Layer              | Technologies                                                                                                                                                                            |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                            |
-| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                   |
-| Mobile UI          | React Native `StyleSheet`, Expo UI DateTimePicker/Picker, Expo Location, Expo Image, Expo Image Picker, Expo Image Manipulator, Reanimated, Gesture Handler, Safe Area Context, Manrope |
-| Mobile state/forms | TanStack Query for inbox pages, SQLite-backed chat controller, Zod and local React state; React Hook Form and Zustand are not currently required                                        |
-| API                | Express 5, Zod, Helmet, CORS, Pino, message quotas and socket admission budgets; general throttling/OpenAPI/Scalar remain planned                                                       |
-| Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                               |
-| Integrations       | Clerk, Cloudinary, Socket.IO and Expo Push delivery implemented; live native push acceptance, RevenueCat and Sentry pending                                                             |
-| Mobile tests       | Jest, `jest-expo`, React Native Testing Library; Maestro planned                                                                                                                        |
-| API tests          | Vitest, Supertest and explicit rollback-only database scripts; Testcontainers planned                                                                                                   |
-| Delivery           | Neon configured; Docker, Railway, EAS Build/Update and GitHub Actions planned                                                                                                           |
+| Layer              | Technologies                                                                                                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                                                      |
+| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                                             |
+| Mobile UI          | React Native `StyleSheet`, Expo UI DateTimePicker/Picker, Expo Location, Expo Image, Expo Image Picker, Expo Image Manipulator, Expo Haptics, Lucide/SVG, Reanimated, Gesture Handler, Safe Area Context, Manrope |
+| Mobile state/forms | TanStack Query for inbox pages, SQLite-backed chat controller, Zod and local React state; React Hook Form and Zustand are not currently required                                                                  |
+| API                | Express 5, Zod, Helmet, CORS, Pino, message quotas and socket admission budgets; general throttling/OpenAPI/Scalar remain planned                                                                                 |
+| Data               | PostgreSQL, PostGIS, Drizzle ORM, Drizzle Kit, `pg`, Neon                                                                                                                                                         |
+| Integrations       | Clerk, Cloudinary, Socket.IO and Expo Push delivery implemented; live native push acceptance, RevenueCat and Sentry pending                                                                                       |
+| Mobile tests       | Jest, `jest-expo`, React Native Testing Library; Maestro planned                                                                                                                                                  |
+| API tests          | Vitest, Supertest and explicit rollback-only database scripts; Testcontainers planned                                                                                                                             |
+| Delivery           | Neon configured; Docker, Railway, EAS Build/Update and GitHub Actions planned                                                                                                                                     |
 
 Intentionally deferred: Redis, the Socket.IO Redis adapter, Kubernetes, microservices, Elasticsearch, a large third-party UI kit, and speculative global-state infrastructure.
 
@@ -640,13 +650,14 @@ CI and coverage badges will be added only after real workflows produce those res
 
 Current implementation evidence:
 
-- The 9 October local verification passes **526 tests** (60 contracts, 66 database-boundary, 136 API, 264 mobile), formatting, lint and strict TypeScript. Notification SQL-boundary tests use fakes; live notification database/concurrency and native delivery acceptance remain pending.
+- The 21 October local UI-refresh verification passes **544 tests** (60 contracts, 66 database-boundary, 136 API, 282 mobile), formatting, lint and strict TypeScript. These checks do not connect to the configured database. Notification SQL-boundary tests use fakes; live notification database/concurrency and native delivery acceptance remain pending.
 - Automated tests cover shared contracts, database invariants, discovery/engagement, private messaging access, retry deduplication, realtime hints, device queue recovery, real SQLite queries, and accessible mobile behavior. Merged inbox tests cover both members' untouched matches, sender-derived turns, overlapping cursor pages, cached/offline states, immediate confirmed-match navigation, and safety exits. Explicit live PostGIS and messaging checks additionally exercise persistence and state transitions with rolled-back fixtures.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
-- Expo Doctor passes all 21 checks, and Expo CLI reports that the installed packages match SDK 57.
+- Expo Doctor currently passes **20 of 21 checks**. Its online SDK compatibility check recommends newer SDK 57 patch pins for ten existing packages. The three UI additions match the installed SDK's native compatibility map; existing SDK pins were deliberately not upgraded during the presentation-only pass. This is a follow-up compatibility gate, not a clean Doctor result.
 - Metro produces successful iOS and Android Hermes exports. These are JS bundle checks, not signed native builds or push-delivery tests.
-- The 9 October dependency audit reports six transitive advisories (two high, four moderate), not a clean audit: `node-forge`, `braces`, `uuid`, `decode-uri-component`, `sprintf-js`, and a nested Drizzle Kit `esbuild`. The high paths are Expo CLI/code-signing and Metro pattern tooling, not messaging cryptography; they remain distribution-review gates. Keep Metro/API access restricted to trusted local testing, do not process untrusted build patterns/certificates, and do not expose a Drizzle/esbuild development server. Known patched moderate packages need compatible upstream updates and regression tests; no incompatible overrides or advisory suppression were introduced. Recheck before enabling external testing or signing/distributing builds.
+- The 21 October dependency audit reports **nine transitive advisories: three high and six moderate**, with none critical. Existing paths include `node-forge`, `braces`, `uuid`, `decode-uri-component`, `sprintf-js`, nested Drizzle Kit `esbuild`, and three advisories in the existing Vitest → Vite 8.3.2 tooling path. These are not introduced package upgrades in the UI pass and remain distribution-review gates. No incompatible overrides or advisory suppression were added. Keep development services private and review compatible upstream fixes before external distribution.
+- Browser checks cover welcome/auth navigation, compact-width scrolling, and email field validation without provider writes. The web preview also reports an unresolved Expo SQLite WASM worker asset; it is not a supported replacement for native chat testing. No backend, schema, API-client, authentication-provider, message-controller, or notification-lifecycle changes are included in the redesign.
 
 ## Deployment model
 
@@ -688,7 +699,9 @@ Last local automated verification: **9 October 2026**
 | Mobile shell specification                | Approved                                                 |
 | Repository scaffold                       | Implemented                                              |
 | Expo welcome and OTP entry shell          | Implemented and tested                                   |
-| Expo Doctor / iOS Hermes export           | Verified                                                 |
+| Expo Doctor                               | 20/21; existing SDK patch updates pending                |
+| iOS and Android Hermes exports            | Verified; not signed native builds                       |
+| Mobile UI refresh                         | Source verified; physical-device acceptance pending      |
 | First physical-device run                 | Verified                                                 |
 | Clerk phone OTP client flow               | Implemented and tested                                   |
 | Clerk email OTP client flow               | Implemented and tested                                   |

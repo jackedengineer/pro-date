@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   outgoing: { backgroundColor: colors.plum, borderBottomRightRadius: 6 },
   light: { color: colors.white },
-  meta: { opacity: 0.8, marginTop: 4, fontSize: 11 },
+  meta: { marginTop: 6, fontSize: 13, color: colors.muted },
   failure: { maxWidth: '86%' },
   error: { color: colors.danger },
   actions: { flexDirection: 'row', justifyContent: 'flex-end' },
