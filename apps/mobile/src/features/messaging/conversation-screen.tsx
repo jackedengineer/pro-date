@@ -36,6 +36,7 @@ import type { ChatRow, ThreadSnapshot } from './chat-thread';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
 import { ReactionPicker } from './reaction-picker';
+import type { MessageAnchor } from './reaction-picker-layout';
 import type { ReactionKind } from '@pro-date/contracts';
 import { triggerFeedback } from '../../theme/feedback';
 import { useMessaging } from './messaging-provider';
@@ -84,7 +85,10 @@ export function ConversationScreen({ id }: { id: string }) {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [composerHeight, setComposerHeight] = useState(80);
-  const [actionMessageId, setActionMessageId] = useState<string | null>(null);
+  const [messageAction, setMessageAction] = useState<{
+    id: string;
+    anchor: MessageAnchor | null;
+  } | null>(null);
   useEffect(() => runtime!.watch(id), [runtime, id]);
   const handleFailure = useCallback(
     (failure: unknown) =>
@@ -106,13 +110,13 @@ export function ConversationScreen({ id }: { id: string }) {
   const send = useCallback((body: string) => thread.send(body), [thread]);
   const reply = useCallback((messageId: string) => thread.selectReply(messageId), [thread]);
   const cancelReply = useCallback(() => thread.selectReply(null), [thread]);
-  const openMessageActions = useCallback((messageId: string) => {
-    Keyboard.dismiss();
-    setActionMessageId(messageId);
+  const openMessageActions = useCallback((messageId: string, anchor?: MessageAnchor) => {
+    // Keep keyboard/list geometry stable while the anchored menu is visible.
+    setMessageAction({ id: messageId, anchor: anchor ?? null });
   }, []);
   const react = useCallback(
     (messageId: string, kind: ReactionKind) => {
-      setActionMessageId(null);
+      setMessageAction(null);
       if (!reducedMotion) triggerFeedback('selection');
       void thread.setReaction(messageId, kind);
     },
@@ -306,16 +310,20 @@ export function ConversationScreen({ id }: { id: string }) {
         row={
           state.unavailable || !state.capabilities.reactions
             ? null
-            : (state.rows.find((row) => row.messageId === actionMessageId) ?? null)
+            : (state.rows.find((row) => row.messageId === messageAction?.id) ?? null)
         }
         ownerId={runtime!.ownerId}
         online={state.online}
         bottomInset={insets.bottom}
-        onClose={() => setActionMessageId(null)}
+        topInset={insets.top}
+        leftInset={insets.left}
+        rightInset={insets.right}
+        anchor={messageAction?.anchor ?? null}
+        onClose={() => setMessageAction(null)}
         onReply={
           state.capabilities.replies
             ? (messageId) => {
-                setActionMessageId(null);
+                setMessageAction(null);
                 reply(messageId);
               }
             : null

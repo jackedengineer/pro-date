@@ -15,6 +15,15 @@ import type { ChatRow } from './chat-thread';
 
 jest.mock('expo-router', () => ({ router: { replace: jest.fn() } }));
 jest.mock('./messaging-provider', () => ({ useMessaging: jest.fn() }));
+// The gesture's native boundary is covered in swipe-to-reply.test.tsx.
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  const { View } = jest.requireActual<typeof import('react-native')>('react-native');
+  return React.forwardRef(function Swipe(props: { children: React.ReactNode }, ref) {
+    React.useImperativeHandle(ref, () => ({ reset: jest.fn(), close: jest.fn() }));
+    return <View>{props.children}</View>;
+  });
+});
 jest.mock('react-native-keyboard-controller', () =>
   jest.requireActual<typeof import('react-native-keyboard-controller')>(
     'react-native-keyboard-controller/jest',
@@ -130,6 +139,59 @@ function setup(cachedConversation: Conversation | null = conversation) {
 }
 beforeEach(() => jest.clearAllMocks());
 describe('conversation UI', () => {
+  it('opens accessible message actions and shows a chosen reaction before the save completes', async () => {
+    const { thread, api } = setup();
+    const message = {
+      id: owner,
+      clientId: owner,
+      conversationId: id,
+      senderId: owner,
+      body: 'React to this saved hello.',
+      sequence: 1,
+      createdAt: conversation.createdAt,
+    };
+    const context = { messageId: owner, revision: 1, replyTo: null, reactions: [] };
+    jest.mocked(api.capabilities).mockResolvedValue({ replies: true, reactions: true });
+    jest.mocked(api.history).mockResolvedValue({
+      data: [message],
+      olderCursor: null,
+      latestSequence: 1,
+      nextAfterSequence: null,
+    });
+    jest.mocked(api.contexts).mockResolvedValue({ data: [context], revision: 1 });
+    jest
+      .mocked(api.interactionChanges)
+      .mockResolvedValue({ data: [], nextRevision: 1, latestRevision: 1 });
+    let finish!: (value: Awaited<ReturnType<MessagingApi['setReaction']>>) => void;
+    jest.mocked(api.setReaction).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await thread.ready;
+    thread.setEnabled(true);
+    await thread.sync();
+    const view = await render(<Subject />);
+    await fireEvent(
+      view.getByHintText('Long press for reactions and message actions'),
+      'accessibilityAction',
+      { nativeEvent: { actionName: 'react' } },
+    );
+    await fireEvent.press(view.getByRole('button', { name: 'Add Fire reaction' }));
+    expect(view.queryByTestId('reaction-picker-pill')).toBeNull();
+    expect(view.queryByText('Saving reaction…')).toBeNull();
+    expect(view.getByRole('button', { name: 'Remove Fire reaction, 1 person' })).toBeDisabled();
+    await act(() => {
+      finish({
+        ...context,
+        revision: 2,
+        reactions: [{ userId: owner, reaction: 'FIRE', revision: 1 }],
+      });
+    });
+    expect(view.getByRole('button', { name: 'Remove Fire reaction, 1 person' })).not.toBeDisabled();
+    thread.dispose();
+  });
   it('does not call an uncached existing history a brand-new conversation', async () => {
     const { thread } = setup({
       ...conversation,

@@ -20,6 +20,8 @@ export type ChatRow = Omit<Message, 'id' | 'sequence'> & {
   context: MessageContext | null;
   replyTo: MessageQuote | null;
   reactionPending: boolean;
+  // In-memory presentation only; undefined means use the confirmed server choice.
+  pendingReaction?: ReactionKind | null;
   reactionError: string | null;
 };
 export interface ThreadSnapshot {
@@ -40,6 +42,7 @@ export class ChatThread {
   private outgoing: OutgoingMessage[] = [];
   private contexts = new Map<string, MessageContext>();
   private reactionPending = new Set<string>();
+  private reactionChoices = new Map<string, ReactionKind | null>();
   private reactionErrors = new Map<string, string>();
   private interactionCursor: number | null = null;
   private interactionSync: Promise<void> | null = null;
@@ -118,6 +121,9 @@ export class ChatThread {
       context: this.contexts.get(m.id) ?? null,
       replyTo: this.contexts.get(m.id)?.replyTo ?? null,
       reactionPending: this.reactionPending.has(m.id),
+      ...(this.reactionChoices.has(m.id)
+        ? { pendingReaction: this.reactionChoices.get(m.id) ?? null }
+        : {}),
       reactionError: this.reactionErrors.get(m.id) ?? null,
     }));
     for (const pending of this.outgoing)
@@ -148,6 +154,7 @@ export class ChatThread {
           old.context === row.context &&
           old.replyTo === row.replyTo &&
           old.reactionPending === row.reactionPending &&
+          old.pendingReaction === row.pendingReaction &&
           old.reactionError === row.reactionError &&
           old.body === row.body
           ? old
@@ -542,16 +549,18 @@ export class ChatThread {
     const context = this.contexts.get(messageId);
     if (context === undefined || !this.messages.some((message) => message.id === messageId)) return;
     const current = context.reactions.find((state) => state.userId === this.ownerId);
+    const next = current?.reaction === reaction ? null : reaction;
     const request = new AbortController();
     this.controllers.add(request);
     this.reactionPending.add(messageId);
+    this.reactionChoices.set(messageId, next);
     this.publish();
     try {
       const result = await this.api.setReaction(
         this.id,
         messageId,
         {
-          reaction: current?.reaction === reaction ? null : reaction,
+          reaction: next,
           expectedRevision: current?.revision ?? 0,
         },
         request.signal,
@@ -571,6 +580,7 @@ export class ChatThread {
     } finally {
       this.controllers.delete(request);
       this.reactionPending.delete(messageId);
+      this.reactionChoices.delete(messageId);
       this.publish();
     }
   }
@@ -635,6 +645,7 @@ export class ChatThread {
     this.outgoing = [];
     this.contexts.clear();
     this.reactionPending.clear();
+    this.reactionChoices.clear();
     this.reactionErrors.clear();
     this.interactionCursor = null;
     this.statuses.clear();
@@ -668,5 +679,6 @@ export class ChatThread {
     clearTimeout(this.retryTimer);
     for (const request of this.controllers) request.abort();
     this.listeners.clear();
+    this.reactionChoices.clear();
   }
 }

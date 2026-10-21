@@ -26,6 +26,7 @@ function setup() {
   let messages: Message[] = [];
   let outgoing: OutgoingMessage[] = [];
   const saveConversation = jest.fn();
+  const saveContexts = jest.fn();
   const storage: ChatStorage = {
     read: () =>
       Promise.resolve({
@@ -36,7 +37,7 @@ function setup() {
         capabilities: { replies: true, reactions: false },
       }),
     saveCapabilities: jest.fn(),
-    saveContexts: jest.fn(),
+    saveContexts,
     saveConversation,
     saveConversations: jest.fn(),
     cachedConversations: jest.fn().mockResolvedValue([]),
@@ -87,7 +88,7 @@ function setup() {
   };
   const make = () =>
     new ChatThread(conversation.id, owner, storage, api, () => clientId, jest.fn());
-  return { api, storage, make, saveConversation };
+  return { api, storage, make, saveConversation, saveContexts };
 }
 describe('durable chat thread', () => {
   async function reactionThread(sequence = 1, olderCursor: string | null = null) {
@@ -181,6 +182,9 @@ describe('durable chat thread', () => {
     await thread.setReaction(message().id, 'FIRE');
     expect(api.setReaction).toHaveBeenCalledTimes(1);
     expect(thread.getSnapshot().rows[0]?.reactionPending).toBe(true);
+    expect(thread.getSnapshot().rows[0]?.pendingReaction).toBe('HEART');
+    // Optimism is presentation-only: server context and disk never contain an invented revision.
+    expect(thread.getSnapshot().rows[0]?.context?.reactions).toEqual([]);
     await thread.revoke();
     finish({
       ...context,
@@ -189,6 +193,45 @@ describe('durable chat thread', () => {
     });
     await write;
     expect(thread.getSnapshot()).toMatchObject({ unavailable: true, rows: [] });
+    thread.dispose();
+  });
+  it('shows replacements and removals before the network responds, then rolls back on failure', async () => {
+    const { api, saveContexts, thread, context } = await reactionThread();
+    jest.mocked(api.setReaction).mockResolvedValue({
+      ...context,
+      revision: 6,
+      reactions: [{ userId: owner, reaction: 'HEART', revision: 1 }],
+    });
+    await thread.setReaction(message().id, 'HEART');
+    saveContexts.mockClear();
+    let fail!: (error: Error) => void;
+    jest.mocked(api.setReaction).mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    const replacement = thread.setReaction(message().id, 'FIRE');
+    expect(thread.getSnapshot().rows[0]?.pendingReaction).toBe('FIRE');
+    expect(saveContexts).not.toHaveBeenCalled();
+    fail(new Error('Connection lost'));
+    await replacement;
+    expect(thread.getSnapshot().rows[0]?.pendingReaction).toBeUndefined();
+    expect(thread.getSnapshot().rows[0]?.context?.reactions[0]?.reaction).toBe('HEART');
+    expect(thread.getSnapshot().rows[0]?.reactionError).toContain('Refresh');
+    jest.mocked(api.contexts).mockResolvedValue({
+      data: [
+        { ...context, revision: 6, reactions: [{ userId: owner, reaction: 'HEART', revision: 1 }] },
+      ],
+      revision: 6,
+    });
+    await thread.refreshReaction(message().id);
+    const removal = thread.setReaction(message().id, 'HEART');
+    expect(thread.getSnapshot().rows[0]?.pendingReaction).toBeNull();
+    fail(new Error('Connection lost'));
+    await removal;
+    expect(thread.getSnapshot().rows[0]?.pendingReaction).toBeUndefined();
+    expect(thread.getSnapshot().rows[0]?.context?.reactions[0]?.reaction).toBe('HEART');
     thread.dispose();
   });
   it('requires authoritative refresh after an unknown reaction outcome, never queues offline writes', async () => {
@@ -226,6 +269,44 @@ describe('durable chat thread', () => {
     thread.setEnabled(false);
     await thread.setReaction(message().id, 'FIRE');
     expect(api.setReaction).toHaveBeenCalledTimes(2);
+    thread.dispose();
+  });
+  it('keeps newer server context when an older ACK follows an optimistic choice', async () => {
+    const { api, thread, context } = await reactionThread();
+    let finish!: (value: Awaited<ReturnType<MessagingApi['setReaction']>>) => void;
+    jest.mocked(api.setReaction).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const write = thread.setReaction(message().id, 'HEART');
+    jest.mocked(api.interactionChanges).mockResolvedValue({
+      data: [
+        {
+          ...context,
+          revision: 8,
+          reactions: [
+            { userId: owner, reaction: 'LIKE', revision: 2 },
+            { userId: conversation.member.userId, reaction: 'FIRE', revision: 1 },
+          ],
+        },
+      ],
+      nextRevision: 8,
+      latestRevision: 8,
+    });
+    await thread.syncInteractions();
+    expect(thread.getSnapshot().rows[0]?.pendingReaction).toBe('HEART');
+    finish({
+      ...context,
+      revision: 6,
+      reactions: [{ userId: owner, reaction: 'HEART', revision: 1 }],
+    });
+    await write;
+    const saved = thread.getSnapshot().rows[0];
+    expect(saved?.pendingReaction).toBeUndefined();
+    expect(saved?.context?.revision).toBe(8);
+    expect(saved?.context?.reactions.map((state) => state.reaction)).toEqual(['LIKE', 'FIRE']);
     thread.dispose();
   });
   it('keeps a reply target and send ID through offline restart', async () => {

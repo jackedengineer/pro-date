@@ -1,11 +1,23 @@
 import type { ReactionKind } from '@pro-date/contracts';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Animated,
+  Keyboard,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import X from 'lucide-react-native/icons/x';
+import Reply from 'lucide-react-native/icons/reply';
 import { AppText } from '../../components/app-text';
-import { IconButton } from '../../components/icon-button';
 import { colors } from '../../theme/tokens';
+import { useReducedMotionPreference } from '../../theme/motion';
 import type { ChatRow } from './chat-thread';
-import { reactionOptions } from './reaction-options';
+import { displayedReactions, reactionOptions } from './reaction-options';
+import { reactionPickerPosition, type MessageAnchor } from './reaction-picker-layout';
 
 export function ReactionPicker({
   row,
@@ -15,7 +27,11 @@ export function ReactionPicker({
   onReply,
   onReact,
   onRefresh,
+  anchor = null,
+  topInset = 0,
   bottomInset = 0,
+  leftInset = 0,
+  rightInset = 0,
 }: {
   row: ChatRow | null;
   ownerId: string;
@@ -24,31 +40,113 @@ export function ReactionPicker({
   onReply: ((id: string) => void) | null;
   onReact: (id: string, kind: ReactionKind) => void;
   onRefresh: (id: string) => void;
+  anchor?: MessageAnchor | null;
+  topInset?: number;
   bottomInset?: number;
+  leftInset?: number;
+  rightInset?: number;
 }) {
-  const own = row?.context?.reactions.find((state) => state.userId === ownerId)?.reaction ?? null;
+  const window = useWindowDimensions();
+  const reducedMotion = useReducedMotionPreference();
+  const [entrance] = useState(() => new Animated.Value(1));
+  const [menuHeight, setMenuHeight] = useState(104);
+  const [keyboardTop, setKeyboardTop] = useState<number | null>(
+    () => Keyboard.metrics()?.screenY ?? null,
+  );
+  const messageId = row?.messageId ?? null;
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (event) =>
+      setKeyboardTop(event.endCoordinates.screenY),
+    );
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardTop(null));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  useEffect(() => {
+    entrance.stopAnimation();
+    entrance.setValue(reducedMotion || messageId === null ? 1 : 0);
+    if (messageId === null || reducedMotion) return;
+    // Native opacity/transform only: no layout animation on the message list.
+    // https://reactnative.dev/docs/0.86/animated#using-the-native-driver
+    const animation = Animated.timing(entrance, {
+      toValue: 1,
+      duration: 120,
+      useNativeDriver: true,
+      isInteraction: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [messageId, reducedMotion, entrance]);
+  const own =
+    row === null
+      ? null
+      : (displayedReactions(row, ownerId).find((state) => state.userId === ownerId)?.reaction ??
+        null);
   const disabled =
     !online || row?.reactionPending === true || row?.reactionError != null || row?.context == null;
+  const width = Math.min(280, window.width - leftInset - rightInset - 32);
+  const availableHeight = Math.min(window.height, keyboardTop ?? window.height);
+  const bottom = keyboardTop === null ? bottomInset : 0;
+  const maxHeight = Math.max(52, availableHeight - topInset - bottom - 24);
+  const position = reactionPickerPosition({
+    anchor,
+    width: window.width,
+    height: availableHeight,
+    menuWidth: width,
+    menuHeight: Math.min(menuHeight, maxHeight),
+    topInset,
+    bottomInset: bottom,
+    leftInset,
+    rightInset,
+  });
   return (
-    <Modal visible={row !== null} transparent animationType="none" onRequestClose={onClose}>
-      <View style={[styles.overlay, { paddingBottom: Math.max(16, bottomInset) }]}>
+    <Modal
+      visible={row !== null}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessible={false} />
-        <View style={styles.sheet} accessibilityViewIsModal onAccessibilityEscape={onClose}>
-          <View style={styles.header}>
-            <AppText variant="button" accessibilityRole="header">
-              Message actions
-            </AppText>
-            <IconButton label="Close message actions" icon={X} onPress={onClose} />
-          </View>
+        <Animated.View
+          style={[
+            styles.menu,
+            position,
+            {
+              width,
+              maxHeight,
+              opacity: entrance,
+              transform: [
+                { scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+              ],
+            },
+          ]}
+          accessibilityViewIsModal
+          onAccessibilityEscape={onClose}
+          onLayout={(event) => setMenuHeight(event.nativeEvent.layout.height)}
+        >
           <ScrollView
             style={styles.scroll}
-            contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
+            bounces={false}
+            contentContainerStyle={[
+              styles.content,
+              anchor !== null && position.top < anchor.y && styles.above,
+            ]}
           >
-            <AppText numberOfLines={2} style={styles.preview}>
-              {row?.body}
-            </AppText>
-            <View style={styles.choices}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              bounces={false}
+              style={styles.pill}
+              contentContainerStyle={styles.choices}
+              testID="reaction-picker-pill"
+            >
               {reactionOptions.map((option) => (
                 <Pressable
                   key={option.kind}
@@ -57,42 +155,34 @@ export function ReactionPicker({
                   accessibilityState={{ selected: own === option.kind, disabled }}
                   disabled={disabled}
                   onPress={() => {
-                    if (row?.messageId != null) onReact(row.messageId, option.kind);
+                    if (messageId !== null) onReact(messageId, option.kind);
                   }}
                   style={({ pressed }) => [
                     styles.choice,
-                    own === option.kind && styles.selected,
                     disabled && styles.disabled,
                     pressed && styles.pressed,
+                    pressed && !reducedMotion && styles.compressed,
                   ]}
                 >
-                  <AppText style={styles.emoji}>{option.emoji}</AppText>
-                  <AppText variant="caption">
-                    {option.label}
-                    {own === option.kind ? ' ✓' : ''}
-                  </AppText>
+                  <View style={[styles.emojiDisc, own === option.kind && styles.selected]}>
+                    <AppText style={styles.emoji} maxFontSizeMultiplier={1.2}>
+                      {option.emoji}
+                    </AppText>
+                  </View>
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
             {!online ? (
-              <AppText variant="caption">
+              <AppText variant="caption" style={styles.notice}>
                 Connect to change reactions. Replies can stay queued.
               </AppText>
-            ) : row?.reactionPending ? (
-              <AppText variant="caption" accessibilityLiveRegion="polite">
-                Saving reaction…
-              </AppText>
-            ) : row?.context == null ? (
-              <AppText variant="caption">
-                Message details are loading. Refresh if they don’t appear.
-              </AppText>
-            ) : (
-              <AppText variant="caption">
-                Choose one. Tap your current reaction to remove it.
-              </AppText>
-            )}
+            ) : null}
             {row?.reactionError == null ? null : (
-              <AppText variant="caption" style={styles.error} accessibilityRole="alert">
+              <AppText
+                variant="caption"
+                style={[styles.notice, styles.error]}
+                accessibilityRole="alert"
+              >
                 {row.reactionError}
               </AppText>
             )}
@@ -101,70 +191,93 @@ export function ReactionPicker({
                 accessibilityRole="button"
                 disabled={!online || row.reactionPending}
                 onPress={() => {
-                  if (row.messageId !== null) onRefresh(row.messageId);
+                  if (messageId !== null) onRefresh(messageId);
                 }}
-                style={styles.action}
+                style={styles.recovery}
               >
-                <AppText variant="button">Refresh reaction</AppText>
+                <AppText variant="caption">Refresh reaction</AppText>
               </Pressable>
             ) : null}
-            {onReply === null || row?.messageId == null ? null : (
+            <View style={styles.actions}>
+              {onReply === null || messageId === null ? null : (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => onReply(messageId)}
+                  style={({ pressed }) => [styles.reply, pressed && styles.pressed]}
+                >
+                  <Reply size={16} color={colors.plum} strokeWidth={1.5} />
+                  <AppText variant="caption" style={styles.replyText}>
+                    Reply
+                  </AppText>
+                </Pressable>
+              )}
               <Pressable
                 accessibilityRole="button"
-                onPress={() => onReply(row.messageId!)}
-                style={styles.action}
+                accessibilityLabel="Close message actions"
+                onPress={onClose}
+                style={({ pressed }) => [styles.close, pressed && styles.pressed]}
               >
-                <AppText variant="button">Reply</AppText>
+                <X size={16} color={colors.muted} strokeWidth={1.5} />
               </Pressable>
-            )}
+            </View>
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: `${colors.ink}66`,
-    paddingHorizontal: 16,
-    paddingTop: 32,
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderRadius: 24,
-    padding: 16,
-    gap: 12,
-    maxHeight: '100%',
-    flexShrink: 1,
-  },
+  overlay: { flex: 1, backgroundColor: `${colors.ink}1F` },
+  menu: { position: 'absolute', gap: 8 },
   scroll: { flexGrow: 0, flexShrink: 1 },
-  content: { gap: 12 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  preview: { color: colors.muted },
-  choices: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 },
-  choice: {
-    width: '30%',
-    minHeight: 72,
+  content: { gap: 8 },
+  above: { flexDirection: 'column-reverse' },
+  pill: {
+    flexGrow: 0,
+    backgroundColor: colors.surface,
+    borderRadius: 28,
+    boxShadow: '0 3px 16px rgba(0, 0, 0, 0.12)',
+  },
+  choices: { flexDirection: 'row', flexWrap: 'nowrap', padding: 8, paddingVertical: 4 },
+  choice: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  emojiDisc: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 4,
-    paddingVertical: 8,
+    borderRadius: 19,
   },
-  selected: { borderColor: colors.plum, backgroundColor: colors.plumSoft },
-  emoji: { fontSize: 26, lineHeight: 34 },
+  selected: { backgroundColor: colors.plumSoft },
+  emoji: { fontSize: 24, lineHeight: 32 },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.7 },
-  action: {
-    minHeight: 48,
-    justifyContent: 'center',
+  compressed: { transform: [{ scale: 0.96 }] },
+  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  reply: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    gap: 6,
+  },
+  replyText: { color: colors.plum },
+  close: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+  },
+  notice: { padding: 12, backgroundColor: colors.surface, borderRadius: 12 },
+  recovery: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 22,
   },
   error: { color: colors.danger },
 });
