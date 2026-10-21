@@ -127,6 +127,70 @@ describe('ProfileReviewScreen', () => {
     expect(view.queryByText('173 cm')).toBeNull();
   });
 
+  it.each([4, 6])(
+    'shows all %i uploaded photos in stable, explicitly sized frames',
+    async (count) => {
+      const photos = Array.from({ length: count }, (_, position) => ({
+        ...review.photos[0]!,
+        id: `00000000-0000-4000-8000-${(position + 1).toString().padStart(12, '0')}`,
+        position,
+        deliveryUrl: `https://images.example/photo-${position}.jpg`,
+      }));
+      const view = await render(
+        <ProfileReviewScreen
+          {...editCallbacks}
+          loadProfileReview={jest.fn().mockResolvedValue({ ...review, photos })}
+          publishProfile={jest.fn()}
+        />,
+      );
+
+      await view.findByText(/Avery,/);
+      expect(view.getByTestId('review-lead-photo')).toHaveProp('source', [
+        { uri: photos[0]!.deliveryUrl },
+      ]);
+      await fireEvent(view.getByTestId('review-photo-gallery'), 'layout', {
+        nativeEvent: { layout: { width: 288, height: 0, x: 0, y: 0 } },
+      });
+      for (const [index, photo] of photos.slice(1).entries()) {
+        expect(view.getByTestId(`review-photo-frame-${index + 1}`)).toHaveStyle({
+          width: 124,
+          height: 155,
+        });
+        expect(view.getByLabelText(`Profile photo ${index + 2} preview`)).toHaveProp('source', [
+          {
+            uri: photo.deliveryUrl,
+          },
+        ]);
+        expect(view.getByLabelText(`Profile photo ${index + 2} preview`)).toHaveProp(
+          'contentFit',
+          'cover',
+        );
+      }
+      expect(view.getAllByLabelText(/Profile photo \d+ preview/)).toHaveLength(count - 1);
+
+      await fireEvent(view.getByTestId('review-photo-gallery'), 'layout', {
+        nativeEvent: { layout: { width: 248, height: 0, x: 0, y: 0 } },
+      });
+      expect(view.getByTestId('review-photo-frame-1')).toHaveStyle({ width: 104, height: 130 });
+    },
+  );
+
+  it('includes the rest of the photos when reviewing a published profile', async () => {
+    const view = await render(
+      <ProfileReviewScreen
+        {...editCallbacks}
+        loadProfileReview={jest.fn().mockResolvedValue({
+          ...review,
+          publishedAt: '2026-10-21T00:00:00.000Z',
+        })}
+        publishProfile={jest.fn()}
+      />,
+    );
+    await fireEvent.press(await view.findByRole('button', { name: 'Review my profile' }));
+    expect(view.getByTestId('review-photo-frame-3')).toBeTruthy();
+    expect(view.getByText(review.prompts[2]!.answer)).toBeTruthy();
+  });
+
   it('offers direct edits without losing the review checkpoint', async () => {
     const onEditPhotos = jest.fn();
     const view = await render(

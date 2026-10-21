@@ -58,8 +58,8 @@ export function NotificationEvents({
             const content = notification.request.content;
             const show =
               !closed &&
-              content.title === 'ProDate' &&
-              content.body === 'New message on ProDate.' &&
+              ((content.title === 'Merge' && content.body === 'New message on Merge.') ||
+                (content.title === 'ProDate' && content.body === 'New message on ProDate.')) &&
               (await interactions.foreground(content.data));
             return {
               shouldShowBanner: show,

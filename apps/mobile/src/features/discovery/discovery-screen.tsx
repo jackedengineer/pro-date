@@ -57,7 +57,7 @@ export function DiscoveryScreen({
     <Screen>
       <View style={styles.header}>
         <AppText variant="title" style={styles.headerTitle}>
-          {tab === 'discover' ? 'ProDate' : tab === 'requests' ? 'Pull requests' : 'Merged'}
+          {tab === 'discover' ? 'Merge' : tab === 'requests' ? 'Pull requests' : 'Merged'}
         </AppText>
         <IconButton label="My profile" icon={UserRound} onPress={onOpenProfile} />
       </View>

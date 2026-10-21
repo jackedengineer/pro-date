@@ -32,8 +32,8 @@ describe('Expo provider boundary (fake transport; no remote push)', () => {
     expect(JSON.parse(init!.body as string)).toEqual([
       {
         to: delivery.token,
-        title: 'ProDate',
-        body: 'New message on ProDate.',
+        title: 'Merge',
+        body: 'New message on Merge.',
         data: payload,
         channelId: 'messages',
         sound: 'default',

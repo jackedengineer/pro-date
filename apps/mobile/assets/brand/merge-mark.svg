@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" fill="none">
+  <title>Merge — two paths, one connection</title>
+  <path d="M84 64v106" stroke="#5A2E4F" stroke-width="22" stroke-linecap="round"/>
+  <path d="M164 64v28c0 42-80 20-80 64" stroke="#E65F55" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="84" cy="64" r="17" fill="#5A2E4F"/>
+  <circle cx="164" cy="64" r="17" fill="#E65F55"/>
+  <path d="M84 194l-17-16c-15-14 7-31 17-15 10-16 32 1 17 15Z" fill="#5A2E4F"/>
+</svg>

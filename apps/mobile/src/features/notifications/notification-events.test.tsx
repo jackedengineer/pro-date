@@ -1,5 +1,5 @@
 import { cleanup, render, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { NotificationEvents } from './notification-events';
@@ -38,7 +38,9 @@ const response = {
   notification,
 } as Notifications.NotificationResponse;
 const load = () => Promise.resolve(Notifications);
+const initialAppState = AppState.currentState;
 function setup(runtimeAvailable = true) {
+  AppState.currentState = 'active';
   const runtime = {
     ownerId: id,
     isCurrent: () => true,
@@ -61,10 +63,33 @@ function setup(runtimeAvailable = true) {
 }
 afterEach(async () => {
   await cleanup();
+  AppState.currentState = initialAppState;
   jest.restoreAllMocks();
   jest.clearAllMocks();
 });
 describe('SDK notification event wiring', () => {
+  it.each(['Merge', 'ProDate'])(
+    'accepts generic %s notifications during the rename transition',
+    async (brand) => {
+      setup();
+      await render(<NotificationEvents load={load} />);
+      await waitFor(() => expect(Notifications.setNotificationHandler).toHaveBeenCalled());
+      const handler = jest.mocked(Notifications.setNotificationHandler).mock.calls[0]![0]!;
+      expect(
+        await handler.handleNotification({
+          ...notification,
+          request: {
+            ...notification.request,
+            content: {
+              ...notification.request.content,
+              title: brand,
+              body: `New message on ${brand}.`,
+            },
+          },
+        }),
+      ).toMatchObject({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true });
+    },
+  );
   it('removes the listener even if the initial native response lookup fails', async () => {
     const test = setup();
     jest.mocked(Notifications.getLastNotificationResponse).mockImplementationOnce(() => {

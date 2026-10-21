@@ -127,8 +127,8 @@ export function createExpoPushProvider(
         const result = await request('send', [
           {
             to: delivery.token,
-            title: 'ProDate',
-            body: 'New message on ProDate.',
+            title: 'Merge',
+            body: 'New message on Merge.',
             data: payload,
             channelId: 'messages',
             sound: 'default',

@@ -1,5 +1,5 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
-import Heart from 'lucide-react-native/icons/heart';
+import { type ImageRequireSource, ScrollView, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
@@ -16,10 +16,16 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.brandMark}>
-            <Heart size={18} color={colors.plum} strokeWidth={2} />
+            <Image
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              contentFit="contain"
+              source={require('../../../assets/brand/merge-mark.png') as ImageRequireSource}
+              style={styles.brandImage}
+            />
           </View>
           <AppText style={styles.wordmark} variant="button">
-            ProDate
+            Merge
           </AppText>
         </View>
 
@@ -98,6 +104,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  brandImage: { width: 36, height: 36 },
   content: {
     gap: spacing.md,
   },

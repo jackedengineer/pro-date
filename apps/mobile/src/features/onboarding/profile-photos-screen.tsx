@@ -162,7 +162,7 @@ export function ProfilePhotosScreen({
 
     Alert.alert(
       'Remove this photo?',
-      'It will be deleted from your ProDate profile and media storage.',
+      'It will be deleted from your Merge profile and media storage.',
       [
         { style: 'cancel', text: 'Keep photo' },
         {

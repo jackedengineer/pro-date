@@ -332,7 +332,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
           details: [
             {
               code: 'too_young',
-              message: 'You must be 18 or older to use ProDate.',
+              message: 'You must be 18 or older to use Merge.',
               path: 'birthDate',
             },
           ],
