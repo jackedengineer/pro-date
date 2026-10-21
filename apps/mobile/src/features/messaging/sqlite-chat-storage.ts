@@ -1,4 +1,11 @@
-import { conversationSchema, messageSchema, type Message } from '@pro-date/contracts';
+import {
+  chatCapabilitiesSchema,
+  conversationSchema,
+  messageContextSchema,
+  messageQuoteSchema,
+  messageSchema,
+  type Message,
+} from '@pro-date/contracts';
 import * as SQLite from 'expo-sqlite';
 import { z } from 'zod';
 import type { ChatStorage, OutgoingMessage } from './chat-storage';
@@ -9,6 +16,7 @@ const outgoingSchema = z.object({
   body: z.string().min(1).max(2000),
   createdAt: z.iso.datetime({ offset: true }),
   failure: z.string().nullable(),
+  replyTo: messageQuoteSchema.optional(),
 });
 const schema = `
 PRAGMA journal_mode = WAL;
@@ -17,7 +25,17 @@ CREATE TABLE IF NOT EXISTS chat_messages (owner TEXT NOT NULL, conversation_id T
 CREATE INDEX IF NOT EXISTS chat_history ON chat_messages(owner, conversation_id, sequence);
 CREATE TABLE IF NOT EXISTS chat_outgoing (owner TEXT NOT NULL, conversation_id TEXT NOT NULL, client_id TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL, failure TEXT, PRIMARY KEY(owner, client_id));
 CREATE TABLE IF NOT EXISTS chat_account (subject TEXT PRIMARY KEY, owner TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS chat_context (owner TEXT NOT NULL, conversation_id TEXT NOT NULL, message_id TEXT NOT NULL, context TEXT NOT NULL, PRIMARY KEY(owner, conversation_id, message_id));
+CREATE TABLE IF NOT EXISTS chat_features (owner TEXT NOT NULL, conversation_id TEXT NOT NULL, capabilities TEXT NOT NULL, PRIMARY KEY(owner, conversation_id));
 `;
+const tables = [
+  'chat_messages',
+  'chat_outgoing',
+  'chat_conversations',
+  'chat_account',
+  'chat_context',
+  'chat_features',
+];
 export async function cachedChatOwner(subject: string): Promise<string | null> {
   const db = await SQLite.openDatabaseAsync('prodate-messaging.db');
   try {
@@ -36,8 +54,7 @@ export async function forgetChatAccounts() {
   try {
     await db.execAsync(schema);
     await db.withExclusiveTransactionAsync(async (tx) => {
-      for (const table of ['chat_messages', 'chat_outgoing', 'chat_conversations', 'chat_account'])
-        await tx.runAsync(`DELETE FROM ${table}`);
+      for (const table of tables) await tx.runAsync(`DELETE FROM ${table}`);
     });
   } finally {
     await db.closeAsync();
@@ -46,6 +63,13 @@ export async function forgetChatAccounts() {
 export async function openChatStorage(owner: string, subject?: string): Promise<ChatStorage> {
   const db = await SQLite.openDatabaseAsync('prodate-messaging.db');
   await db.execAsync(schema);
+  // Additive upgrade preserves already queued intents. Never rewrite the queue table.
+  // Source: https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/
+  await db.withExclusiveTransactionAsync(async (tx) => {
+    const columns = await tx.getAllAsync<{ name: string }>('PRAGMA table_info(chat_outgoing)');
+    if (!columns.some((column) => column.name === 'reply_context'))
+      await tx.execAsync('ALTER TABLE chat_outgoing ADD COLUMN reply_context TEXT');
+  });
   let closed = false;
   let closing: Promise<void> | null = null;
   let writes: Promise<void> = Promise.resolve();
@@ -59,7 +83,7 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
     return job;
   };
   await write(async (tx) => {
-    for (const table of ['chat_outgoing', 'chat_messages', 'chat_conversations', 'chat_account']) {
+    for (const table of tables) {
       await tx.runAsync(`DELETE FROM ${table} WHERE owner <> ?`, owner);
     }
     if (subject !== undefined)
@@ -75,8 +99,15 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
       owner,
       Date.now() - 7 * 86_400_000,
     );
+    await tx.runAsync(
+      'DELETE FROM chat_context WHERE owner = ? AND message_id NOT IN (SELECT id FROM chat_messages WHERE owner = ?)',
+      owner,
+      owner,
+    );
   });
   const clear = async (tx: SQLite.SQLiteDatabase, id: string) => {
+    for (const table of ['chat_context', 'chat_features'])
+      await tx.runAsync(`DELETE FROM ${table} WHERE owner = ? AND conversation_id = ?`, owner, id);
     await tx.runAsync(
       'DELETE FROM chat_messages WHERE owner = ? AND conversation_id = ?',
       owner,
@@ -103,8 +134,18 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
         owner,
         id,
       );
-      const pending = await db.getAllAsync<OutgoingMessage>(
-        'SELECT conversation_id AS conversationId, client_id AS clientId, body, created_at AS createdAt, failure FROM chat_outgoing WHERE owner = ? AND conversation_id = ? ORDER BY created_at, rowid',
+      const pending = await db.getAllAsync<OutgoingMessage & { replyContext: string | null }>(
+        'SELECT conversation_id AS conversationId, client_id AS clientId, body, created_at AS createdAt, failure, reply_context AS replyContext FROM chat_outgoing WHERE owner = ? AND conversation_id = ? ORDER BY created_at, rowid',
+        owner,
+        id,
+      );
+      const contexts = await db.getAllAsync<{ context: string }>(
+        'SELECT context FROM chat_context WHERE owner = ? AND conversation_id = ?',
+        owner,
+        id,
+      );
+      const features = await db.getFirstAsync<{ capabilities: string }>(
+        'SELECT capabilities FROM chat_features WHERE owner = ? AND conversation_id = ?',
         owner,
         id,
       );
@@ -112,7 +153,19 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
         conversation:
           summary === null ? null : conversationSchema.parse(JSON.parse(summary.summary)),
         messages: rows.map((row) => messageSchema.parse(row)),
-        outgoing: pending.map((row) => outgoingSchema.parse(row)),
+        outgoing: pending.map(({ replyContext, ...row }) =>
+          outgoingSchema.parse({
+            ...row,
+            ...(replyContext === null
+              ? {}
+              : { replyTo: messageQuoteSchema.parse(JSON.parse(replyContext)) }),
+          }),
+        ),
+        contexts: contexts.map((row) => messageContextSchema.parse(JSON.parse(row.context))),
+        capabilities:
+          features === null
+            ? null
+            : chatCapabilitiesSchema.parse(JSON.parse(features.capabilities)),
       };
     },
     saveConversation: (conversation) =>
@@ -177,6 +230,38 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
           owner,
           id,
         );
+        await tx.runAsync(
+          'DELETE FROM chat_context WHERE owner = ? AND conversation_id = ? AND message_id NOT IN (SELECT id FROM chat_messages WHERE owner = ? AND conversation_id = ?)',
+          owner,
+          id,
+          owner,
+          id,
+        );
+      }),
+    saveCapabilities: (id, capabilities) =>
+      write(async (tx) => {
+        await tx.runAsync(
+          'INSERT OR REPLACE INTO chat_features(owner,conversation_id,capabilities) VALUES (?,?,?)',
+          owner,
+          id,
+          JSON.stringify(chatCapabilitiesSchema.parse(capabilities)),
+        );
+      }),
+    saveContexts: (id, contexts) =>
+      write(async (tx) => {
+        for (const context of contexts) {
+          const parsed = messageContextSchema.parse(context);
+          await tx.runAsync(
+            "INSERT INTO chat_context(owner,conversation_id,message_id,context) SELECT ?,?,?,? WHERE EXISTS (SELECT 1 FROM chat_messages WHERE owner = ? AND conversation_id = ? AND id = ?) ON CONFLICT(owner,conversation_id,message_id) DO UPDATE SET context = excluded.context WHERE json_extract(chat_context.context, '$.revision') <= json_extract(excluded.context, '$.revision')",
+            owner,
+            id,
+            parsed.messageId,
+            JSON.stringify(parsed),
+            owner,
+            id,
+            parsed.messageId,
+          );
+        }
       }),
     enqueue: (message) =>
       write(async (tx) => {
@@ -187,13 +272,16 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
         if ((count?.count ?? 0) >= 500)
           throw new Error('Pending queue is full. Connect before sending more.');
         await tx.runAsync(
-          'INSERT INTO chat_outgoing(owner,conversation_id,client_id,body,created_at,failure) VALUES (?,?,?,?,?,?)',
+          'INSERT INTO chat_outgoing(owner,conversation_id,client_id,body,created_at,failure,reply_context) VALUES (?,?,?,?,?,?,?)',
           owner,
           message.conversationId,
           message.clientId,
           message.body,
           message.createdAt,
           message.failure,
+          message.replyTo === undefined
+            ? null
+            : JSON.stringify(messageQuoteSchema.parse(message.replyTo)),
         );
       }),
     setFailure: (id, failure) =>
@@ -227,12 +315,7 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
         try {
           if (purge)
             await db.withExclusiveTransactionAsync(async (tx) => {
-              for (const table of [
-                'chat_messages',
-                'chat_outgoing',
-                'chat_conversations',
-                'chat_account',
-              ])
+              for (const table of tables)
                 await tx.runAsync(`DELETE FROM ${table} WHERE owner = ?`, owner);
             });
         } finally {

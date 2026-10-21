@@ -1,5 +1,7 @@
 import {
   conversationResponseSchema,
+  chatCapabilitiesResponseSchema,
+  messageContextResponseSchema,
   conversationsResponseSchema,
   messageHistoryResponseSchema,
   messageResponseSchema,
@@ -16,6 +18,20 @@ export function createMessagingApi(options: Parameters<typeof createHttpClient>[
   const request = createHttpClient(options);
   const path = (id: string) => `/v1/conversations/${encodeURIComponent(id)}`;
   return {
+    async capabilities(id: string, signal?: AbortSignal) {
+      return (
+        await request(`${path(id)}/capabilities`, chatCapabilitiesResponseSchema, {
+          signal: signal ?? null,
+        })
+      ).data;
+    },
+    async contexts(id: string, ids: string[], signal?: AbortSignal) {
+      return request(
+        `${path(id)}/message-context?ids=${encodeURIComponent(ids.join(','))}`,
+        messageContextResponseSchema,
+        { signal: signal ?? null },
+      );
+    },
     async conversations(cursor?: string, signal?: AbortSignal) {
       const page = await request(
         `/v1/conversations?limit=20${cursor === undefined ? '' : `&cursor=${encodeURIComponent(cursor)}`}`,

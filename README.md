@@ -307,6 +307,8 @@ The additive reply API keeps existing message, history and inbox responses uncha
 
 `0014_message-replies` is **prepared only**, not applied or live-database verified. `CHAT_REPLIES_ENABLED=false` is the default; disabled paths never query reply-link storage. Apply and verify the migration only with the database owner's approval before enabling the flag. The supporting unique constraint must precede the composite foreign keys; assess DDL locks before applying to populated data. No actual environment file is changed by this implementation.
 
+When enabled, right-swipe or use the accessible Reply action on a saved message. A cancellable quote appears above the composer. Reply targets and previews are persisted alongside the outgoing intent before the draft clears; retry and restart retain the same UUID and target. SQLite upgrades are additive, account-scoped, and preserve old plain-text queued messages. Do not downgrade to an older binary with newly queued replies: it cannot understand their intent. Native swipe/scroll/keyboard and screen-reader acceptance still require a physical device; automated tests do not establish frame rate or gesture feel.
+
 ## Chat notification preferences
 
 The first notification slice adds **Chat notifications** inside a conversation and **Notifications** in Merged. Both open a scrollable settings sheet with account-owned choices, save/error states, and accessible full-row switches. Every chat defaults to silent. An account-wide pause preserves individual chat opt-ins; muting or pausing cancels pending delivery jobs without replay on resume. Preference revisions change only when the desired state changes, so equivalent PATCH retries do not re-enable old work.

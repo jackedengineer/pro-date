@@ -27,7 +27,16 @@ function setup() {
   let outgoing: OutgoingMessage[] = [];
   const saveConversation = jest.fn();
   const storage: ChatStorage = {
-    read: () => Promise.resolve({ conversation, messages: [...messages], outgoing: [...outgoing] }),
+    read: () =>
+      Promise.resolve({
+        conversation,
+        messages: [...messages],
+        outgoing: [...outgoing],
+        contexts: [],
+        capabilities: { replies: true, reactions: false },
+      }),
+    saveCapabilities: jest.fn(),
+    saveContexts: jest.fn(),
     saveConversation,
     saveConversations: jest.fn(),
     cachedConversations: jest.fn().mockResolvedValue([]),
@@ -59,6 +68,8 @@ function setup() {
     close: jest.fn(),
   };
   const api: MessagingApi = {
+    capabilities: jest.fn().mockResolvedValue({ replies: true, reactions: false }),
+    contexts: jest.fn().mockResolvedValue({ data: [], revision: 0 }),
     conversation: jest.fn().mockResolvedValue(conversation),
     conversations: jest.fn(),
     history: jest.fn().mockResolvedValue({
@@ -75,6 +86,60 @@ function setup() {
   return { api, storage, make, saveConversation };
 }
 describe('durable chat thread', () => {
+  it('keeps a reply target and send ID through offline restart', async () => {
+    const { api, storage, make } = setup();
+    await storage.saveMessages(conversation.id, [message(2)]);
+    const thread = make();
+    await thread.ready;
+    thread.selectReply(message(2).id);
+    await thread.send('A thoughtful reply');
+    expect((await storage.read(conversation.id)).outgoing[0]?.replyTo?.messageId).toBe(
+      message(2).id,
+    );
+    expect(thread.getSnapshot().replyTo).toBeNull();
+    thread.dispose();
+    const restarted = make();
+    await restarted.ready;
+    restarted.setEnabled(true);
+    await restarted.flush();
+    expect(api.send).toHaveBeenCalledWith(
+      conversation.id,
+      { clientId, body: 'A thoughtful reply', replyToMessageId: message(2).id },
+      expect.any(AbortSignal),
+    );
+    restarted.dispose();
+  });
+  it('preserves reply selection if saving the outgoing intent fails', async () => {
+    const { storage, make } = setup();
+    await storage.saveMessages(conversation.id, [message()]);
+    storage.enqueue = jest.fn().mockRejectedValue(new Error('disk full'));
+    const thread = make();
+    await thread.ready;
+    thread.selectReply(message().id);
+    await expect(thread.send('hello')).rejects.toThrow('draft');
+    expect(thread.getSnapshot().replyTo?.messageId).toBe(message().id);
+    thread.dispose();
+  });
+  it('does not clear a newer reply selection when an earlier save finishes', async () => {
+    const { storage, make } = setup();
+    await storage.saveMessages(conversation.id, [message(1), message(2)]);
+    let finish!: () => void;
+    storage.enqueue = jest.fn(
+      () =>
+        new Promise<void>((done) => {
+          finish = done;
+        }),
+    );
+    const thread = make();
+    await thread.ready;
+    thread.selectReply(message(1).id);
+    const send = thread.send('first reply');
+    thread.selectReply(message(2).id);
+    finish();
+    await send;
+    expect(thread.getSnapshot().replyTo?.messageId).toBe(message(2).id);
+    thread.dispose();
+  });
   it('does not restore a revoked chat from a delayed network response', async () => {
     const { api, saveConversation, make } = setup();
     let resolve!: (value: Conversation) => void;
@@ -105,7 +170,13 @@ describe('durable chat thread', () => {
       });
     const thread = make();
     await thread.revoke();
-    resolve({ conversation, messages: [message()], outgoing: [] });
+    resolve({
+      conversation,
+      messages: [message()],
+      outgoing: [],
+      contexts: [],
+      capabilities: null,
+    });
     await thread.ready;
     expect(thread.getSnapshot()).toMatchObject({ unavailable: true, conversation: null, rows: [] });
     thread.dispose();

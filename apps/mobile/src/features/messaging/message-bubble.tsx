@@ -3,17 +3,23 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../../components/app-text';
 import { colors } from '../../theme/tokens';
 import type { ChatRow } from './chat-thread';
+import { QuotedMessage } from './message-quote';
+import { SwipeToReply } from './swipe-to-reply';
 
 export const MessageBubble = memo(function MessageBubble({
   row,
   mine,
   retry,
   remove,
+  reply,
+  reducedMotion,
 }: {
   row: ChatRow;
   mine: boolean;
   retry: (id: string) => void;
   remove: (id: string) => void;
+  reply: ((id: string) => void) | null;
+  reducedMotion: boolean;
 }) {
   const time = new Date(row.createdAt).toLocaleTimeString([], {
     hour: 'numeric',
@@ -29,15 +35,28 @@ export const MessageBubble = memo(function MessageBubble({
           : row.status === 'failed'
             ? 'Not sent'
             : 'Queued';
-  return (
+  const content = (
     <View style={[styles.row, mine ? styles.right : styles.left]}>
-      <View style={[styles.bubble, mine ? styles.outgoing : styles.incoming]}>
+      <Pressable
+        style={[styles.bubble, mine ? styles.outgoing : styles.incoming]}
+        accessible
+        accessibilityActions={reply === null ? [] : [{ name: 'reply', label: 'Reply' }]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'reply' && row.messageId !== null)
+            reply?.(row.messageId);
+        }}
+        onLongPress={
+          reply !== null && row.messageId !== null ? () => reply(row.messageId!) : undefined
+        }
+        accessibilityHint={reply === null ? undefined : 'Swipe right or long press to reply'}
+      >
+        {row.replyTo === null ? null : <QuotedMessage quote={row.replyTo} light={mine} />}
         <AppText style={mine ? styles.light : undefined}>{row.body}</AppText>
         <AppText variant="caption" style={[styles.meta, mine && styles.light]}>
           {time}
           {mine ? ` · ${state}` : ''}
         </AppText>
-      </View>
+      </Pressable>
       {mine && row.status === 'failed' ? (
         <View style={styles.failure}>
           <AppText variant="caption" style={styles.error}>
@@ -64,6 +83,13 @@ export const MessageBubble = memo(function MessageBubble({
         </View>
       ) : null}
     </View>
+  );
+  return reply !== null && row.messageId !== null ? (
+    <SwipeToReply messageId={row.messageId} onReply={reply} reducedMotion={reducedMotion}>
+      {content}
+    </SwipeToReply>
+  ) : (
+    content
   );
 });
 const styles = StyleSheet.create({

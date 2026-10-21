@@ -1,4 +1,11 @@
-import { messageBodySchema, type Conversation, type Message } from '@pro-date/contracts';
+import {
+  messageBodySchema,
+  type ChatCapabilities,
+  type Conversation,
+  type Message,
+  type MessageContext,
+  type MessageQuote,
+} from '@pro-date/contracts';
 import { ApiRequestError } from '../../api/http-client';
 import type { MessagingApi } from '../../api/messaging';
 import type { ChatStorage, OutgoingMessage } from './chat-storage';
@@ -8,6 +15,9 @@ export type ChatRow = Omit<Message, 'id' | 'sequence'> & {
   sequence: number | null;
   status: 'saving' | 'queued' | 'sending' | 'sent' | 'failed';
   failure: string | null;
+  messageId: string | null;
+  context: MessageContext | null;
+  replyTo: MessageQuote | null;
 };
 export interface ThreadSnapshot {
   conversation: Conversation | null;
@@ -18,10 +28,14 @@ export interface ThreadSnapshot {
   error: string | null;
   unavailable: boolean;
   online: boolean;
+  capabilities: ChatCapabilities;
+  replyTo: MessageQuote | null;
+  contextError: string | null;
 }
 export class ChatThread {
   private messages: Message[] = [];
   private outgoing: OutgoingMessage[] = [];
+  private contexts = new Map<string, MessageContext>();
   private statuses = new Map<string, ChatRow['status']>();
   private listeners = new Set<() => void>();
   private snapshot: ThreadSnapshot = {
@@ -33,6 +47,9 @@ export class ChatThread {
     error: null,
     unavailable: false,
     online: false,
+    capabilities: { replies: false, reactions: false },
+    replyTo: null,
+    contextError: null,
   };
   private enabled = false;
   private disposed = false;
@@ -59,7 +76,12 @@ export class ChatThread {
         if (this.disposed || this.snapshot.unavailable) return;
         this.messages = cached.messages;
         this.outgoing = cached.outgoing;
-        this.publish({ conversation: cached.conversation, loading: false });
+        this.contexts = new Map(cached.contexts.map((context) => [context.messageId, context]));
+        this.publish({
+          conversation: cached.conversation,
+          loading: false,
+          capabilities: cached.capabilities ?? { replies: false, reactions: false },
+        });
       })
       .catch(() => {
         if (this.snapshot.unavailable) return;
@@ -84,6 +106,9 @@ export class ChatThread {
       key: `${m.senderId}:${m.clientId}`,
       status: 'sent',
       failure: null,
+      messageId: m.id,
+      context: this.contexts.get(m.id) ?? null,
+      replyTo: this.contexts.get(m.id)?.replyTo ?? null,
     }));
     for (const pending of this.outgoing)
       if (!confirmed.has(`${this.ownerId}:${pending.clientId}`))
@@ -92,6 +117,9 @@ export class ChatThread {
           senderId: this.ownerId,
           key: `${this.ownerId}:${pending.clientId}`,
           sequence: null,
+          messageId: null,
+          context: null,
+          replyTo: pending.replyTo ?? null,
           status:
             this.statuses.get(pending.clientId) ?? (pending.failure === null ? 'queued' : 'failed'),
         });
@@ -105,6 +133,8 @@ export class ChatThread {
           old.sequence === row.sequence &&
           old.status === row.status &&
           old.failure === row.failure &&
+          old.context === row.context &&
+          old.replyTo === row.replyTo &&
           old.body === row.body
           ? old
           : row;
@@ -123,6 +153,24 @@ export class ChatThread {
     const byId = new Map(this.messages.map((m) => [m.id, m]));
     for (const message of messages) byId.set(message.id, byId.get(message.id) ?? message);
     this.messages = [...byId.values()].sort((a, b) => a.sequence - b.sequence);
+    const localContexts: MessageContext[] = [];
+    for (const message of messages) {
+      const pending = this.outgoing.find(
+        (row) => row.clientId === message.clientId && message.senderId === this.ownerId,
+      );
+      if (pending?.replyTo !== undefined && !this.contexts.has(message.id)) {
+        const context = {
+          messageId: message.id,
+          revision: 0,
+          replyTo: pending.replyTo,
+          reactions: [],
+        };
+        this.contexts.set(message.id, context);
+        localContexts.push(context);
+      }
+    }
+    if (localContexts.length > 0) await this.storage.saveContexts(this.id, localContexts);
+    if (this.disposed || this.snapshot.unavailable) return;
     this.outgoing = this.outgoing.filter(
       (o) => !messages.some((m) => m.clientId === o.clientId && m.senderId === this.ownerId),
     );
@@ -141,6 +189,22 @@ export class ChatThread {
       void this.flush();
     }
   }
+  selectReply(messageId: string | null) {
+    if (messageId === null) {
+      this.publish({ replyTo: null });
+      return;
+    }
+    if (!this.snapshot.capabilities.replies || this.snapshot.unavailable || this.disposed) return;
+    const message = this.messages.find((row) => row.id === messageId);
+    if (message === undefined) return;
+    this.publish({
+      replyTo: {
+        messageId,
+        senderId: message.senderId,
+        excerpt: Array.from(message.body).slice(0, 120).join(''),
+      },
+    });
+  }
   async send(body: string) {
     const parsed = messageBodySchema.parse(body);
     if (this.snapshot.loading) await this.ready;
@@ -152,6 +216,7 @@ export class ChatThread {
       body: parsed,
       createdAt: new Date().toISOString(),
       failure: null,
+      ...(this.snapshot.replyTo === null ? {} : { replyTo: this.snapshot.replyTo }),
     };
     this.outgoing.push(pending);
     this.statuses.set(pending.clientId, 'saving');
@@ -167,7 +232,7 @@ export class ChatThread {
       );
     }
     this.statuses.delete(pending.clientId);
-    this.publish();
+    this.publish(this.snapshot.replyTo === pending.replyTo ? { replyTo: null } : {});
     void this.flush();
   }
   async retry(clientId: string) {
@@ -207,11 +272,18 @@ export class ChatThread {
       try {
         const message = await this.api.send(
           this.id,
-          { clientId: pending.clientId, body: pending.body },
+          {
+            clientId: pending.clientId,
+            body: pending.body,
+            ...(pending.replyTo === undefined
+              ? {}
+              : { replyToMessageId: pending.replyTo.messageId }),
+          },
           request.signal,
         );
         // An ACK may leap over an incoming message: only REST history advances the sync watermark.
         await this.accept([message]);
+        await this.refreshContexts([message.id], request.signal);
         this.statuses.delete(pending.clientId);
         this.attempts = 0;
       } catch (failure: unknown) {
@@ -273,6 +345,16 @@ export class ChatThread {
       await this.storage.saveConversation(conversation);
       if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
       this.publish({ conversation });
+      try {
+        const capabilities = await this.api.capabilities(this.id, request.signal);
+        if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+        await this.storage.saveCapabilities(this.id, capabilities);
+        if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+        this.publish({ capabilities, ...(capabilities.replies ? {} : { replyTo: null }) });
+      } catch {
+        if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
+        this.publish({ capabilities: { replies: false, reactions: false }, replyTo: null });
+      }
       do {
         const baseline = this.watermark === null;
         const page = await this.api.history(
@@ -287,6 +369,11 @@ export class ChatThread {
         await this.accept(page.data);
         if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
         this.watermark = page.nextAfterSequence ?? page.latestSequence;
+        await this.refreshContexts(
+          page.data.map((message) => message.id),
+          request.signal,
+        );
+        if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
         if (baseline) {
           this.olderCursor = page.olderCursor;
           this.publish({ hasOlder: this.olderCursor !== null });
@@ -305,6 +392,32 @@ export class ChatThread {
       this.controllers.delete(request);
     }
   }
+  private async refreshContexts(ids: string[], signal: AbortSignal) {
+    if (
+      ids.length === 0 ||
+      (!this.snapshot.capabilities.replies && !this.snapshot.capabilities.reactions)
+    )
+      return;
+    try {
+      const page = await this.api.contexts(this.id, ids, signal);
+      if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
+      await this.storage.saveContexts(this.id, page.data);
+      if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
+      for (const context of page.data) {
+        const current = this.contexts.get(context.messageId);
+        if (current === undefined || current.revision <= context.revision)
+          this.contexts.set(context.messageId, context);
+      }
+      this.publish({ contextError: null });
+    } catch (failure: unknown) {
+      if (signal.aborted || this.disposed || this.snapshot.unavailable) return;
+      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      else
+        this.publish({
+          contextError: 'Couldn’t refresh message details. Try refreshing the conversation.',
+        });
+    }
+  }
   async loadOlder() {
     if (
       this.olderCursor === null ||
@@ -321,6 +434,10 @@ export class ChatThread {
       const page = await this.api.history(this.id, { cursor: this.olderCursor }, request.signal);
       if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
       await this.accept(page.data);
+      await this.refreshContexts(
+        page.data.map((message) => message.id),
+        request.signal,
+      );
       if (this.disposed || this.snapshot.unavailable || request.signal.aborted) return;
       this.olderCursor = page.olderCursor;
       this.publish({ hasOlder: this.olderCursor !== null });
@@ -339,6 +456,7 @@ export class ChatThread {
     for (const request of this.controllers) request.abort();
     this.messages = [];
     this.outgoing = [];
+    this.contexts.clear();
     this.statuses.clear();
     this.olderCursor = null;
     this.watermark = null;
@@ -350,6 +468,9 @@ export class ChatThread {
       loading: false,
       hasOlder: false,
       loadingOlder: false,
+      replyTo: null,
+      contextError: null,
+      capabilities: { replies: false, reactions: false },
     });
     try {
       await this.storage.clear(this.id);

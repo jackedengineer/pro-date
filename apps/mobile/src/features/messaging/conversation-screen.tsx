@@ -100,6 +100,8 @@ export function ConversationScreen({ id }: { id: string }) {
     [thread, handleFailure],
   );
   const send = useCallback((body: string) => thread.send(body), [thread]);
+  const reply = useCallback((messageId: string) => thread.selectReply(messageId), [thread]);
+  const cancelReply = useCallback(() => thread.selectReply(null), [thread]);
   const renderMessage = useCallback(
     ({ item }: { item: ChatRow }) => (
       <MessageBubble
@@ -107,9 +109,11 @@ export function ConversationScreen({ id }: { id: string }) {
         mine={item.senderId === runtime!.ownerId}
         retry={retry}
         remove={remove}
+        reply={state.capabilities.replies ? reply : null}
+        reducedMotion={reducedMotion}
       />
     ),
-    [runtime, retry, remove],
+    [runtime, retry, remove, state.capabilities.replies, reply, reducedMotion],
   );
   const scrollConfig = useMemo(
     () => ({ padding, offset: insets.bottom, onEnd: setAtEnd }),
@@ -196,8 +200,8 @@ export function ConversationScreen({ id }: { id: string }) {
           </View>
         )}
       </View>
-      <ErrorNotice message={actionError ?? state.error} />
-      {state.error !== null && !state.unavailable ? (
+      <ErrorNotice message={actionError ?? state.error ?? state.contextError} />
+      {(state.error !== null || state.contextError !== null) && !state.unavailable ? (
         <QuietButton label="Refresh conversation" onPress={() => void thread.sync()} />
       ) : null}
       <View style={styles.body}>
@@ -252,6 +256,8 @@ export function ConversationScreen({ id }: { id: string }) {
               onSend={send}
               disabled={state.loading || state.unavailable || state.conversation === null}
               bottomInset={insets.bottom}
+              replyTo={state.replyTo}
+              onCancelReply={cancelReply}
             />
           </View>
         </KeyboardStickyView>

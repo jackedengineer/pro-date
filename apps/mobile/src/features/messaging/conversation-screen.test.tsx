@@ -79,9 +79,15 @@ function Subject() {
 }
 function setup(cachedConversation: Conversation | null = conversation) {
   const storage: ChatStorage = {
-    read: jest
-      .fn()
-      .mockResolvedValue({ conversation: cachedConversation, messages: [], outgoing: [] }),
+    read: jest.fn().mockResolvedValue({
+      conversation: cachedConversation,
+      messages: [],
+      outgoing: [],
+      contexts: [],
+      capabilities: null,
+    }),
+    saveCapabilities: jest.fn(),
+    saveContexts: jest.fn(),
     saveConversations: jest.fn(),
     cachedConversations: jest.fn().mockResolvedValue([]),
     saveConversation: jest.fn(),
@@ -95,6 +101,8 @@ function setup(cachedConversation: Conversation | null = conversation) {
   };
   const unmatch = jest.fn();
   const api: MessagingApi = {
+    capabilities: jest.fn().mockResolvedValue({ replies: false, reactions: false }),
+    contexts: jest.fn().mockResolvedValue({ data: [], revision: 0 }),
     conversation: jest.fn().mockResolvedValue(conversation),
     conversations: jest.fn(),
     history: jest.fn().mockResolvedValue({
