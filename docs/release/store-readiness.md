@@ -16,31 +16,31 @@ items land. Last reviewed 10 November 2026.
 
 ## Required by both stores
 
-| Item                   | Status  | Notes                                                                                                                                                                  |
-| ---------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account deletion       | Missing | Both stores require deletion inside the app. Google also requires a web link. No API route exists yet                                                                  |
-| Privacy policy         | Missing | Needs a public URL and a link in the app. The app handles location, photos, messages, phone and email                                                                  |
-| Terms of service       | Missing | Linked from sign-in and the store listing                                                                                                                              |
-| Production sign-in     | Missing | Clerk is on a development instance (`pk_test`). Production needs its own instance on a domain you own. SMS codes do not reach India yet, so email is the working route |
-| Report and block       | Done    | Present on profiles, requests and chats                                                                                                                                |
-| Child safety standards | Missing | Dating apps must publish standards against child sexual abuse and exploitation, with a contact                                                                         |
-| Age gate               | Partly  | The app collects a birthday and requires 18+. The store listing must be rated 18+                                                                                      |
-| Crash reporting        | Missing | Nothing reports crashes from release builds                                                                                                                            |
-| Push notifications     | Off     | Code exists and is disabled. Android needs a Firebase project and `google-services.json`                                                                               |
+| Item                   | Status                 | Notes                                                                                                                                                                  |
+| ---------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Account deletion       | Built, not deployed    | Profile tab, then Delete account. `DELETE /v1/users/me` removes data, images and the sign-in. Web link: `/delete-account` on the site                                  |
+| Privacy policy         | Written, not published | `apps/site/public/privacy.html`, linked from the welcome screen and the Profile tab. Needs the owner's review and a deploy to `merge.jacked.dev`                       |
+| Terms of use           | Written, not published | `apps/site/public/terms.html`. Assumes Indian law; confirm before publishing                                                                                           |
+| Production sign-in     | Missing                | Clerk is on a development instance (`pk_test`). Production needs its own instance on a domain you own. SMS codes do not reach India yet, so email is the working route |
+| Report and block       | Done                   | Present on profiles, requests and chats                                                                                                                                |
+| Child safety standards | Written, not published | `apps/site/public/safety.html`, with the in-app report route and a named contact                                                                                       |
+| Age gate               | Partly                 | The app collects a birthday and requires 18+. The store listing must be rated 18+                                                                                      |
+| Crash reporting        | Missing                | Nothing reports crashes from release builds                                                                                                                            |
+| Push notifications     | Off                    | Code exists and is disabled. Android needs a Firebase project and `google-services.json`                                                                               |
 
 ## Google Play
 
-| Item                         | Status         | Notes                                                                                                                          |
-| ---------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Developer account            | Done           | Personal account `jackedengineer`, which already has Portl in closed testing                                                   |
-| Trader status declaration    | Owner          | Due by February 2027. A legal declaration only the account owner can make                                                      |
-| Create the app               | Done           | Merge, `dev.jacked.merge`, free app, English (UK). Created 10 November 2026 with the owner's confirmation of both declarations |
-| Closed test                  | Not started    | Personal accounts need 12 testers opted in for 14 days before production access                                                |
-| Store listing                | Not started    | Name, short and full description, 512px icon, 1024x500 feature graphic, phone screenshots                                      |
-| Content rating questionnaire | Owner          | Answers are a declaration about the app's content                                                                              |
-| Data safety form             | Owner approval | I can draft answers from the code; the owner confirms them                                                                     |
-| Target audience and ads      | Owner          | 18+, no ads                                                                                                                    |
-| Service account for uploads  | Not started    | Lets `eas submit` upload builds. Optional; the first upload can be manual                                                      |
+| Item                         | Status      | Notes                                                                                                                          |
+| ---------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Developer account            | Done        | Personal account `jackedengineer`, which already has Portl in closed testing                                                   |
+| Trader status declaration    | Owner       | Due by February 2027. A legal declaration only the account owner can make                                                      |
+| Create the app               | Done        | Merge, `dev.jacked.merge`, free app, English (UK). Created 10 November 2026 with the owner's confirmation of both declarations |
+| Closed test                  | Not started | Personal accounts need 12 testers opted in for 14 days before production access                                                |
+| Store listing                | Drafted     | Text, content answers and data safety in `docs/release/store-listing.md`. Feature graphic and real screenshots still needed    |
+| Content rating questionnaire | Owner       | Answers are a declaration about the app's content                                                                              |
+| Data safety form             | Drafted     | See `docs/release/store-listing.md`. The owner confirms and submits                                                            |
+| Target audience and ads      | Owner       | 18+, no ads                                                                                                                    |
+| Service account for uploads  | Not started | Lets `eas submit` upload builds. Optional; the first upload can be manual                                                      |
 
 ## App Store
 
