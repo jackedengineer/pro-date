@@ -10,7 +10,7 @@ import { useReducedMotionPreference } from '../../theme/motion';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '../../components/app-text';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { colors, hairline, radii, spacing, typography } from '../../theme/tokens';
 
 interface ProfilePreviewCardProps {
   onEditBirthday: () => void;
@@ -138,7 +138,7 @@ export function ProfilePreviewCard({
       {profile.relationshipIntent === null ? null : (
         <View style={styles.intentCard}>
           <AppText variant="eyebrow">Looking for</AppText>
-          <AppText>{intentLabels[profile.relationshipIntent]}</AppText>
+          <AppText variant="headline">{intentLabels[profile.relationshipIntent]}</AppText>
         </View>
       )}
       <View style={styles.editRow}>
@@ -206,10 +206,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   detailPill: {
-    backgroundColor: colors.plumSoft,
+    backgroundColor: colors.sand,
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   detailRow: {
     flexDirection: 'row',
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   detailText: {
-    color: colors.plum,
+    color: colors.ink,
   },
   editButton: {
     alignItems: 'center',
@@ -274,20 +274,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   promptAnswer: {
-    fontFamily: typography.family.medium,
-    fontSize: 19,
+    fontFamily: typography.family.serif,
+    fontSize: typography.size.quote,
+    letterSpacing: -0.2,
     lineHeight: 28,
   },
   promptCard: {
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    borderCurve: 'continuous',
+    borderRadius: radii.lg,
+    borderWidth: hairline,
     gap: spacing.sm,
     marginHorizontal: spacing.md,
     padding: spacing.md,
   },
   promptQuestion: {
-    color: colors.plum,
     fontFamily: typography.family.medium,
   },
   thumbnail: {
