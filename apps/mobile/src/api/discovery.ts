@@ -55,7 +55,7 @@ export function createDiscoveryApi({
     body?: unknown,
   ): Promise<T> {
     const token = await getToken();
-    if (token === null) throw new Error('Your session expired. Please sign in again.');
+    if (token === null) throw new Error('Your session expired. Sign in again.');
     const response = await fetchImplementation(`${apiBaseUrl}/v1/${path}`, {
       method,
       headers: {
@@ -73,13 +73,10 @@ export function createDiscoveryApi({
     }
     if (!response.ok) {
       const error = apiErrorResponseSchema.safeParse(json);
-      throw new Error(
-        error.success ? error.data.error.message : 'We could not connect. Please try again.',
-      );
+      throw new Error(error.success ? error.data.error.message : 'Couldn’t connect. Try again.');
     }
     const result = schema.safeParse(json);
-    if (!result.success)
-      throw new Error('The server returned an unexpected response. Please refresh.');
+    if (!result.success) throw new Error('The server returned an unexpected response. Refresh.');
     return result.data;
   }
   const pagePath = (path: string, cursor?: string) =>

@@ -54,7 +54,7 @@ export function ProfileReviewScreen({
     try {
       setReview(await loadProfileReview());
     } catch (error: unknown) {
-      setLoadError(errorMessage(error, 'We could not load your profile review.'));
+      setLoadError(errorMessage(error, 'Couldn’t load your profile review.'));
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +71,7 @@ export function ProfileReviewScreen({
       })
       .catch((error: unknown) => {
         if (isActive) {
-          setLoadError(errorMessage(error, 'We could not load your profile review.'));
+          setLoadError(errorMessage(error, 'Couldn’t load your profile review.'));
         }
       })
       .finally(() => {
@@ -94,7 +94,7 @@ export function ProfileReviewScreen({
       setIsReviewingPublished(false);
       setIsPublishing(false);
     } catch (error: unknown) {
-      setPublishError(errorMessage(error, 'We could not publish your profile.'));
+      setPublishError(errorMessage(error, 'Couldn’t publish your profile.'));
       setIsPublishing(false);
     }
   };

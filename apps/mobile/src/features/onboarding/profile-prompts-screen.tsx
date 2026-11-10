@@ -91,7 +91,7 @@ export function ProfilePromptsScreen({
     try {
       setDraft(hydrateDraft(await loadPrompts()));
     } catch (error: unknown) {
-      setLoadError(error instanceof Error ? error.message : 'We could not load your prompts.');
+      setLoadError(error instanceof Error ? error.message : 'Couldn’t load your prompts.');
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +106,7 @@ export function ProfilePromptsScreen({
       })
       .catch((error: unknown) => {
         if (isActive) {
-          setLoadError(error instanceof Error ? error.message : 'We could not load your prompts.');
+          setLoadError(error instanceof Error ? error.message : 'Couldn’t load your prompts.');
         }
       })
       .finally(() => {
@@ -152,7 +152,7 @@ export function ProfilePromptsScreen({
     try {
       await completePrompts(parsedDraft.data.prompts);
     } catch (error: unknown) {
-      setSaveError(error instanceof Error ? error.message : 'We could not save your prompts.');
+      setSaveError(error instanceof Error ? error.message : 'Couldn’t save your prompts.');
       setIsSaving(false);
     }
   };

@@ -56,7 +56,7 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
         pronouns: pronouns.trim(),
       });
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'We could not save these details.');
+      setErrorMessage(error instanceof Error ? error.message : 'Couldn’t save these details.');
       setIsSaving(false);
     }
   };

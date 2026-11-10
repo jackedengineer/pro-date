@@ -43,7 +43,7 @@ describe('bootstrapCurrentUser', () => {
 
     await expect(
       bootstrapCurrentUser({ apiBaseUrl, fetchImplementation, getToken }),
-    ).rejects.toThrow('Your session expired. Please sign in again.');
+    ).rejects.toThrow('Your session expired. Sign in again.');
     expect(fetchImplementation).not.toHaveBeenCalled();
   });
 

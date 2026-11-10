@@ -39,9 +39,7 @@ export function PullRequestComposer({
       });
     } catch (failure: unknown) {
       setError(
-        failure instanceof Error
-          ? failure.message
-          : 'We could not send your pull request. Try again.',
+        failure instanceof Error ? failure.message : 'Couldn’t send your pull request. Try again.',
       );
     } finally {
       submitting.current = false;

@@ -35,7 +35,7 @@ async function readJsonResponse(response: Response): Promise<unknown> {
 async function getRequiredToken(getToken: GetSessionToken): Promise<string> {
   const token = await getToken();
 
-  if (token === null) throw new Error('Your session expired. Please sign in again.');
+  if (token === null) throw new Error('Your session expired. Sign in again.');
 
   return token;
 }
@@ -67,7 +67,7 @@ export async function listProfilePrompts({
   const responseBody = await readJsonResponse(response);
 
   if (!response.ok) {
-    throwApiError(responseBody, 'We could not load your prompt draft. Please try again.');
+    throwApiError(responseBody, 'Couldn’t load your prompt draft. Try again.');
   }
 
   return parseResponse(responseBody).answers;
@@ -98,7 +98,7 @@ export async function completeProfilePrompts({
   const responseBody = await readJsonResponse(response);
 
   if (!response.ok) {
-    throwApiError(responseBody, 'We could not save your prompts. Please try again.');
+    throwApiError(responseBody, 'Couldn’t save your prompts. Try again.');
   }
 
   return parseResponse(responseBody);

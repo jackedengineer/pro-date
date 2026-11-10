@@ -26,7 +26,7 @@ function askAboutUnconfirmedAlerts() {
   return new Promise<UnconfirmedRevocationChoice>((resolve) => {
     Alert.alert(
       'Chat alerts may continue',
-      'We couldn’t confirm this phone will stop getting Merge chat alerts. Check your connection and try again, or sign out anyway and turn off Merge notifications in your phone’s settings.',
+      'Couldn’t confirm this phone will stop getting Merge chat alerts. Check your connection and try again, or sign out anyway and turn off Merge notifications in your phone’s settings.',
       [
         { text: 'Cancel', style: 'cancel', onPress: () => resolve('cancel') },
         { text: 'Try again', onPress: () => resolve('retry') },
@@ -58,7 +58,7 @@ function ConfiguredAccountActionsProvider({ children }: PropsWithChildren) {
       .then((outcome) => {
         if (outcome === 'SIGNED_OUT') router.replace('/');
         else if (outcome === 'FAILED')
-          Alert.alert('We couldn’t sign you out', 'Check your connection and try again.');
+          Alert.alert('Couldn’t sign you out', 'Check your connection and try again.');
       })
       .finally(() => {
         inFlight.current = false;

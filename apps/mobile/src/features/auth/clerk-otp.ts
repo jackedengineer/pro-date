@@ -119,8 +119,8 @@ export function getSafeAuthErrorMessage(
       return 'Too many attempts. Wait a moment and try again.';
     default:
       return action === 'request'
-        ? 'We couldn’t send a code right now. Check your connection and try again.'
-        : 'We couldn’t verify that code. Try again.';
+        ? 'Couldn’t send a code right now. Check your connection and try again.'
+        : 'Couldn’t verify that code. Try again.';
   }
 }
 

@@ -34,9 +34,7 @@ export function usePagedCollection<T>(
         .catch((failure: unknown) => {
           if (current === generation.current)
             setError(
-              failure instanceof Error
-                ? failure.message
-                : 'We could not load this list. Try again.',
+              failure instanceof Error ? failure.message : 'Couldn’t load this list. Try again.',
             );
         })
         .finally(() => {

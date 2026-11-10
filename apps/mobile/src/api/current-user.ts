@@ -30,7 +30,7 @@ export async function bootstrapCurrentUser({
   const token = await getToken();
 
   if (token === null) {
-    throw new Error('Your session expired. Please sign in again.');
+    throw new Error('Your session expired. Sign in again.');
   }
 
   const response = await fetchImplementation(`${apiBaseUrl}/v1/users/me`, {
@@ -46,9 +46,7 @@ export async function bootstrapCurrentUser({
     const apiError = apiErrorResponseSchema.safeParse(responseBody);
 
     throw new Error(
-      apiError.success
-        ? apiError.data.error.message
-        : 'We could not prepare your profile. Please try again.',
+      apiError.success ? apiError.data.error.message : 'Couldn’t prepare your profile. Try again.',
     );
   }
 

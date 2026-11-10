@@ -343,10 +343,10 @@ describe('getSafeAuthErrorMessage', () => {
 
   it('uses action-specific fallback copy for unknown errors', () => {
     expect(getSafeAuthErrorMessage(new Error('private provider detail'), 'request')).toBe(
-      'We couldn’t send a code right now. Check your connection and try again.',
+      'Couldn’t send a code right now. Check your connection and try again.',
     );
     expect(getSafeAuthErrorMessage(new Error('private provider detail'), 'verify')).toBe(
-      'We couldn’t verify that code. Try again.',
+      'Couldn’t verify that code. Try again.',
     );
   });
 });

@@ -79,7 +79,7 @@ function ConfiguredVerifyPhoneRoute() {
     } else if ('error' in result) {
       setErrorMessage(getSafeAuthErrorMessage(result.error, 'request'));
     } else {
-      setErrorMessage('We couldn’t send another code. Change your number and try again.');
+      setErrorMessage('Couldn’t send another code. Change your number and try again.');
     }
 
     setActivity('idle');

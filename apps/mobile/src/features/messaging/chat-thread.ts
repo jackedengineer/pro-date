@@ -123,7 +123,7 @@ export class ChatThread {
         if (this.snapshot.unavailable) return;
         this.publish({
           loading: false,
-          error: 'We couldn’t open the local chat cache. Please reopen messaging.',
+          error: 'Couldn’t open the local chat cache. Reopen messaging.',
         });
       });
   }
@@ -273,9 +273,7 @@ export class ChatThread {
       this.outgoing = this.outgoing.filter((o) => o.clientId !== pending.clientId);
       this.statuses.delete(pending.clientId);
       this.publish();
-      throw new Error(
-        'We couldn’t save this message on your device. Your draft hasn’t been cleared.',
-      );
+      throw new Error('Couldn’t save this message on your device. Your draft hasn’t been cleared.');
     }
     this.statuses.delete(pending.clientId);
     this.publish(this.snapshot.replyTo === pending.replyTo ? { replyTo: null } : {});
@@ -448,8 +446,7 @@ export class ChatThread {
       if (isConversationGone(failure)) await this.revoke();
       else if (!request.signal.aborted)
         this.publish({
-          error:
-            failure instanceof Error ? failure.message : 'We couldn’t refresh this conversation.',
+          error: failure instanceof Error ? failure.message : 'Couldn’t refresh this conversation.',
         });
     } finally {
       this.controllers.delete(request);
@@ -672,7 +669,7 @@ export class ChatThread {
     } catch (failure: unknown) {
       if (isConversationGone(failure)) await this.revoke();
       else if (!request.signal.aborted)
-        this.publish({ error: 'We couldn’t load earlier messages. Try again.' });
+        this.publish({ error: 'Couldn’t load earlier messages. Try again.' });
     } finally {
       this.controllers.delete(request);
       this.publish({ loadingOlder: false });
@@ -709,7 +706,7 @@ export class ChatThread {
     } catch {
       this.publish({
         error:
-          'This conversation is closed, but its local cache could not be cleared. Please sign out to clear device data.',
+          'This conversation is closed, but its local cache could not be cleared. Sign out to clear device data.',
       });
     }
     this.changed();

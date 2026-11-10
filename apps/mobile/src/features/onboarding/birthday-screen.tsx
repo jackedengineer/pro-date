@@ -80,9 +80,7 @@ export function BirthdayScreen({
       await onSave(toCalendarDate(birthDate));
     } catch (error: unknown) {
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'We could not save your birthday. Please try again.',
+        error instanceof Error ? error.message : 'Couldn’t save your birthday. Try again.',
       );
     } finally {
       setIsSaving(false);

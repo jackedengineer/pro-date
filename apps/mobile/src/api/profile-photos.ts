@@ -103,7 +103,7 @@ async function getRequiredToken(getToken: GetSessionToken): Promise<string> {
   const token = await getToken();
 
   if (token === null) {
-    throw new Error('Your session expired. Please sign in again.');
+    throw new Error('Your session expired. Sign in again.');
   }
 
   return token;
@@ -151,7 +151,7 @@ export async function listProfilePhotos({
   );
 
   if (!response.ok) {
-    throwApiError(responseBody, 'We could not load your photos. Please try again.');
+    throwApiError(responseBody, 'Couldn’t load your photos. Try again.');
   }
 
   return parsePhotoList(responseBody).photos;
@@ -178,7 +178,7 @@ export async function addProfilePhoto({
   );
 
   if (!intentResponse.ok) {
-    throwApiError(intentBody, 'We could not prepare that photo. Please try again.');
+    throwApiError(intentBody, 'Couldn’t prepare that photo. Try again.');
   }
 
   const parsedIntent = profilePhotoUploadIntentResponseSchema.safeParse(intentBody);
@@ -210,7 +210,7 @@ export async function addProfilePhoto({
     throw new Error(
       cloudinaryError.success
         ? cloudinaryError.data.error.message
-        : 'We could not upload that photo. Please try again.',
+        : 'Couldn’t upload that photo. Try again.',
     );
   }
 
@@ -241,7 +241,7 @@ export async function addProfilePhoto({
   );
 
   if (!confirmationResponse.ok) {
-    throwApiError(confirmationBody, 'We could not save that photo. Please try again.');
+    throwApiError(confirmationBody, 'Couldn’t save that photo. Try again.');
   }
 
   return parsePhotoList(confirmationBody).photos;
@@ -276,7 +276,7 @@ export async function completeProfilePhotos({
   );
 
   if (!response.ok) {
-    throwApiError(responseBody, 'We could not save your photo order. Please try again.');
+    throwApiError(responseBody, 'Couldn’t save your photo order. Try again.');
   }
 
   const result = parsePhotoList(responseBody);
@@ -302,7 +302,7 @@ export async function deleteProfilePhoto({
   );
 
   if (!response.ok) {
-    throwApiError(responseBody, 'We could not remove that photo. Please try again.');
+    throwApiError(responseBody, 'Couldn’t remove that photo. Try again.');
   }
 
   return parsePhotoList(responseBody).photos;

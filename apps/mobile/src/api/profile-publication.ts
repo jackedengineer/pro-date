@@ -27,7 +27,7 @@ async function requestProfileReview(
 ): Promise<ProfileReview> {
   const token = await getToken();
 
-  if (token === null) throw new Error('Your session expired. Please sign in again.');
+  if (token === null) throw new Error('Your session expired. Sign in again.');
 
   const response = await fetchImplementation(`${apiBaseUrl}/v1/users/me/${path}`, {
     headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
@@ -41,7 +41,7 @@ async function requestProfileReview(
     throw new Error(
       parsed.success
         ? parsed.data.error.message
-        : 'We could not prepare your profile review. Please try again.',
+        : 'Couldn’t prepare your profile review. Try again.',
     );
   }
 

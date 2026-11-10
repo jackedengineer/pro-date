@@ -49,7 +49,7 @@ export function ProfileSafetySheet({
           : 'Member blocked. You will no longer see each other.',
       );
     } catch (failure: unknown) {
-      setError(failure instanceof Error ? failure.message : 'We could not save this. Try again.');
+      setError(failure instanceof Error ? failure.message : 'Couldn’t save this. Try again.');
     } finally {
       submitting.current = false;
       setBusy(false);

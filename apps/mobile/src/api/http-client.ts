@@ -69,7 +69,7 @@ export function createHttpClient({
         throw new ApiRequestError('Request interrupted.', 0, 'INTERRUPTED', true);
       if (token === null)
         throw new ApiRequestError(
-          'Your session expired. Please sign in again.',
+          'Your session expired. Sign in again.',
           401,
           'UNAUTHENTICATED',
           false,
@@ -93,9 +93,7 @@ export function createHttpClient({
       if (!response.ok) {
         const parsed = apiErrorResponseSchema.safeParse(body);
         throw new ApiRequestError(
-          parsed.success
-            ? parsed.data.error.message
-            : 'We couldn’t complete this request. Try again.',
+          parsed.success ? parsed.data.error.message : 'Couldn’t complete this request. Try again.',
           response.status,
           parsed.success ? parsed.data.error.code : 'REQUEST_FAILED',
           response.status === 408 || response.status === 429 || response.status >= 500,
@@ -104,7 +102,7 @@ export function createHttpClient({
       const parsed = schema.safeParse(body);
       if (!parsed.success)
         throw new ApiRequestError(
-          'The server returned an unexpected response. Please refresh.',
+          'The server returned an unexpected response. Refresh.',
           response.status,
           'INVALID_RESPONSE',
           false,

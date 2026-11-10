@@ -87,7 +87,7 @@ function ConfiguredVerifyEmailRoute() {
     } else if ('error' in result) {
       setErrorMessage(getSafeAuthErrorMessage(result.error, 'request', 'email'));
     } else {
-      setErrorMessage('We couldn’t send another code. Change your email and try again.');
+      setErrorMessage('Couldn’t send another code. Change your email and try again.');
     }
 
     setActivity('idle');

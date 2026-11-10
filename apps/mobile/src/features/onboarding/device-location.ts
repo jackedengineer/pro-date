@@ -61,7 +61,7 @@ export async function captureProfileLocation(
   try {
     permission = await services.requestForegroundPermission();
   } catch {
-    throw new Error('We could not read your location. Check location services and try again.');
+    throw new Error('Couldn’t read your location. Check location services and try again.');
   }
 
   if (permission !== 'granted') {
@@ -75,12 +75,12 @@ export async function captureProfileLocation(
     coordinates = await services.getCurrentCoordinates();
     address = await services.reverseGeocode(coordinates);
   } catch {
-    throw new Error('We could not read your location. Check location services and try again.');
+    throw new Error('Couldn’t read your location. Check location services and try again.');
   }
   const locality = address?.locality ?? address?.district ?? address?.subregion;
 
   if (address?.countryCode === null || address?.countryCode === undefined || locality == null) {
-    throw new Error('We could not identify your city. Check location services and try again.');
+    throw new Error('Couldn’t identify your city. Check location services and try again.');
   }
 
   return {

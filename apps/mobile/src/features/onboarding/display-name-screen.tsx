@@ -44,9 +44,7 @@ export function DisplayNameScreen({ initialValue, onBack, onSave }: DisplayNameS
       await onSave(result.data);
     } catch (error: unknown) {
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'We could not save your profile. Please try again.',
+        error instanceof Error ? error.message : 'Couldn’t save your profile. Try again.',
       );
       setIsSaving(false);
     }

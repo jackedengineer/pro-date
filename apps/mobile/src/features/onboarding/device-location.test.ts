@@ -65,7 +65,7 @@ describe('captureProfileLocation', () => {
     const services = createLocationServices({ reverseGeocode: jest.fn().mockResolvedValue(null) });
 
     await expect(captureProfileLocation(services)).rejects.toThrow(
-      'We could not identify your city. Check location services and try again.',
+      'Couldn’t identify your city. Check location services and try again.',
     );
   });
 
@@ -75,7 +75,7 @@ describe('captureProfileLocation', () => {
     });
 
     await expect(captureProfileLocation(services)).rejects.toThrow(
-      'We could not read your location. Check location services and try again.',
+      'Couldn’t read your location. Check location services and try again.',
     );
   });
 });

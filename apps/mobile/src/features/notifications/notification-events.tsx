@@ -42,7 +42,7 @@ export function NotificationEvents({
         router.replace({ pathname: '/discover', params: { tab: 'merged' } });
         Alert.alert(
           'Connection unavailable',
-          'We couldn’t open this connection. Open Merged and try again.',
+          'Couldn’t open this connection. Open Merged and try again.',
         );
       },
     });

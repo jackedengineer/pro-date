@@ -43,7 +43,7 @@ export function HeightScreen({ initialValue, onBack, onSave }: HeightScreenProps
     try {
       await onSave({ centimeters, isVisible });
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'We could not save your height.');
+      setErrorMessage(error instanceof Error ? error.message : 'Couldn’t save your height.');
       setIsSaving(false);
     }
   };

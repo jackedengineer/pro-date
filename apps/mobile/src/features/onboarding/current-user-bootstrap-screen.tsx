@@ -38,9 +38,7 @@ export function CurrentUserBootstrapScreen({
         if (isActive) {
           setState({
             message:
-              error instanceof Error
-                ? error.message
-                : 'We could not prepare your profile. Please try again.',
+              error instanceof Error ? error.message : 'Couldn’t prepare your profile. Try again.',
             status: 'error',
           });
         }

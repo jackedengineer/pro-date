@@ -27,7 +27,7 @@ export function LocationScreen({ captureLocation, onBack, onSave }: LocationScre
       await onSave(location);
     } catch (error: unknown) {
       setErrorMessage(
-        error instanceof Error ? error.message : 'We could not save your discovery area.',
+        error instanceof Error ? error.message : 'Couldn’t save your discovery area.',
       );
       setIsSaving(false);
     }

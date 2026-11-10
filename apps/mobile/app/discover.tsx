@@ -42,7 +42,7 @@ function ConfiguredDiscoveryRoute({ apiUrl }: { apiUrl: string }) {
       .catch((failure: unknown) => {
         if (active) {
           setError(
-            failure instanceof Error ? failure.message : 'We could not open discovery. Try again.',
+            failure instanceof Error ? failure.message : 'Couldn’t open discovery. Try again.',
           );
           setStatus('error');
         }

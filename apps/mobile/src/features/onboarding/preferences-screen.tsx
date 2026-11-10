@@ -72,9 +72,7 @@ export function PreferencesScreen({ initialValue, onBack, onSave }: PreferencesS
     try {
       await onSave({ interestedIn, relationshipIntent });
     } catch (error: unknown) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'We could not save your preferences.',
-      );
+      setErrorMessage(error instanceof Error ? error.message : 'Couldn’t save your preferences.');
       setIsSaving(false);
     }
   };

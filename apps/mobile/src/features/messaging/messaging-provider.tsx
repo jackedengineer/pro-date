@@ -349,7 +349,7 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
         if (!cancelled)
           setState({
             runtime: null,
-            error: 'We couldn’t open messaging. Check your connection and try again.',
+            error: 'Couldn’t open messaging. Check your connection and try again.',
             session,
           });
       });

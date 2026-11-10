@@ -35,14 +35,14 @@ describe('<EmailEntryScreen />', () => {
     const onUsePhone = jest.fn();
     const view = await render(
       <EmailEntryScreen
-        errorMessage="We couldn’t send a code right now."
+        errorMessage="Couldn’t send a code right now."
         onBack={jest.fn()}
         onContinue={jest.fn()}
         onUsePhone={onUsePhone}
       />,
     );
 
-    expect(view.getByRole('alert')).toHaveTextContent('We couldn’t send a code right now.');
+    expect(view.getByRole('alert')).toHaveTextContent('Couldn’t send a code right now.');
 
     await fireEvent.press(view.getByRole('button', { name: 'Use phone instead' }));
 

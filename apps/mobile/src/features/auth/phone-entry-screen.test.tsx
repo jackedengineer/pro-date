@@ -36,7 +36,7 @@ describe('<PhoneEntryScreen />', () => {
   it('announces request failures and prevents duplicate submissions', async () => {
     const view = await render(
       <PhoneEntryScreen
-        errorMessage="We couldn’t send a code right now."
+        errorMessage="Couldn’t send a code right now."
         isSubmitting
         onBack={jest.fn()}
         onContinue={jest.fn()}
@@ -44,7 +44,7 @@ describe('<PhoneEntryScreen />', () => {
       />,
     );
 
-    expect(view.getByRole('alert')).toHaveTextContent('We couldn’t send a code right now.');
+    expect(view.getByRole('alert')).toHaveTextContent('Couldn’t send a code right now.');
     expect(view.getByRole('button', { name: 'Sending code' })).toBeDisabled();
   });
 
