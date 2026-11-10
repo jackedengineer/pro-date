@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--dir", "apps/mobile", "exec", "expo", "start", "--web", "--port", "8081"],
       "port": 8081
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "apps/site", "exec", "wrangler", "dev", "--port", "5391"],
+      "port": 5391
     }
   ]
 }

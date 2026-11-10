@@ -1,0 +1,18 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Static pages only: no Worker code runs, so there is nothing to keep warm or secure.
+  "name": "merge-site",
+  "account_id": "afc0353bdd89b39c334efd3db0311ec3",
+  "compatibility_date": "2026-11-10",
+
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "merge.jacked.dev", "custom_domain": true }],
+
+  "assets": {
+    "directory": "./public",
+    // /privacy serves privacy.html, so the URLs printed in the stores stay short.
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+  },
+}

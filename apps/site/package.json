@@ -1,0 +1,16 @@
+{
+  "name": "@pro-date/site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The public pages the app stores require: privacy, terms, safety standards and account deletion.",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "5.0.2",
+    "wrangler": "4.157.0"
+  }
+}
