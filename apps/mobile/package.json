@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@clerk/expo": "4.15.1",
+    "@expo-google-fonts/fraunces": "0.4.1",
     "@expo-google-fonts/manrope": "0.4.2",
     "@expo/ui": "~58.0.27",
     "@shopify/flash-list": "2.3.2",
