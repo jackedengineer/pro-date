@@ -250,7 +250,7 @@ export function ProfilePromptsScreen({
                           )
                         }
                         onSubmitEditing={() => Keyboard.dismiss()}
-                        placeholder="Write the answer only you could write…"
+                        placeholder="The answer only you could write"
                         placeholderTextColor={colors.muted}
                         returnKeyType="done"
                         scrollEnabled

@@ -62,7 +62,7 @@ export function PullRequestComposer({
         onChangeText={setComment}
         multiline
         maxLength={280}
-        placeholder="Give them something good to reply to…"
+        placeholder="What caught your eye?"
         placeholderTextColor={colors.muted}
         style={styles.input}
         returnKeyType="done"

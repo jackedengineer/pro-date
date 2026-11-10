@@ -1,5 +1,6 @@
 import type { DiscoveryProfile, PullRequestTarget } from '@pro-date/contracts';
-import { useCallback, useRef, useState } from 'react';
+import { Image } from 'expo-image';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import X from 'lucide-react-native/icons/x';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -32,6 +33,11 @@ export function DiscoveryFeed({
   );
   const list = usePagedCollection(load, identifyProfile);
   const profile = list.items[0];
+  // Warm the next profile's lead photo so passing does not land on an empty frame.
+  const nextPhoto = list.items[1]?.photos[0]?.deliveryUrl;
+  useEffect(() => {
+    if (nextPhoto !== undefined) void Image.prefetch?.(nextPhoto)?.catch(() => {});
+  }, [nextPhoto]);
   const [target, setTarget] = useState<PullRequestTarget | null>(null);
   const [showSafety, setShowSafety] = useState(false);
   const [busy, setBusy] = useState(false);

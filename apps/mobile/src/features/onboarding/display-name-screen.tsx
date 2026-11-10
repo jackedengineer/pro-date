@@ -91,7 +91,7 @@ export function DisplayNameScreen({ initialValue, onBack, onSave }: DisplayNameS
               }}
               onFocus={() => setIsFocused(true)}
               onSubmitEditing={() => void save()}
-              placeholder="e.g. Ada"
+              placeholder="Ada"
               placeholderTextColor={colors.muted}
               returnKeyType="done"
               selectionColor={colors.plum}

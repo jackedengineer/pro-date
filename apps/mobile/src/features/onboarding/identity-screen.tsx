@@ -170,7 +170,7 @@ export function IdentityScreen({ initialValue, onBack, onSave }: IdentityScreenP
             editable={!isSaving}
             maxLength={30}
             onChangeText={setPronouns}
-            placeholder="e.g. xe/xem"
+            placeholder="xe/xem"
             placeholderTextColor={colors.muted}
             selectionColor={colors.coral}
             style={styles.customInput}
