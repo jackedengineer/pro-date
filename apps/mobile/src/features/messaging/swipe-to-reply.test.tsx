@@ -24,7 +24,7 @@ describe('reply gesture boundary', () => {
     expect(view.getByTestId('swipe').props).toMatchObject({
       overshootLeft: false,
       leftThreshold: 44,
-      dragOffsetFromLeftEdge: 24,
+      dragOffsetFromLeft: 24,
     });
     await fireEvent(view.getByTestId('swipe'), 'swipeableOpen', 'left');
     expect(reply).toHaveBeenCalledWith('first');

@@ -10,7 +10,7 @@ describe('IdentityScreen', () => {
     const toggleProps = toggle.props as { style: StyleProp<ViewStyle> };
     const style = StyleSheet.flatten(toggleProps.style);
 
-    expect(style.alignSelf).toBe('center');
+    expect(style?.alignSelf).toBe('center');
   });
 
   it('supports self-described identity and pronouns', async () => {

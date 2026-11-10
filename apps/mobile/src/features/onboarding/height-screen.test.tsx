@@ -31,6 +31,6 @@ describe('HeightScreen', () => {
     const toggleProps = toggle.props as { style: StyleProp<ViewStyle> };
     const style = StyleSheet.flatten(toggleProps.style);
 
-    expect(style.alignSelf).toBe('center');
+    expect(style?.alignSelf).toBe('center');
   });
 });

@@ -1,5 +1,5 @@
 import { memo, useRef } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type ViewInstance } from 'react-native';
 import { AppText } from '../../components/app-text';
 import { colors } from '../../theme/tokens';
 import type { ChatRow } from './chat-thread';
@@ -34,7 +34,7 @@ export const MessageBubble = memo(function MessageBubble({
   react: ((id: string, kind: ReactionKind) => void) | null;
   refreshReaction: (id: string) => void;
 }) {
-  const bubble = useRef<View>(null);
+  const bubble = useRef<ViewInstance>(null);
   const openActions = () => {
     if (row.messageId === null) return;
     const messageId = row.messageId;

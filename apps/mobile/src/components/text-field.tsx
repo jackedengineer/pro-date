@@ -1,9 +1,9 @@
 import { forwardRef, useState } from 'react';
-import { StyleSheet, TextInput, type TextInputProps } from 'react-native';
+import { StyleSheet, TextInput, type TextInputInstance, type TextInputProps } from 'react-native';
 import { colors, radii, spacing, typography } from '../theme/tokens';
 
 /** A controlled native input: validation and values stay with its caller. */
-export const TextField = forwardRef<TextInput, TextInputProps>(function TextField(
+export const TextField = forwardRef<TextInputInstance, TextInputProps>(function TextField(
   { style, onFocus, onBlur, ...props },
   ref,
 ) {

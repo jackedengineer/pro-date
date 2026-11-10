@@ -38,7 +38,7 @@ export function SwipeToReply({
       ref={ref}
       friction={2}
       leftThreshold={44}
-      dragOffsetFromLeftEdge={24}
+      dragOffsetFromLeft={24}
       overshootLeft={false}
       overshootRight={false}
       renderLeftActions={ReplyAction}

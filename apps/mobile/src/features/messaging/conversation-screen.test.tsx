@@ -44,13 +44,13 @@ jest.mock('@shopify/flash-list', () => {
         const Scroll = props.renderScrollComponent;
         return (
           <Native.FlatList
-            data={props.data}
+            data={props.data ?? undefined}
             keyExtractor={props.keyExtractor ?? ((_row, index) => String(index))}
             renderItem={({ item, index }) =>
               props.renderItem?.({ item, index, target: 'Cell' }) ?? null
             }
-            ListHeaderComponent={props.ListHeaderComponent ?? null}
-            ListEmptyComponent={props.ListEmptyComponent ?? null}
+            ListHeaderComponent={props.ListHeaderComponent ?? undefined}
+            ListEmptyComponent={props.ListEmptyComponent ?? undefined}
             ref={ref}
             renderScrollComponent={(scrollProps) =>
               Scroll === undefined ? (

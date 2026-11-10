@@ -3,7 +3,7 @@ import type { MessageQuote } from '@pro-date/contracts';
 import X from 'lucide-react-native/icons/x';
 import { IconButton } from '../../components/icon-button';
 import { QuotedMessage } from './message-quote';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import { AppText } from '../../components/app-text';
 import { colors, typography } from '../../theme/tokens';
@@ -26,7 +26,7 @@ export function MessageComposer({
   const [error, setError] = useState<string | null>(null);
   const current = useRef('');
   const guard = useRef(false);
-  const input = useRef<TextInput>(null);
+  const input = useRef<TextInputInstance>(null);
   useEffect(() => {
     if (replyTo !== null) input.current?.focus();
   }, [replyTo]);

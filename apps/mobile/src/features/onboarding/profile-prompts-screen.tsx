@@ -249,7 +249,7 @@ export function ProfilePromptsScreen({
                             ),
                           )
                         }
-                        onSubmitEditing={Keyboard.dismiss}
+                        onSubmitEditing={() => Keyboard.dismiss()}
                         placeholder="Write the answer only you could write…"
                         placeholderTextColor={colors.muted}
                         returnKeyType="done"

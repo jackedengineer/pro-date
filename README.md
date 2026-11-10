@@ -122,7 +122,7 @@ Merge is tech-native, not tech-exclusive. Developer and startup language gives k
 
 ```mermaid
 flowchart TB
-    subgraph Client[Expo SDK 57 mobile app]
+    subgraph Client[Expo SDK 58 mobile app]
         UI[Expo Router + custom UI system]
         Q[TanStack Query]
         RT[Socket.IO client]
@@ -168,16 +168,16 @@ The backend is a modular monolith built as two processes from one codebase: a pu
 
 | Decision           | Choice                                                                            | Why                                                                                                    |
 | ------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Mobile runtime     | [Expo SDK 57](https://expo.dev/changelog/sdk-57), React Native 0.86, React 19.2.3 | Current stable Expo line and supported by the current iOS Expo Go application                          |
+| Mobile runtime     | [Expo SDK 58](https://expo.dev/changelog/sdk-58), React Native 0.88, React 19.3.0 | Current stable Expo line; the App Store Expo Go app runs only the latest SDK                           |
 | Navigation         | Expo Router                                                                       | Expo-first routing, deep links, and typed route support                                                |
 | UI foundation      | React Native primitives, `StyleSheet`, typed tokens, internal components          | Distinctive product experience without a generic Material-style visual system                          |
-| Birthday input     | Expo UI SwiftUI/Compose `DateTimePicker`                                          | Native, accessible date selection included in Expo Go for SDK 57                                       |
-| Height input       | Expo UI universal `Picker`                                                        | Native wheel control on iOS with a cross-platform SDK 57 API                                           |
+| Birthday input     | Expo UI SwiftUI/Compose `DateTimePicker`                                          | Native, accessible date selection included in Expo Go for SDK 58                                       |
+| Height input       | Expo UI universal `Picker`                                                        | Native wheel control on iOS with a cross-platform SDK 58 API                                           |
 | Device location    | Expo Location, foreground permission only                                         | Expo Go-compatible capture with an explicit privacy explanation and recoverable denial                 |
 | API                | Express 5 REST under `/v1`                                                        | Explicit, versionable, testable mobile contracts                                                       |
 | Realtime           | Socket.IO                                                                         | Reconnect-friendly transport; durable state remains in PostgreSQL                                      |
-| Chat history       | FlashList 2.0.2 and stable client-intent keys                                     | Virtualized rows and scroll anchoring; acknowledgment does not remount a bubble                        |
-| Chat keyboard      | SDK-pinned keyboard-controller 1.21.9                                             | Chat-specific keyboard lifting and a growing, sticky multiline composer                                |
+| Chat history       | FlashList 2.3.2 and stable client-intent keys                                     | Virtualized rows and scroll anchoring; acknowledgment does not remount a bubble                        |
+| Chat keyboard      | SDK-pinned keyboard-controller 1.22.7                                             | Chat-specific keyboard lifting and a growing, sticky multiline composer                                |
 | Device persistence | Expo SQLite, account-scoped cache and outgoing queue                              | Fast cached opening and restart-safe retries; not a second server database                             |
 | Database           | Neon PostgreSQL with PostGIS in Singapore                                         | Relational integrity, transactions, and geospatial filtering near the backend region                   |
 | Data access        | Drizzle ORM and committed Drizzle Kit migrations                                  | Type-safe relational access and auditable schema history                                               |
@@ -192,12 +192,12 @@ The backend is a modular monolith built as two processes from one codebase: a pu
 
 ## Technology stack
 
-Exact installed package versions are pinned in the workspace lockfile. Expo-native versions are checked against Expo SDK 57 with Expo CLI and Expo Doctor rather than inferred from semver alone. Planned integrations and delivery tooling below are not installed or operational yet.
+Exact installed package versions are pinned in the workspace lockfile. Expo-native versions are checked against Expo SDK 58 with Expo CLI and Expo Doctor rather than inferred from semver alone. Planned integrations and delivery tooling below are not installed or operational yet.
 
 | Layer              | Technologies                                                                                                                                                                                                      |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Workspace          | Node.js 24 LTS, TypeScript 6 strict mode, pnpm 12 workspaces                                                                                                                                                      |
-| Mobile             | Expo 57, React Native 0.86, React 19.2.3, Expo Router                                                                                                                                                             |
+| Mobile             | Expo 58, React Native 0.88, React 19.3.0, Expo Router                                                                                                                                                             |
 | Mobile UI          | React Native `StyleSheet`, Expo UI DateTimePicker/Picker, Expo Location, Expo Image, Expo Image Picker, Expo Image Manipulator, Expo Haptics, Lucide/SVG, Reanimated, Gesture Handler, Safe Area Context, Manrope |
 | Mobile state/forms | TanStack Query for inbox pages, SQLite-backed chat controller, Zod and local React state; React Hook Form and Zustand are not currently required                                                                  |
 | API                | Express 5, Zod, Helmet, CORS, Pino, message quotas and socket admission budgets; general throttling/OpenAPI/Scalar remain planned                                                                                 |
@@ -282,7 +282,7 @@ Inbox cursors represent a live activity-ordered list, not a frozen snapshot. Act
 
 ### Local messaging setup and verification
 
-No additional cloud account, Redis instance, or native development build is needed for this SDK 57 text-chat slice. Existing Clerk, Neon, and Cloudinary configuration is reused. Apply the additive `0012` migration before starting the API:
+No additional cloud account, Redis instance, or native development build is needed for this text-chat slice. Existing Clerk, Neon, and Cloudinary configuration is reused. Apply the additive `0012` migration before starting the API:
 
 ```bash
 pnpm db:migrate
@@ -389,7 +389,7 @@ Exactly-once notification delivery is **not promised**: an unknown provider resp
 
 ### Foreground alerts and notification taps
 
-Foreground alerts suppress the currently open conversation and require fresh, authorized opt-in/pause checks within two seconds; errors fail closed. Cold/warm taps validate strict metadata, deduplicate message IDs, wait for the current account bootstrap, and fetch the conversation through authorized REST before navigation. Wrong-account, malformed or obsolete responses cannot open private content. Unavailable conversations return to Merged with a neutral explanation. SDK 57's synchronous initial-response APIs and listener cleanup handle remounts without retaining stale account state. Actual OS presentation and cold-start routing still need physical-device acceptance.
+Foreground alerts suppress the currently open conversation and require fresh, authorized opt-in/pause checks within two seconds; errors fail closed. Cold/warm taps validate strict metadata, deduplicate message IDs, wait for the current account bootstrap, and fetch the conversation through authorized REST before navigation. Wrong-account, malformed or obsolete responses cannot open private content. Unavailable conversations return to Merged with a neutral explanation. expo-notifications' synchronous initial-response APIs and listener cleanup handle remounts without retaining stale account state. Actual OS presentation and cold-start routing still need physical-device acceptance.
 
 ### Configuration and verification gates
 
@@ -471,7 +471,7 @@ The current prerequisites are:
 - Corepack-managed pnpm
 - An Expo account
 - An iPhone running iOS 16.4 or later for the primary physical-device path
-- Current Expo Go with SDK 57 support
+- Current Expo Go (SDK 58)
 - Docker for local PostGIS integration tests
 - Provider development/test accounts as their integrations are introduced
 
@@ -582,7 +582,7 @@ If any Cloudinary variable is absent, the API still starts, logs a safe configur
 
 The current policy accepts JPEG assets under 10 MB with both edges at least 600 px. Expo Image Picker selects from the system library, and Expo Image Manipulator removes format ambiguity, compresses to JPEG, and bounds the longest edge at 2048 px. Cloudinary delivery uses immutable versioned URLs and server-defined crop/quality transformations. Four photos are required to continue and six are allowed.
 
-Implementation references: [Cloudinary credential guide](https://cloudinary.com/documentation/developer_onboarding_faq_find_credentials), [Cloudinary signed uploads](https://cloudinary.com/documentation/client_side_uploading), [Cloudinary upload response signatures](https://cloudinary.com/documentation/response_signatures), [Expo Image Picker for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/), and [Expo Image Manipulator](https://docs.expo.dev/versions/latest/sdk/imagemanipulator/).
+Implementation references: [Cloudinary credential guide](https://cloudinary.com/documentation/developer_onboarding_faq_find_credentials), [Cloudinary signed uploads](https://cloudinary.com/documentation/client_side_uploading), [Cloudinary upload response signatures](https://cloudinary.com/documentation/response_signatures), [Expo Image Picker for SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/imagepicker/), and [Expo Image Manipulator](https://docs.expo.dev/versions/latest/sdk/imagemanipulator/).
 
 ## Profile onboarding flow
 
@@ -601,7 +601,7 @@ Own-profile review shows the lead photo and every remaining uploaded photo in pr
 
 The location request sends exact latitude/longitude over the authenticated API for distance calculations. No profile response contains those coordinates, and the mobile UI explains the distinction between the private stored point and the public city/region label before requesting permission.
 
-Implementation references: [Expo Location for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/location/), [Expo UI universal Picker for SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/ui/universal/picker/), and [Drizzle PostGIS geography points](https://orm.drizzle.team/docs/guides/postgis-geometry-point).
+Implementation references: [Expo Location for SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/location/), [Expo UI universal Picker for SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/ui/universal/picker/), and [Drizzle PostGIS geography points](https://orm.drizzle.team/docs/guides/postgis-geometry-point).
 
 ## Discovery and item-specific connections
 
@@ -714,7 +714,7 @@ Current implementation evidence:
 - Automated tests cover shared contracts, database invariants, discovery/engagement, private messaging access, retry deduplication, realtime hints, device queue recovery, real SQLite queries, and accessible mobile behavior. Merged inbox tests cover both members' untouched matches, sender-derived turns, overlapping cursor pages, cached/offline states, immediate confirmed-match navigation, and safety exits. Explicit live PostGIS and messaging checks additionally exercise persistence and state transitions with rolled-back fixtures.
 - Strict TypeScript, repository formatting, generic lint rules, Expo React/React Hooks rules, and React Compiler lint rules pass.
 - The dependency graph has no peer dependency issues.
-- Expo Doctor currently passes **20 of 21 checks**. Its online SDK compatibility check recommends newer SDK 57 patch pins for ten existing packages. The three UI additions match the installed SDK's native compatibility map; existing SDK pins were deliberately not upgraded during the presentation-only pass. This is a follow-up compatibility gate, not a clean Doctor result.
+- Expo Doctor passes **20 of 20 checks** on SDK 58 (React Native 0.88, React 19.3, Jest 30); every Expo-native package matches the SDK compatibility map.
 - Metro produces successful iOS and Android Hermes exports. These are JS bundle checks, not signed native builds or push-delivery tests.
 - The 21 October dependency audit reports **nine transitive advisories: three high and six moderate**, with none critical. Existing paths include `node-forge`, `braces`, `uuid`, `decode-uri-component`, `sprintf-js`, nested Drizzle Kit `esbuild`, and three advisories in the existing Vitest → Vite 8.3.2 tooling path. These are not introduced package upgrades in the UI pass and remain distribution-review gates. No incompatible overrides or advisory suppression were added. Keep development services private and review compatible upstream fixes before external distribution.
 - Browser checks cover welcome/auth navigation, compact-width scrolling, and email field validation without provider writes. The web preview also reports an unresolved Expo SQLite WASM worker asset; it is not a supported replacement for native chat testing. No backend, schema, API-client, authentication-provider, message-controller, or notification-lifecycle changes are included in the redesign.
@@ -751,63 +751,63 @@ To rotate a secret, run `pnpm --filter @pro-date/edge exec wrangler secret put <
 
 Last local automated verification: **9 October 2026**
 
-| Milestone                                 | Status                                                     |
-| ----------------------------------------- | ---------------------------------------------------------- |
-| Product boundary and V0 journey           | Approved                                                   |
-| Capability map                            | Approved                                                   |
-| Core architecture and provider choices    | Approved baseline                                          |
-| Expo SDK/App Store compatibility          | Verified for SDK 57                                        |
-| Exact dependency manifest                 | Verified and locked                                        |
-| Installed dependency lock                 | Implemented                                                |
-| Shared API contracts                      | Implemented and tested                                     |
-| Express health/startup foundation         | Implemented and tested                                     |
-| Mobile shell specification                | Approved                                                   |
-| Repository scaffold                       | Implemented                                                |
-| Expo welcome and OTP entry shell          | Implemented and tested                                     |
-| Expo Doctor                               | 20/21; existing SDK patch updates pending                  |
-| iOS and Android Hermes exports            | Verified; not signed native builds                         |
-| Mobile UI refresh                         | Source verified; physical-device acceptance pending        |
-| First physical-device run                 | Verified                                                   |
-| Clerk phone OTP client flow               | Implemented and tested                                     |
-| Clerk email OTP client flow               | Implemented and tested                                     |
-| Live Clerk SMS verification               | Awaiting provider setup                                    |
-| Live Clerk email verification             | Verified on physical iPhone                                |
-| Neon/PostGIS and Drizzle foundation       | Implemented and tested                                     |
-| Authenticated internal-user bootstrap     | Implemented and live verified                              |
-| Profile intro and name checkpoint         | Verified on physical iPhone                                |
-| Birthday and server-side 18+ checkpoint   | Verified on physical iPhone                                |
-| Inclusive identity and pronouns           | Implemented and tested                                     |
-| Dating preferences and intent             | Implemented and tested                                     |
-| Foreground location and PostGIS point     | Implemented and tested                                     |
-| Native height and visibility control      | Implemented and tested                                     |
-| Signed photo contracts and persistence    | Implemented and tested                                     |
-| Expo photo picker and ordered grid        | Implemented and tested                                     |
-| Live Cloudinary upload                    | Verified on physical iPhone                                |
-| Curated three-prompt editor               | Implemented and tested                                     |
-| Prompt persistence and review checkpoint  | Implemented and tested                                     |
-| Real profile-card review and direct edits | Implemented and tested                                     |
-| Atomic profile publication                | Implemented and tested                                     |
-| PostGIS discovery and cursor pages        | Implemented; database verified                             |
-| Photo/prompt likes and incoming requests  | Implemented and tested                                     |
-| Merge/decline and durable connections     | Implemented; database verified                             |
-| Pass and bidirectional blocking           | Implemented; database verified                             |
-| Report persistence and immediate block    | Implemented; database verified                             |
-| Text inbox, private history, and sends    | Implemented; device acceptance pending                     |
-| Durable outgoing queue and retry recovery | Implemented; SQLite verified                               |
-| Quoted replies and offline reply intent   | Implemented; disabled; migration/device acceptance pending |
-| Curated reactions and independent replay  | Implemented; disabled; migration/device acceptance pending |
-| Authenticated foreground realtime hints   | Implemented; local clients verified                        |
-| Bounded socket admission/auth retries     | Implemented; local socket tests passed                     |
-| Chat notification preferences and pause   | Implemented; local tests passed; disabled by default       |
-| Notification relational migration         | Prepared only; not applied or live verified                |
-| Device binding API / local controller     | Implemented; disabled; native/live DB checks pending       |
-| Native notification adapter / lifecycle   | Implemented; native acceptance pending                     |
-| Push delivery worker / safe tap handling  | Implemented; disabled; native/live DB acceptance pending   |
-| Chat safety and permanent unmatch         | Implemented; database verified                             |
-| Discovery physical-iPhone acceptance      | Pending                                                    |
-| Apple App Review release gates            | Documented and enforced                                    |
-| Basic profile foundation compatibility    | Automated verification passed                              |
-| V0 vertical slice                         | In progress                                                |
+| Milestone                                 | Status                                                           |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| Product boundary and V0 journey           | Approved                                                         |
+| Capability map                            | Approved                                                         |
+| Core architecture and provider choices    | Approved baseline                                                |
+| Expo SDK/App Store compatibility          | Upgraded to SDK 58; iOS Hermes export passes, device run pending |
+| Exact dependency manifest                 | Verified and locked                                              |
+| Installed dependency lock                 | Implemented                                                      |
+| Shared API contracts                      | Implemented and tested                                           |
+| Express health/startup foundation         | Implemented and tested                                           |
+| Mobile shell specification                | Approved                                                         |
+| Repository scaffold                       | Implemented                                                      |
+| Expo welcome and OTP entry shell          | Implemented and tested                                           |
+| Expo Doctor                               | 20/20 on SDK 58                                                  |
+| iOS and Android Hermes exports            | Verified; not signed native builds                               |
+| Mobile UI refresh                         | Source verified; physical-device acceptance pending              |
+| First physical-device run                 | Verified                                                         |
+| Clerk phone OTP client flow               | Implemented and tested                                           |
+| Clerk email OTP client flow               | Implemented and tested                                           |
+| Live Clerk SMS verification               | Awaiting provider setup                                          |
+| Live Clerk email verification             | Verified on physical iPhone                                      |
+| Neon/PostGIS and Drizzle foundation       | Implemented and tested                                           |
+| Authenticated internal-user bootstrap     | Implemented and live verified                                    |
+| Profile intro and name checkpoint         | Verified on physical iPhone                                      |
+| Birthday and server-side 18+ checkpoint   | Verified on physical iPhone                                      |
+| Inclusive identity and pronouns           | Implemented and tested                                           |
+| Dating preferences and intent             | Implemented and tested                                           |
+| Foreground location and PostGIS point     | Implemented and tested                                           |
+| Native height and visibility control      | Implemented and tested                                           |
+| Signed photo contracts and persistence    | Implemented and tested                                           |
+| Expo photo picker and ordered grid        | Implemented and tested                                           |
+| Live Cloudinary upload                    | Verified on physical iPhone                                      |
+| Curated three-prompt editor               | Implemented and tested                                           |
+| Prompt persistence and review checkpoint  | Implemented and tested                                           |
+| Real profile-card review and direct edits | Implemented and tested                                           |
+| Atomic profile publication                | Implemented and tested                                           |
+| PostGIS discovery and cursor pages        | Implemented; database verified                                   |
+| Photo/prompt likes and incoming requests  | Implemented and tested                                           |
+| Merge/decline and durable connections     | Implemented; database verified                                   |
+| Pass and bidirectional blocking           | Implemented; database verified                                   |
+| Report persistence and immediate block    | Implemented; database verified                                   |
+| Text inbox, private history, and sends    | Implemented; device acceptance pending                           |
+| Durable outgoing queue and retry recovery | Implemented; SQLite verified                                     |
+| Quoted replies and offline reply intent   | Implemented; disabled; migration/device acceptance pending       |
+| Curated reactions and independent replay  | Implemented; disabled; migration/device acceptance pending       |
+| Authenticated foreground realtime hints   | Implemented; local clients verified                              |
+| Bounded socket admission/auth retries     | Implemented; local socket tests passed                           |
+| Chat notification preferences and pause   | Implemented; local tests passed; disabled by default             |
+| Notification relational migration         | Prepared only; not applied or live verified                      |
+| Device binding API / local controller     | Implemented; disabled; native/live DB checks pending             |
+| Native notification adapter / lifecycle   | Implemented; native acceptance pending                           |
+| Push delivery worker / safe tap handling  | Implemented; disabled; native/live DB acceptance pending         |
+| Chat safety and permanent unmatch         | Implemented; database verified                                   |
+| Discovery physical-iPhone acceptance      | Pending                                                          |
+| Apple App Review release gates            | Documented and enforced                                          |
+| Basic profile foundation compatibility    | Automated verification passed                                    |
+| V0 vertical slice                         | In progress                                                      |
 
 The next step is approved database verification/migration and native development-build setup, followed by push-worker deployment on Cloudflare and physical-device push acceptance. Automated notification tests are not evidence of alerts arriving on a device. Device acceptance covers discovery → item like → Requests → Merge → Merged chat, Your turn / Their turn, untouched matches for both accounts, keyboard/scrolling, reconnect and notification opt-ins. Live push acceptance, typing/read semantics, release profiling, safety operations and account-lifecycle work remain unfinished. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
 
