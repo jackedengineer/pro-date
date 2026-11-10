@@ -49,15 +49,29 @@ This document is the reference for anyone changing a screen. The tokens live in
 
 ## Components
 
-| Component        | File                                      | Notes                                                                                                                          |
-| ---------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `AppButton`      | `components/app-button.tsx`               | primary (plum), secondary (outlined), quiet, danger. 54pt tall. Pressed darkens in place; disabled is plumSoft with muted text |
-| `PressableScale` | `components/pressable-scale.tsx`          | Round controls: like, pass, send. Scales to 0.94 on press-in                                                                   |
-| `IconButton`     | `components/icon-button.tsx`              | 44pt (48dp on Android), round pressed ground                                                                                   |
-| `TextField`      | `components/text-field.tsx`               | 56pt, 3:1 edge, 2px plum edge on focus                                                                                         |
-| `Reveal`         | `components/reveal.tsx`                   | One-time staggered entrance for rarely seen screens                                                                            |
-| `BackIcon`       | `components/back-icon.ts`                 | Chevron on iOS, arrow on Android                                                                                               |
-| Tab bar          | `features/discovery/discovery-screen.tsx` | Discover, Requests (pull-request icon), Merged (merge icon). Announced as a tab list                                           |
+| Component          | File                                      | Notes                                                                                                                          |
+| ------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `AppButton`        | `components/app-button.tsx`               | primary (plum), secondary (outlined), quiet, danger. 54pt tall. Pressed darkens in place; disabled is plumSoft with muted text |
+| `PressableScale`   | `components/pressable-scale.tsx`          | Round controls: like, pass, send. Scales to 0.94 on press-in                                                                   |
+| `IconButton`       | `components/icon-button.tsx`              | 44pt (48dp on Android), round pressed ground                                                                                   |
+| `TextField`        | `components/text-field.tsx`               | 56pt, 3:1 edge, 2px plum edge on focus                                                                                         |
+| `Reveal`           | `components/reveal.tsx`                   | One-time staggered entrance for rarely seen screens                                                                            |
+| `BackIcon`         | `components/back-icon.ts`                 | Chevron on iOS, arrow on Android                                                                                               |
+| Tab bar            | `features/discovery/discovery-screen.tsx` | Discover, Requests (pull-request icon), Merged (merge icon), Profile. Announced as a tab list                                  |
+| `SegmentedControl` | `components/segmented-control.tsx`        | Two or three views of one thing, such as Preview and Edit                                                                      |
+| `FormScrollView`   | `components/form-scroll-view.tsx`         | Pass `footer` to keep a form's action above the keyboard                                                                       |
+| `DraggablePhoto`   | `features/onboarding/draggable-photo.tsx` | Hold, then drag onto another photo. Arrow buttons remain the non-drag route                                                    |
+
+## Profile flows
+
+- **Setup** is nine steps shown as three chapters: About you, The details, Show yourself. Each
+  step's button says Continue. Screen readers hear the exact step.
+- **The Profile tab** opens on the member's profile as Discover shows it (Preview). Edit lists
+  the same profile as tap targets: photos, each detail, the answers.
+- **Editing** opens that one setup step as a sheet (`/profile-edit?field=name`) through
+  `OnboardingModeContext`: no progress bar, a close control, and a Save button. It saves with the
+  same calls as setup. A live profile stays live, so nothing asks to be published again.
+- Hidden details never appear in Preview and are labelled as hidden in Edit.
 
 ## Motion
 
