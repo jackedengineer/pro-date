@@ -3,6 +3,7 @@ import type {
   DiscoveryProfile,
   IncomingPullRequest,
   Message,
+  ProfileReview,
 } from '@pro-date/contracts';
 
 import type { DiscoveryActions } from '../api/discovery';
@@ -221,4 +222,29 @@ export function previewThread(data: PreviewData, empty = false): ThreadSnapshot 
     replyTo: null,
     contextError: null,
   };
+}
+
+/** The signed-in member's own profile. `empty` is a profile that was started and not finished. */
+export function previewReview(data: PreviewData, empty = false): ProfileReview {
+  const mine = profile(data, 0);
+  const worst = data === 'worst';
+  return {
+    missingSections: empty ? ['PHOTOS', 'PROMPTS'] : [],
+    photos: empty ? [] : mine.photos,
+    prompts: empty ? [] : mine.prompts,
+    publishedAt: empty ? null : new Date(Date.now() - 86_400_000).toISOString(),
+    profile: {
+      userId: previewOwnerId,
+      displayName: mine.displayName,
+      birthDate: worst ? '1922-02-28' : '1998-06-14',
+      locationLabel: mine.locationLabel,
+      genderIdentity: mine.genderIdentity,
+      pronouns: mine.pronouns,
+      heightCm: empty ? null : mine.heightCm,
+      isGenderVisible: !worst,
+      arePronounsVisible: !worst,
+      isHeightVisible: !worst,
+      relationshipIntent: empty ? null : mine.relationshipIntent,
+    },
+  } as unknown as ProfileReview;
 }

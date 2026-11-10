@@ -20,6 +20,7 @@ jest.mock('expo-router', () => {
   return {
     router: { push: jest.fn(), setParams: jest.fn() },
     useLocalSearchParams: jest.fn(),
+    useFocusEffect: (effect: () => void) => React.useEffect(effect, [effect]),
     Redirect: ({ href }: { href: unknown }) => (
       <Native.Text>{`Redirect: ${JSON.stringify(href)}`}</Native.Text>
     ),

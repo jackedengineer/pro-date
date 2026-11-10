@@ -7,13 +7,13 @@ import UserRound from 'lucide-react-native/icons/user-round';
 import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconButton } from '../../components/icon-button';
-import { SignOutIconButton } from '../account/account-actions';
 
 import type { DiscoveryActions, DiscoveryFilters } from '../../api/discovery';
 import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
 import { colors, hairline, spacing, typography } from '../../theme/tokens';
 import { ConnectionList } from './connection-list';
+import type { DiscoveryTab } from './discovery-tabs';
 import { DiscoveryFeed } from './discovery-feed';
 import { DiscoveryFiltersSheet } from './discovery-filters-sheet';
 
@@ -23,18 +23,26 @@ const tabs = [
   { id: 'discover', label: 'Discover', icon: Compass },
   { id: 'requests', label: 'Requests', icon: GitPullRequest },
   { id: 'merged', label: 'Merged', icon: GitMerge },
-] as const;
-export type DiscoveryTab = (typeof tabs)[number]['id'];
+  { id: 'profile', label: 'Profile', icon: UserRound },
+] as const satisfies readonly { id: DiscoveryTab; label: string; icon: unknown }[];
+export type { DiscoveryTab };
+const titles: Record<DiscoveryTab, string> = {
+  discover: 'Merge',
+  requests: 'Pull requests',
+  merged: 'Merged',
+  profile: 'Profile',
+};
 export function DiscoveryScreen({
   actions,
-  onOpenProfile,
+  profile,
   mergedInbox,
   onMerged,
   selectedTab,
   onTabChange,
 }: {
   actions: DiscoveryActions;
-  onOpenProfile: () => void;
+  /** The member's own profile, shown under the Profile tab. */
+  profile: ReactNode;
   mergedInbox: ReactNode;
   onMerged?: (id: string) => void;
   selectedTab?: DiscoveryTab;
@@ -62,12 +70,8 @@ export function DiscoveryScreen({
     <Screen edges={screenEdges}>
       <View style={styles.header}>
         <AppText variant="largeTitle" numberOfLines={1} style={styles.headerTitle}>
-          {tab === 'discover' ? 'Merge' : tab === 'requests' ? 'Pull requests' : 'Merged'}
+          {titles[tab]}
         </AppText>
-        <View style={styles.headerActions}>
-          <IconButton label="My profile" icon={UserRound} onPress={onOpenProfile} />
-          <SignOutIconButton />
-        </View>
       </View>
       {tab === 'discover' ? (
         <View style={styles.filters}>
@@ -91,8 +95,10 @@ export function DiscoveryScreen({
           />
         ) : tab === 'requests' ? (
           <ConnectionList actions={actions} onMerged={handleMerged} />
-        ) : (
+        ) : tab === 'merged' ? (
           mergedInbox
+        ) : (
+          profile
         )}
       </View>
       <SafeAreaView edges={tabBarEdges} style={styles.tabBar}>
@@ -139,14 +145,13 @@ export function DiscoveryScreen({
 }
 const styles = StyleSheet.create({
   headerTitle: { flexShrink: 1 },
-  headerActions: { flexDirection: 'row', gap: spacing.xs },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
     gap: spacing.md,
   },
   filters: {

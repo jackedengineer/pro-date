@@ -8,6 +8,7 @@ import {
   previewActions,
   previewConversations,
   previewOwnerId,
+  previewReview,
   previewThread,
   type PreviewData,
 } from '../src/dev/preview-fixtures';
@@ -18,10 +19,11 @@ import {
   MessagingPreviewProvider,
   type MessagingRuntime,
 } from '../src/features/messaging/messaging-provider';
+import { MyProfile } from '../src/features/profile/my-profile';
 import { WelcomeScreen } from '../src/features/welcome/welcome-screen';
 import { colors, spacing } from '../src/theme/tokens';
 
-const screens = ['welcome', 'discover', 'requests', 'merged', 'chat'] as const;
+const screens = ['welcome', 'discover', 'requests', 'merged', 'profile', 'chat'] as const;
 
 /**
  * Design-time gallery: real screens over stand-in data, so layout can be checked (and stressed
@@ -79,7 +81,13 @@ export default function PreviewRoute() {
             ) : (
               <DiscoveryScreen
                 actions={actions}
-                onOpenProfile={() => {}}
+                profile={
+                  <MyProfile
+                    loadProfileReview={() => Promise.resolve(previewReview(data, empty))}
+                    onEdit={() => {}}
+                    onFinishSetup={() => {}}
+                  />
+                }
                 selectedTab={screen}
                 onTabChange={(tab) => setParams({ screen: tab })}
                 mergedInbox={

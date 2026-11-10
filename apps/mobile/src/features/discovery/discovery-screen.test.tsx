@@ -30,7 +30,7 @@ describe('DiscoveryScreen', () => {
     const view = await render(
       <DiscoveryScreen
         actions={api}
-        onOpenProfile={jest.fn()}
+        profile={null}
         onMerged={merged}
         mergedInbox={<Text>Your turn</Text>}
       />,
@@ -68,7 +68,7 @@ describe('DiscoveryScreen', () => {
     const view = await render(
       <DiscoveryScreen
         actions={api}
-        onOpenProfile={jest.fn()}
+        profile={null}
         onMerged={merged}
         mergedInbox={<Text>Your turn</Text>}
       />,
@@ -111,7 +111,7 @@ describe('DiscoveryScreen', () => {
     const view = await render(
       <DiscoveryScreen
         actions={api}
-        onOpenProfile={jest.fn()}
+        profile={null}
         onMerged={merged}
         mergedInbox={
           <View>
@@ -160,9 +160,7 @@ describe('DiscoveryScreen', () => {
         ],
         nextCursor: null,
       });
-    const view = await render(
-      <DiscoveryScreen actions={api} onOpenProfile={jest.fn()} mergedInbox={null} />,
-    );
+    const view = await render(<DiscoveryScreen actions={api} profile={null} mergedInbox={null} />);
     await view.findByText('Avery, 28');
     await fireEvent.press(view.getByRole('button', { name: 'Pass · see next profile' }));
     expect(await view.findByText('Jamie, 28')).toBeTruthy();
@@ -173,9 +171,7 @@ describe('DiscoveryScreen', () => {
   });
   it('blocks a member and removes their profile only after the server confirms', async () => {
     const api = actions();
-    const view = await render(
-      <DiscoveryScreen actions={api} onOpenProfile={jest.fn()} mergedInbox={null} />,
-    );
+    const view = await render(<DiscoveryScreen actions={api} profile={null} mergedInbox={null} />);
     await view.findByText('Avery, 28');
     await fireEvent.press(view.getByRole('button', { name: 'Report or block' }));
     await fireEvent.press(view.getByRole('button', { name: 'Block this member' }));
@@ -185,9 +181,7 @@ describe('DiscoveryScreen', () => {
   });
   it('renders full photos and sends a request referencing exactly the selected prompt', async () => {
     const api = actions();
-    const view = await render(
-      <DiscoveryScreen actions={api} onOpenProfile={jest.fn()} mergedInbox={null} />,
-    );
+    const view = await render(<DiscoveryScreen actions={api} profile={null} mergedInbox={null} />);
     await view.findByText('Avery, 28');
     expect(view.getByTestId('discovery-photo-0')).toHaveProp('contentFit', 'cover');
     await fireEvent.press(view.getByRole('button', { name: 'Like prompt 1' }));
@@ -209,9 +203,7 @@ describe('DiscoveryScreen', () => {
   it('keeps the selected profile and draft comment after a failed send', async () => {
     const api = actions();
     jest.mocked(api.send).mockRejectedValue(new Error('That photo changed. Refresh this profile.'));
-    const view = await render(
-      <DiscoveryScreen actions={api} onOpenProfile={jest.fn()} mergedInbox={null} />,
-    );
+    const view = await render(<DiscoveryScreen actions={api} profile={null} mergedInbox={null} />);
     await view.findByText('Avery, 28');
     await fireEvent.press(view.getByRole('button', { name: 'Like photo 2' }));
     await fireEvent.changeText(
@@ -228,9 +220,7 @@ describe('DiscoveryScreen', () => {
   });
   it('keeps empty requests honest and lets the user retry loading', async () => {
     const api = actions();
-    const view = await render(
-      <DiscoveryScreen actions={api} onOpenProfile={jest.fn()} mergedInbox={null} />,
-    );
+    const view = await render(<DiscoveryScreen actions={api} profile={null} mergedInbox={null} />);
     await fireEvent.press(view.getByRole('tab', { name: 'Requests' }));
     expect(await view.findByText('Your next hello starts here.')).toBeTruthy();
     expect(api.respond).not.toHaveBeenCalled();
@@ -243,7 +233,7 @@ describe('DiscoveryScreen', () => {
     const view = await render(
       <DiscoveryScreen
         actions={api}
-        onOpenProfile={jest.fn()}
+        profile={null}
         selectedTab="merged"
         onTabChange={tabChanged}
         mergedInbox={<Text>Your turn</Text>}
@@ -256,7 +246,7 @@ describe('DiscoveryScreen', () => {
     await view.rerender(
       <DiscoveryScreen
         actions={api}
-        onOpenProfile={jest.fn()}
+        profile={null}
         selectedTab="discover"
         onTabChange={tabChanged}
         mergedInbox={<Text>Your turn</Text>}

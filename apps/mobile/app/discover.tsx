@@ -1,18 +1,21 @@
 import { useAuth } from '@clerk/expo';
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { bootstrapCurrentUser } from '../src/api/current-user';
 import { createDiscoveryApi } from '../src/api/discovery';
+import { loadProfileReview } from '../src/api/profile-publication';
 import { AppText } from '../src/components/app-text';
 import { Screen } from '../src/components/screen';
 import { apiBaseUrl, isClerkConfigured } from '../src/config/public-env';
 import { DiscoveryScreen } from '../src/features/discovery/discovery-screen';
+import { isDiscoveryTab } from '../src/features/discovery/discovery-tabs';
 import { ErrorNotice, QuietButton, sharedStyles } from '../src/features/discovery/discovery-shared';
 import { colors } from '../src/theme/tokens';
 import { MergedInbox } from '../src/features/messaging/messaging-inbox';
 import { useMessaging } from '../src/features/messaging/messaging-provider';
+import { MyProfile } from '../src/features/profile/my-profile';
 
 export default function DiscoverRoute() {
   return isClerkConfigured && apiBaseUrl !== null ? (
@@ -28,6 +31,13 @@ function ConfiguredDiscoveryRoute({ apiUrl }: { apiUrl: string }) {
   const [status, setStatus] = useState<'loading' | 'onboarding' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const loadReview = useCallback(
+    () => loadProfileReview({ apiBaseUrl: apiUrl, getToken }),
+    [apiUrl, getToken],
+  );
+  // Coming back from an edit sheet refocuses this screen; show what was just saved.
+  const [profileVisit, setProfileVisit] = useState(0);
+  useFocusEffect(useCallback(() => setProfileVisit((visit) => visit + 1), []));
   const actions = useMemo(
     () => createDiscoveryApi({ apiBaseUrl: apiUrl, getToken }),
     [apiUrl, getToken],
@@ -59,8 +69,15 @@ function ConfiguredDiscoveryRoute({ apiUrl }: { apiUrl: string }) {
     return (
       <DiscoveryScreen
         actions={actions}
-        onOpenProfile={() => router.push('/onboarding')}
-        selectedTab={tab === 'merged' || tab === 'requests' ? tab : 'discover'}
+        profile={
+          <MyProfile
+            loadProfileReview={loadReview}
+            reloadKey={profileVisit}
+            onEdit={(field) => router.push({ pathname: '/profile-edit', params: { field } })}
+            onFinishSetup={() => router.push('/onboarding')}
+          />
+        }
+        selectedTab={isDiscoveryTab(tab) ? tab : 'discover'}
         onTabChange={(value) => router.setParams({ tab: value })}
         onMerged={(id) => runtime?.hint(id)}
         mergedInbox={

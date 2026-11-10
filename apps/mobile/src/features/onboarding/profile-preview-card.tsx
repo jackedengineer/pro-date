@@ -4,6 +4,7 @@ import {
   type RelationshipIntent,
 } from '@pro-date/contracts';
 import { Image } from 'expo-image';
+import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Pencil from 'lucide-react-native/icons/pencil';
 import { useState } from 'react';
 import { useReducedMotionPreference } from '../../theme/motion';
@@ -33,7 +34,7 @@ const intentLabels: Record<RelationshipIntent, string> = {
   SHORT_TERM_OPEN_TO_LONG: 'Short-term, open to long',
 };
 
-function calculateAge(birthDate: string): number {
+export function calculateAge(birthDate: string): number {
   const today = new Date();
   const [year, month, day] = birthDate.split('-').map(Number);
   let age = today.getFullYear() - (year ?? today.getFullYear());
@@ -46,23 +47,59 @@ function calculateAge(birthDate: string): number {
   return age;
 }
 
-function EditButton({ label, onPress }: { label: string; onPress: () => void }) {
+/** One editable fact: what it is, what it says now, and a tap to change it. */
+function EditRow({
+  label,
+  value,
+  note,
+  editLabel,
+  onPress,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  note?: string | undefined;
+  editLabel: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
   return (
     <Pressable
-      accessibilityLabel={`Edit ${label.toLowerCase()}`}
+      accessibilityLabel={`Edit ${editLabel}`}
+      accessibilityHint={`${label}: ${value}`}
       accessibilityRole="button"
-      hitSlop={4}
       onPress={onPress}
-      style={({ pressed }) => [styles.editButton, pressed && styles.editButtonPressed]}
+      style={({ pressed }) => [styles.row, !last && styles.rowDivider, pressed && styles.pressed]}
     >
-      <Pencil size={14} color={colors.plum} />
-      <AppText style={styles.editText} variant="caption">
-        {label}
-      </AppText>
+      <View style={styles.rowText}>
+        <AppText variant="caption">{label}</AppText>
+        <AppText variant="headline">{value}</AppText>
+        {note === undefined ? null : (
+          <AppText style={styles.rowNote} variant="caption">
+            {note}
+          </AppText>
+        )}
+      </View>
+      <ChevronRight color={colors.muted} size={20} strokeWidth={1.8} />
     </Pressable>
   );
 }
 
+function EditBadge() {
+  return (
+    <View style={styles.editBadge}>
+      <Pencil size={14} color={colors.plum} />
+      <AppText style={styles.editBadgeText} variant="caption">
+        Edit
+      </AppText>
+    </View>
+  );
+}
+
+/**
+ * The member's profile as a set of things they can change. Every part is its own target: tap
+ * the photos, a detail or the answers to edit that part.
+ */
 export function ProfilePreviewCard({
   onEditBirthday,
   onEditIdentity,
@@ -77,10 +114,18 @@ export function ProfilePreviewCard({
   const reducedMotion = useReducedMotionPreference();
   const { width: viewportWidth } = useWindowDimensions();
   const [galleryWidth, setGalleryWidth] = useState<number | null>(null);
-  const availableWidth = galleryWidth ?? viewportWidth - spacing.lg * 2 - 2;
-  const thumbnailWidth = Math.max(0, (availableWidth - spacing.md * 2 - spacing.sm) / 2);
+  const availableWidth = galleryWidth ?? viewportWidth - spacing.lg * 2;
+  const thumbnailWidth = Math.max(0, (availableWidth - spacing.sm) / 2);
   const { profile } = review;
   const leadPhoto = review.photos[0];
+  const identity = [profile.genderIdentity, profile.pronouns].filter(
+    (detail): detail is string => detail !== null,
+  );
+  const hiddenIdentity = [
+    profile.genderIdentity !== null && !profile.isGenderVisible ? 'gender' : null,
+    profile.pronouns !== null && !profile.arePronounsVisible ? 'pronouns' : null,
+  ].filter((detail): detail is string => detail !== null);
+
   const visibleDetails = [
     profile.isGenderVisible ? profile.genderIdentity : null,
     profile.arePronounsVisible ? profile.pronouns : null,
@@ -89,38 +134,13 @@ export function ProfilePreviewCard({
 
   return (
     <View style={styles.card}>
-      {leadPhoto === undefined ? null : (
-        <View style={styles.leadPhotoFrame}>
-          <Image
-            accessibilityIgnoresInvertColors
-            accessibilityLabel="Lead profile photo preview"
-            cachePolicy="memory-disk"
-            contentFit="cover"
-            contentPosition="center"
-            source={{ uri: leadPhoto.deliveryUrl }}
-            style={StyleSheet.absoluteFill}
-            testID="review-lead-photo"
-            transition={reducedMotion ? 0 : 180}
-          />
-        </View>
-      )}
-      <View style={styles.photoTitle}>
-        <AppText style={styles.name} variant="title">
-          {profile.displayName},{' '}
+      {/* What other people see first: the name, the age, and only the details left visible. */}
+      <View style={styles.summary}>
+        <AppText variant="display">
+          {profile.displayName ?? 'You'},{' '}
           {profile.birthDate === null ? '—' : calculateAge(profile.birthDate)}
         </AppText>
-        {profile.locationLabel === null ? null : (
-          <AppText style={styles.location}>{profile.locationLabel}</AppText>
-        )}
-      </View>
-      <View style={styles.editRow}>
-        <EditButton label="Name" onPress={onEditName} />
-        <EditButton label="Birthday" onPress={onEditBirthday} />
-        <EditButton label="Location" onPress={onEditLocation} />
-      </View>
-
-      {visibleDetails.length === 0 ? null : (
-        <View style={styles.detailRow}>
+        <View style={styles.detailRow} testID="review-visible-details">
           {visibleDetails.map((detail) => (
             <View key={detail} style={styles.detailPill}>
               <AppText style={styles.detailText} variant="caption">
@@ -129,150 +149,204 @@ export function ProfilePreviewCard({
             </View>
           ))}
         </View>
-      )}
-      <View style={styles.editRow}>
-        <EditButton label="Identity" onPress={onEditIdentity} />
-        <EditButton label="Height" onPress={onEditHeight} />
-      </View>
-
-      {profile.relationshipIntent === null ? null : (
-        <View style={styles.intentCard}>
-          <AppText variant="eyebrow">Looking for</AppText>
-          <AppText variant="headline">{intentLabels[profile.relationshipIntent]}</AppText>
-        </View>
-      )}
-      <View style={styles.editRow}>
-        <EditButton label="Preferences" onPress={onEditPreferences} />
       </View>
 
       <View style={styles.sectionHeader}>
-        <AppText variant="button">Conversation starters</AppText>
-        <EditButton label="Prompts" onPress={onEditPrompts} />
+        <AppText variant="headline">Your photos</AppText>
+        <AppText variant="caption">{review.photos.length} of 6</AppText>
       </View>
-
-      {review.prompts.map((answer) => {
-        const prompt = PROFILE_PROMPT_CATALOGUE.find((item) => item.id === answer.promptId);
-
-        return (
-          <View key={answer.id} style={styles.promptCard}>
-            <AppText style={styles.promptQuestion} variant="caption">
-              {prompt?.text}
-            </AppText>
-            <AppText style={styles.promptAnswer}>{answer.answer}</AppText>
-          </View>
-        );
-      })}
-
-      <View style={styles.sectionHeader}>
-        <AppText variant="button">Your photos</AppText>
-        <EditButton label="Photos" onPress={onEditPhotos} />
-      </View>
-      <View
-        onLayout={(event) => setGalleryWidth(event.nativeEvent.layout.width)}
-        style={styles.photoStrip}
-        testID="review-photo-gallery"
+      <Pressable
+        accessibilityLabel="Edit photos"
+        accessibilityRole="button"
+        onPress={onEditPhotos}
+        style={({ pressed }) => [styles.photos, pressed && styles.dimmed]}
       >
-        {review.photos.slice(1).map((photo, index) => (
-          <View
-            key={photo.id}
-            style={[styles.thumbnail, { width: thumbnailWidth, height: thumbnailWidth * 1.25 }]}
-            testID={`review-photo-frame-${index + 1}`}
-          >
+        {leadPhoto === undefined ? (
+          <View style={[styles.leadPhotoFrame, styles.emptyPhoto]}>
+            <AppText style={styles.muted}>Add your photos</AppText>
+          </View>
+        ) : (
+          <View style={styles.leadPhotoFrame}>
             <Image
               accessibilityIgnoresInvertColors
-              accessibilityLabel={`Profile photo ${index + 2} preview`}
+              accessibilityLabel="Lead profile photo preview"
               cachePolicy="memory-disk"
               contentFit="cover"
               contentPosition="center"
-              source={{ uri: photo.deliveryUrl }}
+              source={{ uri: leadPhoto.deliveryUrl }}
               style={StyleSheet.absoluteFill}
+              testID="review-lead-photo"
               transition={reducedMotion ? 0 : 180}
             />
+            <EditBadge />
           </View>
-        ))}
+        )}
+        <View
+          onLayout={(event) => setGalleryWidth(event.nativeEvent.layout.width)}
+          style={styles.photoStrip}
+          testID="review-photo-gallery"
+        >
+          {review.photos.slice(1).map((photo, index) => (
+            <View
+              key={photo.id}
+              style={[styles.thumbnail, { width: thumbnailWidth, height: thumbnailWidth * 1.25 }]}
+              testID={`review-photo-frame-${index + 1}`}
+            >
+              <Image
+                accessibilityIgnoresInvertColors
+                accessibilityLabel={`Profile photo ${index + 2} preview`}
+                cachePolicy="memory-disk"
+                contentFit="cover"
+                contentPosition="center"
+                source={{ uri: photo.deliveryUrl }}
+                style={StyleSheet.absoluteFill}
+                transition={reducedMotion ? 0 : 180}
+              />
+            </View>
+          ))}
+        </View>
+      </Pressable>
+
+      <View style={styles.sectionHeader}>
+        <AppText variant="headline">About you</AppText>
       </View>
+      <View style={styles.rows}>
+        <EditRow
+          label="Name"
+          value={profile.displayName ?? 'Add your name'}
+          editLabel="name"
+          onPress={onEditName}
+        />
+        <EditRow
+          label="Age"
+          value={
+            profile.birthDate === null
+              ? 'Add your birthday'
+              : calculateAge(profile.birthDate).toString()
+          }
+          note="Your birthday itself stays private."
+          editLabel="birthday"
+          onPress={onEditBirthday}
+        />
+        <EditRow
+          label="Location"
+          value={profile.locationLabel ?? 'Add your location'}
+          note="Your exact location stays private."
+          editLabel="location"
+          onPress={onEditLocation}
+        />
+        <EditRow
+          label="Gender and pronouns"
+          value={identity.length === 0 ? 'Add how you identify' : identity.join(' · ')}
+          note={
+            hiddenIdentity.length === 0
+              ? undefined
+              : `Your ${hiddenIdentity.join(' and ')} ${hiddenIdentity.length === 1 ? 'is' : 'are'} hidden on your profile.`
+          }
+          editLabel="identity"
+          onPress={onEditIdentity}
+        />
+        <EditRow
+          label="Height"
+          value={profile.heightCm === null ? 'Add your height' : `${profile.heightCm} cm`}
+          note={
+            profile.heightCm !== null && !profile.isHeightVisible
+              ? 'Hidden on your profile.'
+              : undefined
+          }
+          editLabel="height"
+          onPress={onEditHeight}
+        />
+        <EditRow
+          label="Looking for"
+          value={
+            profile.relationshipIntent === null
+              ? 'Add what you’re looking for'
+              : intentLabels[profile.relationshipIntent]
+          }
+          editLabel="preferences"
+          onPress={onEditPreferences}
+          last
+        />
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <AppText variant="headline">Conversation starters</AppText>
+        <View style={styles.editHint}>
+          <Pencil size={14} color={colors.plum} />
+          <AppText style={styles.editBadgeText} variant="caption">
+            Edit
+          </AppText>
+        </View>
+      </View>
+      <Pressable
+        accessibilityLabel="Edit prompts"
+        accessibilityRole="button"
+        onPress={onEditPrompts}
+        style={({ pressed }) => [styles.prompts, pressed && styles.dimmed]}
+      >
+        {review.prompts.length === 0 ? (
+          <View style={styles.promptCard}>
+            <AppText style={styles.muted}>Add three answers people can reply to</AppText>
+          </View>
+        ) : (
+          review.prompts.map((answer) => {
+            const prompt = PROFILE_PROMPT_CATALOGUE.find((item) => item.id === answer.promptId);
+
+            return (
+              <View key={answer.id} style={styles.promptCard}>
+                <AppText style={styles.promptQuestion} variant="caption">
+                  {prompt?.text}
+                </AppText>
+                <AppText style={styles.promptAnswer}>{answer.answer}</AppText>
+              </View>
+            );
+          })
+        )}
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    gap: spacing.md,
-    overflow: 'hidden',
-    paddingBottom: spacing.lg,
-  },
+  card: { gap: spacing.sm },
   detailPill: {
     backgroundColor: colors.sand,
     borderRadius: radii.pill,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  detailRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  detailText: {
-    color: colors.ink,
-  },
-  editButton: {
+  detailRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  detailText: { color: colors.ink },
+  summary: { gap: spacing.sm },
+  dimmed: { opacity: 0.85 },
+  editBadge: {
     alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
     flexDirection: 'row',
     gap: 6,
-    borderRadius: radii.sm,
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    position: 'absolute',
+    right: spacing.md,
+    top: spacing.md,
   },
-  editButtonPressed: {
-    backgroundColor: colors.plumSoft,
-  },
-  editRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  editText: {
-    color: colors.plum,
-    fontFamily: typography.family.medium,
-  },
-  intentCard: {
-    backgroundColor: colors.sand,
-    borderRadius: radii.md,
-    gap: spacing.xs,
-    marginHorizontal: spacing.md,
-    padding: spacing.md,
-  },
+  editBadgeText: { color: colors.plum, fontFamily: typography.family.medium },
+  editHint: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  emptyPhoto: { alignItems: 'center', justifyContent: 'center' },
   leadPhotoFrame: {
-    aspectRatio: 4 / 5,
-    backgroundColor: colors.plumSoft,
-    justifyContent: 'flex-end',
+    aspectRatio: 0.8,
+    backgroundColor: colors.sand,
+    borderCurve: 'continuous',
+    borderRadius: radii.lg,
     overflow: 'hidden',
-    position: 'relative',
     width: '100%',
   },
-  location: {
-    color: colors.muted,
-  },
-  name: {
-    color: colors.ink,
-  },
-  photoStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  photoTitle: {
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-  },
+  muted: { color: colors.muted },
+  photoStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  photos: { gap: spacing.sm },
+  pressed: { backgroundColor: colors.sand },
   promptAnswer: {
     fontFamily: typography.family.serif,
     fontSize: typography.size.quote,
@@ -286,24 +360,39 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: hairline,
     gap: spacing.sm,
-    marginHorizontal: spacing.md,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
-  promptQuestion: {
-    fontFamily: typography.family.medium,
+  promptQuestion: { fontFamily: typography.family.medium },
+  prompts: { gap: spacing.sm },
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    minHeight: 64,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
   },
-  thumbnail: {
-    backgroundColor: colors.plumSoft,
-    borderRadius: radii.sm,
+  rowDivider: { borderBottomColor: colors.border, borderBottomWidth: hairline },
+  rowNote: { marginTop: 2 },
+  rowText: { flex: 1, gap: 2 },
+  rows: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderCurve: 'continuous',
+    borderRadius: radii.lg,
+    borderWidth: hairline,
     overflow: 'hidden',
-    position: 'relative',
   },
   sectionHeader: {
+    alignItems: 'baseline',
     flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  thumbnail: {
+    backgroundColor: colors.sand,
+    borderCurve: 'continuous',
+    borderRadius: radii.md,
+    overflow: 'hidden',
   },
 });

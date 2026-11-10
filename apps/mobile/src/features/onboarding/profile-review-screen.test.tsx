@@ -1,5 +1,5 @@
 import type { ProfileReview } from '@pro-date/contracts';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
 
 import { ProfileReviewScreen } from './profile-review-screen';
 
@@ -122,9 +122,14 @@ describe('ProfileReviewScreen', () => {
     );
 
     await view.findByText(/Avery,/);
-    expect(view.queryByText('Non-binary')).toBeNull();
-    expect(view.queryByText('they/them')).toBeNull();
-    expect(view.queryByText('173 cm')).toBeNull();
+    // What other people see carries none of the hidden details…
+    const visible = within(view.getByTestId('review-visible-details'));
+    expect(visible.queryByText('Non-binary')).toBeNull();
+    expect(visible.queryByText('they/them')).toBeNull();
+    expect(visible.queryByText('173 cm')).toBeNull();
+    // …while the member can still see and change them, labelled as hidden.
+    expect(view.getByText('Your gender and pronouns are hidden on your profile.')).toBeTruthy();
+    expect(view.getByText('Hidden on your profile.')).toBeTruthy();
   });
 
   it.each([4, 6])(
@@ -153,8 +158,8 @@ describe('ProfileReviewScreen', () => {
       });
       for (const [index, photo] of photos.slice(1).entries()) {
         expect(view.getByTestId(`review-photo-frame-${index + 1}`)).toHaveStyle({
-          width: 124,
-          height: 155,
+          width: 140,
+          height: 175,
         });
         expect(view.getByLabelText(`Profile photo ${index + 2} preview`)).toHaveProp('source', [
           {
@@ -171,7 +176,7 @@ describe('ProfileReviewScreen', () => {
       await fireEvent(view.getByTestId('review-photo-gallery'), 'layout', {
         nativeEvent: { layout: { width: 248, height: 0, x: 0, y: 0 } },
       });
-      expect(view.getByTestId('review-photo-frame-1')).toHaveStyle({ width: 104, height: 130 });
+      expect(view.getByTestId('review-photo-frame-1')).toHaveStyle({ width: 120, height: 150 });
     },
   );
 

@@ -82,7 +82,10 @@ function AppStack() {
         contentStyle: styles.root,
         headerShown: false,
       }}
-    />
+    >
+      {/* Editing one part of a profile is a detour, so it rises as a sheet and is dismissed. */}
+      <Stack.Screen name="profile-edit" options={{ presentation: 'modal' }} />
+    </Stack>
   );
 }
 
