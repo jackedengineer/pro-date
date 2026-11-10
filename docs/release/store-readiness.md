@@ -30,17 +30,17 @@ items land. Last reviewed 10 November 2026.
 
 ## Google Play
 
-| Item                         | Status         | Notes                                                                                     |
-| ---------------------------- | -------------- | ----------------------------------------------------------------------------------------- |
-| Developer account            | Done           | Personal account `jackedengineer`, which already has Portl in closed testing              |
-| Trader status declaration    | Owner          | Due by February 2027. A legal declaration only the account owner can make                 |
-| Create the app               | Owner approval | Needs two declarations: Developer Programme Policies and US export laws                   |
-| Closed test                  | Not started    | Personal accounts need 12 testers opted in for 14 days before production access           |
-| Store listing                | Not started    | Name, short and full description, 512px icon, 1024x500 feature graphic, phone screenshots |
-| Content rating questionnaire | Owner          | Answers are a declaration about the app's content                                         |
-| Data safety form             | Owner approval | I can draft answers from the code; the owner confirms them                                |
-| Target audience and ads      | Owner          | 18+, no ads                                                                               |
-| Service account for uploads  | Not started    | Lets `eas submit` upload builds. Optional; the first upload can be manual                 |
+| Item                         | Status         | Notes                                                                                                                          |
+| ---------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Developer account            | Done           | Personal account `jackedengineer`, which already has Portl in closed testing                                                   |
+| Trader status declaration    | Owner          | Due by February 2027. A legal declaration only the account owner can make                                                      |
+| Create the app               | Done           | Merge, `dev.jacked.merge`, free app, English (UK). Created 10 November 2026 with the owner's confirmation of both declarations |
+| Closed test                  | Not started    | Personal accounts need 12 testers opted in for 14 days before production access                                                |
+| Store listing                | Not started    | Name, short and full description, 512px icon, 1024x500 feature graphic, phone screenshots                                      |
+| Content rating questionnaire | Owner          | Answers are a declaration about the app's content                                                                              |
+| Data safety form             | Owner approval | I can draft answers from the code; the owner confirms them                                                                     |
+| Target audience and ads      | Owner          | 18+, no ads                                                                                                                    |
+| Service account for uploads  | Not started    | Lets `eas submit` upload builds. Optional; the first upload can be manual                                                      |
 
 ## App Store
 
