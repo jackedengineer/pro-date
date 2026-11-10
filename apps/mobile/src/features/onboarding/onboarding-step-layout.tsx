@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BackIcon } from '../../components/back-icon';
 import { FormScrollView } from '../../components/form-scroll-view';
 import { IconButton } from '../../components/icon-button';
 
 import { Screen } from '../../components/screen';
 import { spacing } from '../../theme/tokens';
 import { SignOutIconButton } from '../account/account-actions';
+import { useOnboardingMode, useStepBack } from './onboarding-mode';
 import { OnboardingProgress } from './onboarding-progress';
 
 interface OnboardingStepLayoutProps {
@@ -22,17 +22,19 @@ export function OnboardingStepLayout({
   footer,
   onBack,
 }: OnboardingStepLayoutProps) {
+  const editing = useOnboardingMode() === 'edit';
+  const back = useStepBack('Go to previous profile step');
   return (
     <Screen style={styles.screen}>
       <FormScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           {onBack === undefined ? null : (
-            <IconButton label="Go to previous profile step" icon={BackIcon} onPress={onBack} />
+            <IconButton label={back.label} icon={back.icon} onPress={onBack} />
           )}
           <View style={styles.progress}>
             <OnboardingProgress current={current} total={9} />
           </View>
-          <SignOutIconButton />
+          {editing ? null : <SignOutIconButton />}
         </View>
 
         <View style={styles.content}>{children}</View>

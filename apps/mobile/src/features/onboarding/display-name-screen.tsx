@@ -1,7 +1,6 @@
 import { displayNameSchema } from '@pro-date/contracts';
 import { useState } from 'react';
 import { Keyboard, TextInput, View } from 'react-native';
-import { BackIcon } from '../../components/back-icon';
 import { FormScrollView } from '../../components/form-scroll-view';
 import { IconButton } from '../../components/icon-button';
 
@@ -10,6 +9,7 @@ import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
 import { colors } from '../../theme/tokens';
 import { styles } from './display-name-screen.styles';
+import { useStepAction, useStepBack } from './onboarding-mode';
 import { OnboardingProgress } from './onboarding-progress';
 
 interface DisplayNameScreenProps {
@@ -19,6 +19,8 @@ interface DisplayNameScreenProps {
 }
 
 export function DisplayNameScreen({ initialValue, onBack, onSave }: DisplayNameScreenProps) {
+  const action = useStepAction('Save and continue');
+  const back = useStepBack('Back to profile introduction');
   const [displayName, setDisplayName] = useState(initialValue ?? '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -52,14 +54,20 @@ export function DisplayNameScreen({ initialValue, onBack, onSave }: DisplayNameS
 
   return (
     <Screen style={styles.screen}>
-      <FormScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <IconButton
-            label="Back to profile introduction"
-            icon={BackIcon}
-            onPress={onBack}
-            disabled={isSaving}
+      <FormScrollView
+        contentContainerStyle={styles.scrollContent}
+        footer={
+          <AppButton
+            accessibilityLabel={isSaving ? 'Saving name' : action.accessibilityLabel}
+            disabled={displayName.trim().length === 0 || isSaving}
+            label={isSaving ? 'Saving…' : action.label}
+            loading={isSaving}
+            onPress={() => void save()}
           />
+        }
+      >
+        <View style={styles.header}>
+          <IconButton label={back.label} icon={back.icon} onPress={onBack} disabled={isSaving} />
           <View style={styles.progress}>
             <OnboardingProgress current={1} total={9} />
           </View>
@@ -114,19 +122,6 @@ export function DisplayNameScreen({ initialValue, onBack, onSave }: DisplayNameS
               </View>
             )}
           </View>
-        </View>
-
-        <View style={styles.footer}>
-          <AppText style={styles.autosaveText} variant="caption">
-            Saved when you continue
-          </AppText>
-          <AppButton
-            accessibilityLabel={isSaving ? 'Saving name' : 'Save and continue'}
-            disabled={displayName.trim().length === 0 || isSaving}
-            label={isSaving ? 'Saving…' : 'Save & continue'}
-            loading={isSaving}
-            onPress={() => void save()}
-          />
         </View>
       </FormScrollView>
     </Screen>

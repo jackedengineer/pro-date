@@ -30,7 +30,10 @@ export interface ProfileOnboardingFlowProps {
   captureLocation: () => Promise<LocationUpdate>;
   completePhotos: (photoIds: string[]) => Promise<CompletedProfilePhotos>;
   completePrompts: (prompts: ProfilePromptAnswerInput[]) => Promise<CompletedProfilePrompts>;
-  initialUser: CurrentUser;
+  /** Where setup resumes. Omitted when a single step is opened for editing. */
+  initialUser?: CurrentUser;
+  /** Opens one step on its own, pre-filled, and reports when the member is finished with it. */
+  edit?: { step: EditableStep; profile: ProfileCheckpoint; onDone: () => void };
   loadPhotos: () => Promise<ProfilePhoto[]>;
   loadProfileReview: () => Promise<ProfileReview>;
   loadPrompts: () => Promise<ProfilePromptAnswer[]>;
@@ -57,6 +60,17 @@ type VisibleStep =
   | 'prompts'
   | 'preferences'
   | 'review';
+export type EditableStep = Exclude<VisibleStep, 'intro' | 'review'>;
+export const EDITABLE_STEPS: readonly EditableStep[] = [
+  'name',
+  'birthday',
+  'identity',
+  'preferences',
+  'location',
+  'height',
+  'photos',
+  'prompts',
+];
 
 function getInitialVisibleStep(user: CurrentUser): VisibleStep {
   if (user.onboardingStatus === 'NOT_STARTED') {
@@ -89,6 +103,7 @@ export function ProfileOnboardingFlow({
   completePhotos,
   completePrompts,
   initialUser,
+  edit,
   loadPhotos,
   loadProfileReview,
   loadPrompts,
@@ -103,12 +118,16 @@ export function ProfileOnboardingFlow({
   savePreferences,
   uploadPhoto,
 }: ProfileOnboardingFlowProps) {
-  const [profile, setProfile] = useState<ProfileCheckpoint>();
-  const [isEditingFromReview, setIsEditingFromReview] = useState(false);
-  const [visibleStep, setVisibleStep] = useState<VisibleStep>(() =>
-    getInitialVisibleStep(initialUser),
+  const [profile, setProfile] = useState<ProfileCheckpoint | undefined>(edit?.profile);
+  const [isEditingFromReview, setIsEditingFromReview] = useState(edit !== undefined);
+  const [visibleStep, setVisibleStep] = useState<VisibleStep>(
+    () => edit?.step ?? (initialUser === undefined ? 'intro' : getInitialVisibleStep(initialUser)),
   );
   const completeStep = (nextStep: VisibleStep) => {
+    if (edit !== undefined) {
+      edit.onDone();
+      return;
+    }
     if (isEditingFromReview) {
       setIsEditingFromReview(false);
       setVisibleStep('review');
@@ -118,6 +137,10 @@ export function ProfileOnboardingFlow({
     setVisibleStep(nextStep);
   };
   const backFromEdit = (fallback: VisibleStep) => () => {
+    if (edit !== undefined) {
+      edit.onDone();
+      return;
+    }
     if (isEditingFromReview) {
       setIsEditingFromReview(false);
       setVisibleStep('review');
@@ -300,8 +323,7 @@ export function ProfileOnboardingFlow({
       <ProfilePromptsScreen
         completePrompts={async (prompts) => {
           await completePrompts(prompts);
-          setIsEditingFromReview(false);
-          setVisibleStep('review');
+          completeStep('review');
         }}
         loadPrompts={loadPrompts}
         onBack={isEditingFromReview ? backFromEdit('photos') : () => setVisibleStep('photos')}

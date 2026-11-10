@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
 import { colors, radii, spacing } from '../../theme/tokens';
+import { useStepAction } from './onboarding-mode';
 
 interface ProfileStepFooterProps {
   accessibilityLabel: string;
@@ -19,6 +20,7 @@ export function ProfileStepFooter({
   isSaving,
   onPress,
 }: ProfileStepFooterProps) {
+  const action = useStepAction(accessibilityLabel);
   return (
     <>
       {errorMessage === null ? null : (
@@ -26,13 +28,10 @@ export function ProfileStepFooter({
           <AppText style={styles.errorText}>{errorMessage}</AppText>
         </View>
       )}
-      <AppText style={styles.syncText} variant="caption">
-        Saved when you continue
-      </AppText>
       <AppButton
-        accessibilityLabel={isSaving ? 'Saving profile details' : accessibilityLabel}
+        accessibilityLabel={isSaving ? 'Saving profile details' : action.accessibilityLabel}
         disabled={disabled || isSaving}
-        label={isSaving ? 'Saving…' : 'Save & continue'}
+        label={isSaving ? 'Saving…' : action.label}
         loading={isSaving}
         onPress={onPress}
       />
@@ -48,8 +47,5 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.danger,
-  },
-  syncText: {
-    textAlign: 'center',
   },
 });

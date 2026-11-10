@@ -1,7 +1,6 @@
 import { DateTimePicker as ExpoDateTimePicker } from '@expo/ui/community/datetime-picker';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
-import { BackIcon } from '../../components/back-icon';
 import { IconButton } from '../../components/icon-button';
 
 import { AppButton } from '../../components/app-button';
@@ -9,6 +8,7 @@ import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
 import { colors } from '../../theme/tokens';
 import { styles } from './birthday-screen.styles';
+import { useStepAction, useStepBack } from './onboarding-mode';
 import { OnboardingProgress } from './onboarding-progress';
 
 interface BirthdayScreenProps {
@@ -57,6 +57,8 @@ export function BirthdayScreen({
   onSave,
   today = new Date(),
 }: BirthdayScreenProps) {
+  const action = useStepAction('Save birthday and continue');
+  const back = useStepBack('Back to name');
   const [birthDate, setBirthDate] = useState(() =>
     initialValue === undefined ? subtractCalendarYears(today, 25) : fromCalendarDate(initialValue),
   );
@@ -92,7 +94,7 @@ export function BirthdayScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           {onBack === undefined ? null : (
-            <IconButton label="Back to name" icon={BackIcon} onPress={onBack} disabled={isSaving} />
+            <IconButton label={back.label} icon={back.icon} onPress={onBack} disabled={isSaving} />
           )}
           <View style={styles.progress}>
             <OnboardingProgress current={2} total={9} />
@@ -173,13 +175,10 @@ export function BirthdayScreen({
         </View>
 
         <View style={styles.footer}>
-          <AppText style={styles.supportingText} variant="caption">
-            Saved when you continue
-          </AppText>
           <AppButton
-            accessibilityLabel={isSaving ? 'Saving birthday' : 'Save birthday and continue'}
+            accessibilityLabel={isSaving ? 'Saving birthday' : action.accessibilityLabel}
             disabled={!hasSelectedDate || isSaving}
-            label={isSaving ? 'Saving…' : 'Save & continue'}
+            label={isSaving ? 'Saving…' : action.label}
             loading={isSaving}
             onPress={() => void save()}
           />
