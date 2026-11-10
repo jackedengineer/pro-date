@@ -1,7 +1,7 @@
 import { displayNameSchema } from '@pro-date/contracts';
 import { useState } from 'react';
 import { Keyboard, TextInput, View } from 'react-native';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { BackIcon } from '../../components/back-icon';
 import { FormScrollView } from '../../components/form-scroll-view';
 import { IconButton } from '../../components/icon-button';
 
@@ -56,7 +56,7 @@ export function DisplayNameScreen({ initialValue, onBack, onSave }: DisplayNameS
         <View style={styles.header}>
           <IconButton
             label="Back to profile introduction"
-            icon={ArrowLeft}
+            icon={BackIcon}
             onPress={onBack}
             disabled={isSaving}
           />

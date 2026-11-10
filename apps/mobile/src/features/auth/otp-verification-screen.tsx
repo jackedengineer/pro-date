@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { BackIcon } from '../../components/back-icon';
 import { FormScrollView } from '../../components/form-scroll-view';
 import { IconButton } from '../../components/icon-button';
 import { TextField } from '../../components/text-field';
@@ -54,7 +54,7 @@ export function OtpVerificationScreen({
       <FormScrollView>
         <IconButton
           label={changeDestinationAccessibilityLabel}
-          icon={ArrowLeft}
+          icon={BackIcon}
           onPress={onBack}
           style={{ alignSelf: 'flex-start' }}
         />

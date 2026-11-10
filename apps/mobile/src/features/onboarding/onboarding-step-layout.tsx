@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { BackIcon } from '../../components/back-icon';
 import { FormScrollView } from '../../components/form-scroll-view';
 import { IconButton } from '../../components/icon-button';
 
@@ -27,7 +27,7 @@ export function OnboardingStepLayout({
       <FormScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           {onBack === undefined ? null : (
-            <IconButton label="Go to previous profile step" icon={ArrowLeft} onPress={onBack} />
+            <IconButton label="Go to previous profile step" icon={BackIcon} onPress={onBack} />
           )}
           <View style={styles.progress}>
             <OnboardingProgress current={current} total={9} />

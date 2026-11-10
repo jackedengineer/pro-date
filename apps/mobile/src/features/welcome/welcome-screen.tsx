@@ -1,10 +1,12 @@
 import { type ImageRequireSource, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
+import Heart from 'lucide-react-native/icons/heart';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
+import { Reveal } from '../../components/reveal';
 import { Screen } from '../../components/screen';
-import { colors, radii, spacing } from '../../theme/tokens';
+import { cardShadow, colors, hairline, radii, spacing } from '../../theme/tokens';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -14,7 +16,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+        <Reveal style={styles.header}>
           <View style={styles.brandMark}>
             <Image
               accessibilityElementsHidden
@@ -24,89 +26,73 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
               style={styles.brandImage}
             />
           </View>
-          <AppText style={styles.wordmark} variant="button">
+          <AppText style={styles.wordmark} variant="title" accessibilityRole="text">
             Merge
           </AppText>
-        </View>
+        </Reveal>
 
-        <View
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={styles.art}
-        >
-          <View style={styles.orbitLarge} />
-          <View style={styles.orbitSmall} />
-          <View style={styles.promptCard}>
-            <AppText variant="eyebrow">Beyond the bio</AppText>
-            <AppText style={styles.prompt} variant="title">
-              A perfect Sunday looks like…
-            </AppText>
-            <View style={styles.answerPill}>
-              <View style={styles.answerDot} />
-              <AppText style={styles.answer} variant="caption">
-                Long walks + excellent coffee
+        {/* The whole product in one picture: a line someone wrote, and a like on it. */}
+        <Reveal order={1} style={styles.art}>
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={styles.artInner}
+          >
+            <View style={[styles.promptCard, styles.promptCardBehind]} />
+            <View style={styles.promptCard}>
+              <AppText variant="caption" style={styles.question}>
+                A perfect Sunday looks like…
               </AppText>
+              <AppText variant="quote" style={styles.prompt}>
+                Long walks, then excellent coffee.
+              </AppText>
+              <View style={styles.like}>
+                <Heart size={22} color={colors.coral} strokeWidth={2} />
+              </View>
             </View>
           </View>
-        </View>
+        </Reveal>
 
-        <View style={styles.content}>
+        <Reveal order={2} style={styles.content}>
           <AppText variant="hero">Meet people, not profiles.</AppText>
           <AppText style={styles.subtitle}>Thoughtful prompts. Real conversation.</AppText>
           <AppText style={styles.subtitle}>
-            For curious minds with a life beyond their tabs.
+            Like a line someone wrote and send a pull request. If they like you back, you’re merged.
           </AppText>
-        </View>
-        <View style={styles.footer}>
+        </Reveal>
+
+        <Reveal order={3} style={styles.footer}>
           <AppButton label="Get started" onPress={onGetStarted} />
           <AppText style={styles.terms} variant="caption">
             By continuing, you confirm you are 18 or older.
           </AppText>
-        </View>
+        </Reveal>
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  answer: {
-    color: colors.ink,
-    flexShrink: 1,
-  },
-  answerDot: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.pill,
-    height: 8,
-    width: 8,
-  },
-  answerPill: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: colors.sand,
-    borderRadius: radii.pill,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
   art: {
-    justifyContent: 'center',
-    minHeight: 240,
     marginTop: spacing.md,
-    position: 'relative',
+  },
+  artInner: {
+    justifyContent: 'center',
+    minHeight: 220,
+    paddingRight: spacing.md,
   },
   brandMark: {
+    alignItems: 'center',
     backgroundColor: colors.plumSoft,
+    borderCurve: 'continuous',
     borderRadius: radii.sm,
     height: 36,
-    width: 36,
-    alignItems: 'center',
     justifyContent: 'center',
+    width: 36,
   },
   brandImage: { width: 36, height: 36 },
   content: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   footer: {
     gap: spacing.md,
@@ -118,35 +104,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  orbitLarge: {
-    backgroundColor: colors.plumSoft,
+  like: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radii.pill,
-    height: 116,
+    borderWidth: hairline,
+    bottom: -spacing.md,
+    height: 48,
+    justifyContent: 'center',
     position: 'absolute',
-    right: 0,
-    top: 8,
-    width: 116,
-  },
-  orbitSmall: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.pill,
-    bottom: 20,
-    height: 38,
-    left: -10,
-    position: 'absolute',
-    width: 38,
+    right: spacing.lg,
+    width: 48,
+    ...cardShadow,
   },
   prompt: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     maxWidth: 260,
   },
   promptCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
+    borderCurve: 'continuous',
     borderRadius: radii.lg,
-    borderWidth: 1,
+    borderWidth: hairline,
     padding: spacing.lg,
-    boxShadow: '0px 6px 16px rgba(90, 46, 79, 0.05)',
+    paddingBottom: spacing.xl,
+    ...cardShadow,
+  },
+  // A second card tucked behind, so the prompt reads as one of several.
+  promptCardBehind: {
+    backgroundColor: colors.sand,
+    bottom: 0,
+    left: spacing.md,
+    position: 'absolute',
+    right: 0,
+    top: spacing.lg,
+    transform: [{ rotate: '3deg' }],
+  },
+  question: {
+    maxWidth: 240,
   },
   screen: {
     flexGrow: 1,
@@ -156,13 +153,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: colors.muted,
-    maxWidth: 310,
+    maxWidth: 330,
   },
   terms: {
     textAlign: 'center',
   },
   wordmark: {
     color: colors.plum,
-    letterSpacing: -0.4,
   },
 });

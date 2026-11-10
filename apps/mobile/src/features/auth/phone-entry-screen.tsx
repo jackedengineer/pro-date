@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { BackIcon } from '../../components/back-icon';
 import { FormScrollView } from '../../components/form-scroll-view';
 import { IconButton } from '../../components/icon-button';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
@@ -50,7 +50,7 @@ export function PhoneEntryScreen({
       <FormScrollView>
         <IconButton
           label="Go back"
-          icon={ArrowLeft}
+          icon={BackIcon}
           onPress={onBack}
           style={{ alignSelf: 'flex-start' }}
         />

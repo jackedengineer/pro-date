@@ -1,7 +1,7 @@
 import { DateTimePicker as ExpoDateTimePicker } from '@expo/ui/community/datetime-picker';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import { BackIcon } from '../../components/back-icon';
 import { IconButton } from '../../components/icon-button';
 
 import { AppButton } from '../../components/app-button';
@@ -92,12 +92,7 @@ export function BirthdayScreen({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           {onBack === undefined ? null : (
-            <IconButton
-              label="Back to name"
-              icon={ArrowLeft}
-              onPress={onBack}
-              disabled={isSaving}
-            />
+            <IconButton label="Back to name" icon={BackIcon} onPress={onBack} disabled={isSaving} />
           )}
           <View style={styles.progress}>
             <OnboardingProgress current={2} total={9} />
