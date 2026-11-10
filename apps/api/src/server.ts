@@ -27,6 +27,7 @@ import {
   createProfilePhotoProvider,
 } from './media/profile-photo-provider.js';
 import { createProfilePhotoService } from './media/profile-photo-service.js';
+import { startOrphanUploadSweeper, sweepOrphanedUploads } from './media/orphan-upload-sweeper.js';
 import { createProfilePromptService } from './profile/profile-prompt-service.js';
 import { createProfilePublicationService } from './profile/profile-publication-service.js';
 
@@ -58,7 +59,10 @@ const photoProvider =
 const profilePhotoService =
   environment.cloudinary === null
     ? undefined
-    : createProfilePhotoService(photoProvider!, profilePhotoRepository);
+    : createProfilePhotoService(photoProvider!, profilePhotoRepository, {
+        onAssetCleanupFailure: (error) =>
+          logger.warn({ error: describeError(error) }, 'Removed photo asset was not deleted'),
+      });
 const profilePublicationService =
   profilePhotoService === undefined
     ? undefined
@@ -71,6 +75,19 @@ const profilePublicationService =
 if (profilePhotoService === undefined) {
   logger.warn('Cloudinary is incomplete; profile photo routes will remain unavailable');
 }
+
+const orphanUploadSweeper =
+  environment.mediaReconcileEnabled && photoProvider !== undefined
+    ? startOrphanUploadSweeper({
+        logger,
+        sweep: () =>
+          sweepOrphanedUploads({
+            listUploads: (cursor) => photoProvider.listUploads(cursor),
+            referencedAssets: (publicIds) => profilePhotoRepository.referencedAssets(publicIds),
+            deleteUpload: (userId, publicId) => photoProvider.deleteUpload(userId, publicId),
+          }),
+      })
+    : null;
 
 const app = createApiApp({
   notificationDevices: {
@@ -179,8 +196,7 @@ function shutdown(signal: NodeJS.Signals) {
   }, 10_000);
   forceExitTimer.unref();
 
-  void messagingRealtime
-    .close()
+  void Promise.all([messagingRealtime.close(), orphanUploadSweeper?.stop()])
     .then(() => pool.end())
     .then(() => {
       clearTimeout(forceExitTimer);

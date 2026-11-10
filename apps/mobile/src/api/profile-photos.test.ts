@@ -6,6 +6,7 @@ import {
   completeProfilePhotos,
   deleteProfilePhoto,
   listProfilePhotos,
+  PHOTO_UPLOAD_TIMEOUT_MS,
   type LocalProfilePhoto,
 } from './profile-photos';
 
@@ -34,6 +35,7 @@ function response(body: unknown, status = 200): Response {
 
 describe('profile photo API', () => {
   const getToken = jest.fn().mockResolvedValue('session-token') as GetSessionToken;
+  const anySignal = expect.any(AbortSignal) as unknown;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,6 +55,7 @@ describe('profile photo API', () => {
         Authorization: 'Bearer session-token',
       },
       method: 'GET',
+      signal: anySignal,
     });
   });
 
@@ -110,11 +113,13 @@ describe('profile photo API', () => {
           Authorization: 'Bearer session-token',
         },
         method: 'POST',
+        signal: anySignal,
       },
     );
     expect(fetchImplementation).toHaveBeenNthCalledWith(2, uploadUrl, {
       body: formData,
       method: 'POST',
+      signal: anySignal,
     });
     expect(appendedFields).toEqual([
       ['file', photoFile, 'profile.jpg'],
@@ -142,8 +147,108 @@ describe('profile photo API', () => {
           'Content-Type': 'application/json',
         },
         method: 'POST',
+        signal: anySignal,
       },
     );
+  });
+
+  it('asks for a fresh session token to confirm a slow upload', async () => {
+    const publicId =
+      'pro-date/users/729438da-99b3-4d3d-b566-bfe94401829b/profile/31f91663-7e13-4d94-9bfa-683aa92fd09f';
+    const rotatingToken = jest
+      .fn()
+      .mockResolvedValueOnce('token-before-upload')
+      .mockResolvedValueOnce('token-after-upload') as GetSessionToken;
+    const fetchImplementation = jest
+      .fn()
+      .mockResolvedValueOnce(
+        response(
+          {
+            data: {
+              apiKey: 'public-api-key',
+              cloudName: 'demo',
+              maxBytes: PROFILE_PHOTO_MAX_BYTES,
+              publicId,
+              signature: 'a'.repeat(40),
+              timestamp: 1_800_000_000,
+              uploadUrl: 'https://api.cloudinary.com/v1_1/demo/image/upload',
+            },
+            requestId,
+          },
+          201,
+        ),
+      )
+      .mockResolvedValueOnce(
+        response({ public_id: publicId, signature: 'b'.repeat(40), version: 1_800_000_001 }),
+      )
+      .mockResolvedValueOnce(
+        response({ data: [profilePhoto], onboardingStep: 'PHOTOS', requestId }, 201),
+      );
+
+    await addProfilePhoto({
+      apiBaseUrl,
+      fetchImplementation,
+      fileFactory: () => new Blob(['photo'], { type: 'image/jpeg' }),
+      getToken: rotatingToken,
+      photo: localPhoto,
+      position: 0,
+    });
+
+    const authorization = (call: number) =>
+      (fetchImplementation.mock.calls[call] as [string, RequestInit])[1].headers as Record<
+        string,
+        string
+      >;
+    expect(authorization(0).Authorization).toBe('Bearer token-before-upload');
+    expect(authorization(2).Authorization).toBe('Bearer token-after-upload');
+  });
+
+  it('gives up on a stalled upload so the photo grid unlocks', async () => {
+    jest.useFakeTimers();
+    try {
+      let uploadSignal: AbortSignal | undefined;
+      const fetchImplementation = jest
+        .fn()
+        .mockResolvedValueOnce(
+          response(
+            {
+              data: {
+                apiKey: 'public-api-key',
+                cloudName: 'demo',
+                maxBytes: PROFILE_PHOTO_MAX_BYTES,
+                publicId:
+                  'pro-date/users/729438da-99b3-4d3d-b566-bfe94401829b/profile/31f91663-7e13-4d94-9bfa-683aa92fd09f',
+                signature: 'a'.repeat(40),
+                timestamp: 1_800_000_000,
+                uploadUrl: 'https://api.cloudinary.com/v1_1/demo/image/upload',
+              },
+              requestId,
+            },
+            201,
+          ),
+        )
+        .mockImplementationOnce((_url: string, init: RequestInit) => {
+          uploadSignal = init.signal ?? undefined;
+          return new Promise<Response>(() => {});
+        });
+
+      const upload = addProfilePhoto({
+        apiBaseUrl,
+        fetchImplementation,
+        fileFactory: () => new Blob(['photo'], { type: 'image/jpeg' }),
+        getToken,
+        photo: localPhoto,
+        position: 0,
+      });
+      const outcome = expect(upload).rejects.toThrow('That took too long');
+      await jest.advanceTimersByTimeAsync(PHOTO_UPLOAD_TIMEOUT_MS);
+
+      await outcome;
+      expect(uploadSignal?.aborted).toBe(true);
+      expect(fetchImplementation).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('surfaces the provider error without sending an invalid confirmation', async () => {
@@ -205,6 +310,7 @@ describe('profile photo API', () => {
         'Content-Type': 'application/json',
       },
       method: 'PUT',
+      signal: anySignal,
     });
   });
 
@@ -226,6 +332,7 @@ describe('profile photo API', () => {
       {
         headers: { Accept: 'application/json', Authorization: 'Bearer session-token' },
         method: 'DELETE',
+        signal: anySignal,
       },
     );
   });

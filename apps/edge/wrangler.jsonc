@@ -51,6 +51,9 @@
     "CHAT_REACTIONS_ENABLED": "true",
     "NOTIFICATIONS_ENABLED": "false",
     "PUSH_ENABLED": "false",
+    // Deletes day-old Cloudinary uploads that this environment's database does not reference.
+    // Enable only when no other environment (local dev, staging) shares the Cloudinary cloud.
+    "MEDIA_RECONCILE_ENABLED": "false",
   },
   // Values are uploaded with `wrangler secret bulk`, never committed. Deploys fail without them.
   "secrets": {

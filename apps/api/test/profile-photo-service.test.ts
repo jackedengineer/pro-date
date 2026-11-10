@@ -48,32 +48,55 @@ function repository(overrides: Partial<ProfilePhotoRepository> = {}): ProfilePho
 }
 
 describe('profile photo service removal', () => {
-  it('deletes the provider asset before removing and compacting the database row', async () => {
+  it('removes the database row before deleting an unreferenced provider asset', async () => {
     const deleteUpload = vi.fn().mockResolvedValue(undefined);
-    const remove = vi.fn().mockResolvedValue({ photo, photos: [] });
-    const service = createProfilePhotoService(
-      provider({ deleteUpload }),
-      repository({ find: vi.fn().mockResolvedValue(photo), remove }),
-    );
+    const remove = vi.fn().mockResolvedValue({ photo, photos: [], assetReferenced: false });
+    const service = createProfilePhotoService(provider({ deleteUpload }), repository({ remove }));
 
     await expect(service.remove(userId, photoId)).resolves.toEqual([]);
     expect(deleteUpload).toHaveBeenCalledWith(userId, photo.providerPublicId);
-    expect(deleteUpload.mock.invocationCallOrder[0]).toBeLessThan(
-      remove.mock.invocationCallOrder[0]!,
+    expect(remove.mock.invocationCallOrder[0]).toBeLessThan(
+      deleteUpload.mock.invocationCallOrder[0]!,
     );
+  });
+
+  it('keeps the image of a photo that a pull request still shows', async () => {
+    const deleteUpload = vi.fn();
+    const service = createProfilePhotoService(
+      provider({ deleteUpload }),
+      repository({
+        remove: vi.fn().mockResolvedValue({ photo, photos: [], assetReferenced: true }),
+      }),
+    );
+
+    await expect(service.remove(userId, photoId)).resolves.toEqual([]);
+    expect(deleteUpload).not.toHaveBeenCalled();
+  });
+
+  it('reports, but does not fail on, an asset that could not be deleted after removal', async () => {
+    const cleanupFailure = new Error('Cloudinary unavailable');
+    const onAssetCleanupFailure = vi.fn();
+    const service = createProfilePhotoService(
+      provider({ deleteUpload: vi.fn().mockRejectedValue(cleanupFailure) }),
+      repository({
+        remove: vi.fn().mockResolvedValue({ photo, photos: [], assetReferenced: false }),
+      }),
+      { onAssetCleanupFailure },
+    );
+
+    await expect(service.remove(userId, photoId)).resolves.toEqual([]);
+    expect(onAssetCleanupFailure).toHaveBeenCalledWith(cleanupFailure);
   });
 
   it('does not call the provider when the owned row does not exist', async () => {
     const deleteUpload = vi.fn();
-    const remove = vi.fn();
     const service = createProfilePhotoService(
       provider({ deleteUpload }),
-      repository({ find: vi.fn().mockResolvedValue(null), remove }),
+      repository({ remove: vi.fn().mockResolvedValue(null) }),
     );
 
     await expect(service.remove(userId, photoId)).resolves.toBeNull();
     expect(deleteUpload).not.toHaveBeenCalled();
-    expect(remove).not.toHaveBeenCalled();
   });
 });
 

@@ -20,8 +20,11 @@ export {
   buildProfilePhotoFindQuery,
   buildProfilePhotoInsertQuery,
   buildProfilePhotoListQuery,
+  assertPhotoRemovalAllowed,
   buildProfilePhotoOrderUpdateQuery,
+  buildReferencedPhotoAssetQueries,
   createProfilePhotoRepository,
+  ProfilePhotoMinimumError,
   type NewProfilePhotoRecord,
   type ProfilePhotoRecord,
 } from './profile-photo-repository.js';

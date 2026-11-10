@@ -57,11 +57,45 @@ const cloudinaryErrorResponseSchema = z.object({
   error: z.object({ message: z.string().trim().min(1).max(500) }),
 });
 
+/** API calls are small JSON exchanges; the photo itself gets longer on slow networks. */
+export const PHOTO_API_TIMEOUT_MS = 20_000;
+export const PHOTO_UPLOAD_TIMEOUT_MS = 120_000;
+const TIMEOUT_MESSAGE = 'That took too long. Check your connection and try again.';
+
 async function readJsonResponse(response: Response): Promise<unknown> {
   try {
     return (await response.json()) as unknown;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Sends one request and reads its JSON body under a deadline. A request on a stalled network
+ * would otherwise never settle, leaving the photo grid locked on its spinner.
+ */
+async function timedJsonRequest(
+  fetchImplementation: typeof fetch,
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<{ body: unknown; response: Response }> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(TIMEOUT_MESSAGE));
+      controller.abort();
+    }, timeoutMs);
+  });
+  const exchange = async () => {
+    const response = await fetchImplementation(url, { ...init, signal: controller.signal });
+    return { body: await readJsonResponse(response), response };
+  };
+  try {
+    return await Promise.race([exchange(), deadline]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -103,14 +137,18 @@ export async function listProfilePhotos({
   getToken,
 }: ProfilePhotoApiOptions): Promise<ProfilePhoto[]> {
   const token = await getRequiredToken(getToken);
-  const response = await fetchImplementation(`${apiBaseUrl}/v1/users/me/profile-photos`, {
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
+  const { body: responseBody, response } = await timedJsonRequest(
+    fetchImplementation,
+    `${apiBaseUrl}/v1/users/me/profile-photos`,
+    {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      method: 'GET',
     },
-    method: 'GET',
-  });
-  const responseBody = await readJsonResponse(response);
+    PHOTO_API_TIMEOUT_MS,
+  );
 
   if (!response.ok) {
     throwApiError(responseBody, 'We could not load your photos. Please try again.');
@@ -128,16 +166,16 @@ export async function addProfilePhoto({
   photo,
   position,
 }: AddProfilePhotoOptions): Promise<ProfilePhoto[]> {
-  const token = await getRequiredToken(getToken);
-  const authorizationHeaders = {
+  const authorizationHeaders = async () => ({
     Accept: 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
-  const intentResponse = await fetchImplementation(
+    Authorization: `Bearer ${await getRequiredToken(getToken)}`,
+  });
+  const { body: intentBody, response: intentResponse } = await timedJsonRequest(
+    fetchImplementation,
     `${apiBaseUrl}/v1/users/me/profile-photo-upload-intents`,
-    { headers: authorizationHeaders, method: 'POST' },
+    { headers: await authorizationHeaders(), method: 'POST' },
+    PHOTO_API_TIMEOUT_MS,
   );
-  const intentBody = await readJsonResponse(intentResponse);
 
   if (!intentResponse.ok) {
     throwApiError(intentBody, 'We could not prepare that photo. Please try again.');
@@ -159,11 +197,12 @@ export async function addProfilePhoto({
   formData.append('format', 'jpg');
   formData.append('overwrite', 'false');
 
-  const uploadResponse = await fetchImplementation(intent.uploadUrl, {
-    body: formData,
-    method: 'POST',
-  });
-  const uploadBody = await readJsonResponse(uploadResponse);
+  const { body: uploadBody, response: uploadResponse } = await timedJsonRequest(
+    fetchImplementation,
+    intent.uploadUrl,
+    { body: formData, method: 'POST' },
+    PHOTO_UPLOAD_TIMEOUT_MS,
+  );
 
   if (!uploadResponse.ok) {
     const cloudinaryError = cloudinaryErrorResponseSchema.safeParse(uploadBody);
@@ -181,7 +220,9 @@ export async function addProfilePhoto({
     throw new Error('The photo host returned an unexpected response.');
   }
 
-  const confirmationResponse = await fetchImplementation(
+  // A slow upload can outlive the short-lived session token, so ask Clerk again here.
+  const { body: confirmationBody, response: confirmationResponse } = await timedJsonRequest(
+    fetchImplementation,
     `${apiBaseUrl}/v1/users/me/profile-photos`,
     {
       body: JSON.stringify({
@@ -191,13 +232,13 @@ export async function addProfilePhoto({
         version: uploaded.data.version,
       }),
       headers: {
-        ...authorizationHeaders,
+        ...(await authorizationHeaders()),
         'Content-Type': 'application/json',
       },
       method: 'POST',
     },
+    PHOTO_API_TIMEOUT_MS,
   );
-  const confirmationBody = await readJsonResponse(confirmationResponse);
 
   if (!confirmationResponse.ok) {
     throwApiError(confirmationBody, 'We could not save that photo. Please try again.');
@@ -219,16 +260,20 @@ export async function completeProfilePhotos({
   }
 
   const token = await getRequiredToken(getToken);
-  const response = await fetchImplementation(`${apiBaseUrl}/v1/users/me/profile-photos`, {
-    body: JSON.stringify(input.data),
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+  const { body: responseBody, response } = await timedJsonRequest(
+    fetchImplementation,
+    `${apiBaseUrl}/v1/users/me/profile-photos`,
+    {
+      body: JSON.stringify(input.data),
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      method: 'PUT',
     },
-    method: 'PUT',
-  });
-  const responseBody = await readJsonResponse(response);
+    PHOTO_API_TIMEOUT_MS,
+  );
 
   if (!response.ok) {
     throwApiError(responseBody, 'We could not save your photo order. Please try again.');
@@ -246,14 +291,15 @@ export async function deleteProfilePhoto({
   photoId,
 }: DeleteProfilePhotoOptions): Promise<ProfilePhoto[]> {
   const token = await getRequiredToken(getToken);
-  const response = await fetchImplementation(
+  const { body: responseBody, response } = await timedJsonRequest(
+    fetchImplementation,
     `${apiBaseUrl}/v1/users/me/profile-photos/${encodeURIComponent(photoId)}`,
     {
       headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
       method: 'DELETE',
     },
+    PHOTO_API_TIMEOUT_MS,
   );
-  const responseBody = await readJsonResponse(response);
 
   if (!response.ok) {
     throwApiError(responseBody, 'We could not remove that photo. Please try again.');

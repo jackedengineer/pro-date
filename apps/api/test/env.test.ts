@@ -80,6 +80,7 @@ describe('readApiEnvironment', () => {
       chatRepliesEnabled: false,
       chatReactionsEnabled: false,
       pushEnabled: false,
+      mediaReconcileEnabled: false,
       expoPushAccessToken: null,
       expoProjectId: null,
       clerkSecretKey: 'sk_test_example',

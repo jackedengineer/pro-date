@@ -30,7 +30,11 @@ export interface ProfilePhotoRepository {
   remove: (
     userId: string,
     photoId: string,
-  ) => Promise<{ photo: ProfilePhotoRecord; photos: ProfilePhotoRecord[] } | null>;
+  ) => Promise<{
+    photo: ProfilePhotoRecord;
+    photos: ProfilePhotoRecord[];
+    assetReferenced: boolean;
+  } | null>;
   save: (userId: string, photo: NewProfilePhotoRecord) => Promise<ProfilePhotoRecord>;
 }
 
@@ -64,9 +68,15 @@ function toProfilePhoto(photo: ProfilePhotoRecord, provider: ProfilePhotoProvide
   };
 }
 
+export interface ProfilePhotoServiceOptions {
+  /** Called when a removed photo's provider asset could not be deleted (it is then orphaned). */
+  onAssetCleanupFailure?: (error: unknown) => void;
+}
+
 export function createProfilePhotoService(
   provider: ProfilePhotoProvider,
   repository: ProfilePhotoRepository,
+  options: ProfilePhotoServiceOptions = {},
 ): ProfilePhotoService {
   const list = async (userId: string) =>
     (await repository.list(userId)).map((photo) => toProfilePhoto(photo, provider));
@@ -119,14 +129,22 @@ export function createProfilePhotoService(
     createUploadIntent: (userId) => provider.createUploadIntent(userId),
     list,
     async remove(userId, photoId) {
-      const photo = await repository.find(userId, photoId);
-
-      if (photo === null) return null;
-
-      await provider.deleteUpload(userId, photo.providerPublicId);
+      // The database row goes first: a provider failure can then only orphan an image, never
+      // leave a saved photo pointing at a deleted one.
       const result = await repository.remove(userId, photoId);
 
-      return result?.photos.map((remaining) => toProfilePhoto(remaining, provider)) ?? null;
+      if (result === null) return null;
+
+      // Pull requests keep showing the photo that was liked, so its image must stay.
+      if (!result.assetReferenced) {
+        try {
+          await provider.deleteUpload(userId, result.photo.providerPublicId);
+        } catch (error: unknown) {
+          options.onAssetCleanupFailure?.(error);
+        }
+      }
+
+      return result.photos.map((remaining) => toProfilePhoto(remaining, provider));
     },
   };
 }

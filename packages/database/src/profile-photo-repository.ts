@@ -1,14 +1,26 @@
-import type { OnboardingStep } from '@pro-date/contracts';
+import { PROFILE_PHOTO_MIN_COUNT, type OnboardingStep } from '@pro-date/contracts';
 import { and, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import type { ProDateDatabase } from './client.js';
 import { buildOnboardingProgressQuery } from './profile-repository.js';
-import { profilePhotos } from './schema.js';
+import { profilePhotos, profiles, pullRequests } from './schema.js';
 
 type ProfilePhotoInsertDatabase = Pick<ProDateDatabase, 'insert'>;
 type ProfilePhotoReadDatabase = Pick<ProDateDatabase, 'select'>;
 type ProfilePhotoUpdateDatabase = Pick<ProDateDatabase, 'update'>;
 type ProfilePhotoDeleteDatabase = Pick<ProDateDatabase, 'delete'>;
+
+/** A published profile must keep its minimum photos; otherwise it silently leaves discovery. */
+export class ProfilePhotoMinimumError extends Error {
+  constructor() {
+    super('A published profile must keep its minimum number of photos.');
+    this.name = 'ProfilePhotoMinimumError';
+  }
+}
+
+export function assertPhotoRemovalAllowed(isPublished: boolean, photoCount: number): void {
+  if (isPublished && photoCount <= PROFILE_PHOTO_MIN_COUNT) throw new ProfilePhotoMinimumError();
+}
 
 export interface NewProfilePhotoRecord {
   bytes: number;
@@ -109,6 +121,23 @@ export function buildProfilePhotoOrderUpdateQuery(
     .returning(profilePhotoSelection);
 }
 
+/** Every place a Cloudinary profile asset can still be shown: a profile, or a pull request snapshot. */
+export function buildReferencedPhotoAssetQueries(
+  database: ProfilePhotoReadDatabase,
+  publicIds: string[],
+) {
+  return [
+    database
+      .select({ publicId: profilePhotos.providerPublicId })
+      .from(profilePhotos)
+      .where(inArray(profilePhotos.providerPublicId, publicIds)),
+    database
+      .select({ publicId: pullRequests.photoPublicId })
+      .from(pullRequests)
+      .where(inArray(pullRequests.photoPublicId, publicIds)),
+  ] as const;
+}
+
 export function createProfilePhotoRepository(database: ProDateDatabase) {
   return {
     async complete(userId: string, photoIds: string[]) {
@@ -150,6 +179,22 @@ export function createProfilePhotoRepository(database: ProDateDatabase) {
 
     async remove(userId: string, photoId: string) {
       return database.transaction(async (transaction) => {
+        // Lock this member's photos so concurrent removals cannot both pass the minimum check.
+        const owned = await transaction
+          .select({ id: profilePhotos.id })
+          .from(profilePhotos)
+          .where(eq(profilePhotos.userId, userId))
+          .for('update');
+
+        if (!owned.some((row) => row.id === photoId)) return null;
+
+        const [profile] = await transaction
+          .select({ publishedAt: profiles.publishedAt })
+          .from(profiles)
+          .where(eq(profiles.userId, userId))
+          .limit(1);
+        assertPhotoRemovalAllowed(profile?.publishedAt != null, owned.length);
+
         const [removed] = await buildProfilePhotoDeleteQuery(transaction, userId, photoId);
 
         if (removed === undefined) return null;
@@ -159,8 +204,32 @@ export function createProfilePhotoRepository(database: ProDateDatabase) {
         );
         await buildProfilePhotoCompactQuery(transaction, userId, removed.position);
 
-        return { photo: removed, photos: await buildProfilePhotoListQuery(transaction, userId) };
+        // Pull requests snapshot the liked photo; its image must outlive the profile row.
+        const reference = await transaction.execute<
+          { referenced: boolean } & Record<string, unknown>
+        >(
+          sql`select exists (select 1 from pull_requests where photo_public_id = ${removed.providerPublicId}) as referenced`,
+        );
+
+        return {
+          photo: removed,
+          photos: await buildProfilePhotoListQuery(transaction, userId),
+          assetReferenced: reference.rows[0]?.referenced === true,
+        };
       });
+    },
+
+    /** The subset of `publicIds` that a profile or pull request still references. */
+    async referencedAssets(publicIds: string[]): Promise<Set<string>> {
+      if (publicIds.length === 0) return new Set();
+      const [photoRows, pullRequestRows] = await Promise.all(
+        buildReferencedPhotoAssetQueries(database, publicIds),
+      );
+      return new Set(
+        [...photoRows, ...pullRequestRows]
+          .map((row) => row.publicId)
+          .filter((publicId): publicId is string => publicId !== null),
+      );
     },
 
     async save(userId: string, photo: NewProfilePhotoRecord): Promise<ProfilePhotoRecord> {

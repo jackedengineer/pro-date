@@ -27,6 +27,7 @@ function createClient(
       version: 1_790_000_001,
       width: 1200,
     }),
+    listResources: vi.fn().mockResolvedValue({ resources: [] }),
     signUpload: vi.fn().mockReturnValue('a'.repeat(40)),
     verifyResponse: vi.fn().mockReturnValue(true),
     ...overrides,
@@ -178,5 +179,37 @@ describe('profile photo provider', () => {
         'pro-date/users/c0b4c84f-68cb-4ba0-b120-7f5af320be1e/profile/7d256e61-ed8f-41ba-a8bb-7b5dcc279f29',
       ),
     ).rejects.toMatchObject<Partial<ProfilePhotoProviderError>>({ code: 'INVALID_UPLOAD_PROOF' });
+  });
+
+  it('lists only uploads that match our own profile asset scheme', async () => {
+    const listResources = vi.fn().mockResolvedValue({
+      next_cursor: 'page-2',
+      resources: [
+        { created_at: '2026-10-01T12:00:00Z', public_id: publicId },
+        { created_at: '2026-10-01T12:00:00Z', public_id: `pro-date/users/${userId}/profile/../x` },
+        { created_at: '2026-10-01T12:00:00Z', public_id: 'pro-date/users/brand/banner' },
+      ],
+    });
+    const provider = createProfilePhotoProvider({
+      apiKey: '123456789012345',
+      cloudName: 'pro-date-dev',
+      client: createClient({ listResources }),
+    });
+
+    await expect(provider.listUploads('page-1')).resolves.toEqual({
+      assets: [{ createdAt: new Date('2026-10-01T12:00:00Z'), publicId, userId }],
+      nextCursor: 'page-2',
+    });
+    expect(listResources).toHaveBeenCalledWith('pro-date/users/', 'page-1');
+  });
+
+  it('refuses a listing it cannot read', async () => {
+    const provider = createProfilePhotoProvider({
+      apiKey: '123456789012345',
+      cloudName: 'pro-date-dev',
+      client: createClient({ listResources: vi.fn().mockResolvedValue({ rows: [] }) }),
+    });
+
+    await expect(provider.listUploads(undefined)).rejects.toThrow('unexpected listing response');
   });
 });

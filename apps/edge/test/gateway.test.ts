@@ -19,6 +19,7 @@ const env: GatewayEnv = {
   API_LOG_LEVEL: 'info',
   CHAT_REPLIES_ENABLED: 'true',
   CHAT_REACTIONS_ENABLED: 'true',
+  MEDIA_RECONCILE_ENABLED: 'false',
   NOTIFICATIONS_ENABLED: 'false',
   PUSH_ENABLED: 'false',
   CLERK_PUBLISHABLE_KEY: 'pk_test_example',
@@ -108,6 +109,7 @@ describe('container settings', () => {
       CLERK_TELEMETRY_DISABLED: '1',
       CHAT_REPLIES_ENABLED: 'true',
       PUSH_ENABLED: 'false',
+      MEDIA_RECONCILE_ENABLED: 'false',
     });
   });
 });

@@ -2,11 +2,14 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { describe, expect, it } from 'vitest';
 
 import {
+  assertPhotoRemovalAllowed,
   buildProfilePhotoCompactQuery,
   buildProfilePhotoDeleteQuery,
   buildProfilePhotoInsertQuery,
   buildProfilePhotoListQuery,
   buildProfilePhotoOrderUpdateQuery,
+  buildReferencedPhotoAssetQueries,
+  ProfilePhotoMinimumError,
 } from '../src/profile-photo-repository.js';
 import * as schema from '../src/schema.js';
 
@@ -76,5 +79,31 @@ describe('profile photo repository', () => {
     expect(compaction.sql).toContain('update "profile_photos"');
     expect(compaction.sql).toContain('"profile_photos"."position" >');
     expect(compaction.params).toEqual(expect.arrayContaining([1, userId]));
+  });
+});
+
+describe('orphaned upload references', () => {
+  it('checks both live profile photos and pull request snapshots', () => {
+    const database = drizzle.mock({ schema });
+    const ids = ['pro-date/users/a/profile/1', 'pro-date/users/a/profile/2'];
+    const [photos, pullRequests] = buildReferencedPhotoAssetQueries(database, ids).map((query) =>
+      query.toSQL(),
+    );
+
+    expect(photos?.sql).toContain('from "profile_photos"');
+    expect(photos?.sql).toContain('"provider_public_id" in ($1, $2)');
+    expect(pullRequests?.sql).toContain('from "pull_requests"');
+    expect(pullRequests?.sql).toContain('"photo_public_id" in ($1, $2)');
+    expect(photos?.params).toEqual(ids);
+    expect(pullRequests?.params).toEqual(ids);
+  });
+});
+
+describe('published profile photo floor', () => {
+  it('lets an unpublished draft remove any photo but keeps a live profile at four', () => {
+    expect(() => assertPhotoRemovalAllowed(false, 1)).not.toThrow();
+    expect(() => assertPhotoRemovalAllowed(true, 5)).not.toThrow();
+    expect(() => assertPhotoRemovalAllowed(true, 4)).toThrow(ProfilePhotoMinimumError);
+    expect(() => assertPhotoRemovalAllowed(true, 3)).toThrow(ProfilePhotoMinimumError);
   });
 });

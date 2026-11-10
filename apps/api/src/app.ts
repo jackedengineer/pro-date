@@ -27,7 +27,11 @@ import {
   profilePhotoIdSchema,
   updateProfileRequestSchema,
 } from '@pro-date/contracts';
-import { DiscoveryError, ProfileIncompleteError } from '@pro-date/database';
+import {
+  DiscoveryError,
+  ProfileIncompleteError,
+  ProfilePhotoMinimumError,
+} from '@pro-date/database';
 import cors from 'cors';
 import express, {
   type ErrorRequestHandler,
@@ -56,6 +60,7 @@ import {
 } from './media/profile-photo-service.js';
 import type { ProfilePromptService } from './profile/profile-prompt-service.js';
 import type { ProfilePublicationService } from './profile/profile-publication-service.js';
+import { createRateLimiter, type RateLimit } from './rate-limiter.js';
 
 type ReadinessStatus = 'up' | 'down';
 type ReadinessChecks = Record<string, ReadinessStatus>;
@@ -96,6 +101,8 @@ export interface ApiAppOptions {
   profilePromptService?: ProfilePromptService;
   readinessCheck?: () => Promise<ReadinessChecks>;
   requestId?: () => string;
+  /** Per-member budget for signed Cloudinary upload intents. */
+  uploadIntentLimit?: RateLimit;
   resolveClerkSubject?: (request: Request) => string | null;
   saveProfileDisplayName?: (
     userId: string,
@@ -142,8 +149,15 @@ function getRequestId(request: Request): string {
   throw new TypeError('Request ID must be a string or number.');
 }
 
+/** Enough for a full profile plus retries; each intent is a signed, billable upload slot. */
+export const defaultUploadIntentLimit: RateLimit = { burst: 12, refillPerMinute: 2 };
+
 export function createApiApp(options: ApiAppOptions = {}) {
   const clock = options.clock ?? (() => new Date());
+  const uploadIntents = createRateLimiter(
+    options.uploadIntentLimit ?? defaultUploadIntentLimit,
+    () => clock().getTime(),
+  );
   const findOrCreateCurrentUser =
     options.findOrCreateCurrentUser ??
     (() => Promise.reject(new Error('Current-user persistence is not configured.')));
@@ -463,6 +477,22 @@ export function createApiApp(options: ApiAppOptions = {}) {
     const currentUser = await resolveProfilePhotoUser(request, response);
 
     if (currentUser === null || profilePhotoService === undefined) {
+      return;
+    }
+
+    const decision = uploadIntents.take(currentUser.id);
+
+    if (!decision.allowed) {
+      const body = {
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'You’ve added a lot of photos quickly. Wait a minute and try again.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.setHeader('Retry-After', Math.ceil(decision.retryAfterMs / 1000).toString());
+      response.status(429).json(body);
       return;
     }
 
@@ -841,6 +871,20 @@ export function createApiApp(options: ApiAppOptions = {}) {
       } satisfies ApiErrorResponse;
 
       response.status(422).json(body);
+      return;
+    }
+
+    if (error instanceof ProfilePhotoMinimumError) {
+      const body = {
+        error: {
+          code: 'PROFILE_PHOTOS_REQUIRED',
+          message:
+            'Your live profile needs at least four photos. Add another before removing this one.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(409).json(body);
       return;
     }
 

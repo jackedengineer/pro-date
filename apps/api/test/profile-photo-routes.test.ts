@@ -4,6 +4,7 @@ import {
   profilePhotoUploadIntentResponseSchema,
   type ProfilePhoto,
 } from '@pro-date/contracts';
+import { ProfilePhotoMinimumError } from '@pro-date/database';
 import pino from 'pino';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
@@ -125,6 +126,45 @@ describe('profile photo routes', () => {
 
     expect(apiErrorResponseSchema.parse(response.body).error.code).toBe('ONBOARDING_STEP_REQUIRED');
     expect(createUploadIntent).not.toHaveBeenCalled();
+  });
+
+  it('limits how fast one member can request signed upload slots', async () => {
+    let now = new Date('2026-10-06T12:00:00.000Z').getTime();
+    const createUploadIntent = vi.fn().mockReturnValue({
+      apiKey: '123456789012345',
+      cloudName: 'pro-date-dev',
+      maxBytes: 10_485_760,
+      publicId,
+      signature: 'a'.repeat(40),
+      timestamp: 1_791_288_000,
+      uploadUrl: 'https://api.cloudinary.com/v1_1/pro-date-dev/image/upload',
+    });
+    const app = createTestApp(
+      authenticatedOptions({
+        clock: () => new Date(now),
+        uploadIntentLimit: { burst: 2, refillPerMinute: 1 },
+        profilePhotoService: {
+          add: vi.fn(),
+          complete: vi.fn(),
+          createUploadIntent,
+          list: vi.fn(),
+          remove: vi.fn(),
+        },
+      }),
+    );
+    const intent = () => request(app).post('/v1/users/me/profile-photo-upload-intents');
+
+    await intent().expect(201);
+    await intent().expect(201);
+    const limited = await intent().expect(429);
+
+    expect(apiErrorResponseSchema.parse(limited.body).error.code).toBe('RATE_LIMITED');
+    expect(limited.headers['retry-after']).toBe('60');
+    expect(createUploadIntent).toHaveBeenCalledTimes(2);
+
+    now += 60_000;
+    await intent().expect(201);
+    expect(createUploadIntent).toHaveBeenCalledTimes(3);
   });
 
   it('validates provider proof before adding a photo', async () => {
@@ -286,6 +326,28 @@ describe('profile photo routes', () => {
 
     expect(profilePhotoListResponseSchema.parse(response.body).data).toEqual([]);
     expect(remove).toHaveBeenCalledWith(userId, photos[0]!.id);
+  });
+
+  it('refuses to drop a published profile below its minimum photos', async () => {
+    const response = await request(
+      createTestApp(
+        authenticatedOptions({
+          profilePhotoService: {
+            add: vi.fn(),
+            complete: vi.fn(),
+            createUploadIntent: vi.fn(),
+            list: vi.fn(),
+            remove: vi.fn().mockRejectedValue(new ProfilePhotoMinimumError()),
+          },
+        }),
+      ),
+    )
+      .delete(`/v1/users/me/profile-photos/${photos[0]!.id}`)
+      .expect(409);
+
+    const body = apiErrorResponseSchema.parse(response.body);
+    expect(body.error.code).toBe('PROFILE_PHOTOS_REQUIRED');
+    expect(body.error.message).toContain('at least four photos');
   });
 
   it('does not reveal whether another user owns a missing photo', async () => {

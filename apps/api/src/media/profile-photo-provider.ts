@@ -22,6 +22,24 @@ const cloudinaryDeleteResponseSchema = z.object({
   result: z.enum(['not found', 'ok']),
 });
 
+const cloudinaryListResponseSchema = z.object({
+  next_cursor: z.string().min(1).optional(),
+  resources: z.array(
+    z.object({ created_at: z.iso.datetime({ offset: true }), public_id: z.string().min(1) }),
+  ),
+});
+
+/** Every profile upload lives under this folder; nothing outside it is ever listed or deleted. */
+export const PROFILE_UPLOAD_ROOT = 'pro-date/users/';
+const profileUploadPattern =
+  /^pro-date\/users\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/profile\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+export interface UploadedProfileAsset {
+  createdAt: Date;
+  publicId: string;
+  userId: string;
+}
+
 interface UploadParameters {
   format: 'jpg';
   overwrite: false;
@@ -33,6 +51,7 @@ export interface ProfilePhotoCloudinaryClient {
   buildDeliveryUrl: (publicId: string, version: number) => string;
   deleteResource: (publicId: string) => Promise<unknown>;
   getResource: (publicId: string) => Promise<unknown>;
+  listResources: (prefix: string, cursor: string | undefined) => Promise<unknown>;
   signUpload: (parameters: UploadParameters) => string;
   verifyResponse: (publicId: string, version: number, signature: string) => boolean;
 }
@@ -165,6 +184,30 @@ export function createProfilePhotoProvider({
     getDeliveryUrl(publicId: string, version: number) {
       return client.buildDeliveryUrl(publicId, version);
     },
+
+    /** One page of profile uploads. Assets whose ID does not match our own scheme are skipped. */
+    async listUploads(cursor: string | undefined) {
+      const page = cloudinaryListResponseSchema.safeParse(
+        await client.listResources(PROFILE_UPLOAD_ROOT, cursor),
+      );
+
+      if (!page.success) {
+        throw new Error('The media provider returned an unexpected listing response.');
+      }
+
+      const assets: UploadedProfileAsset[] = [];
+      for (const resource of page.data.resources) {
+        const owner = profileUploadPattern.exec(resource.public_id)?.[1];
+        if (owner !== undefined)
+          assets.push({
+            createdAt: new Date(resource.created_at),
+            publicId: resource.public_id,
+            userId: owner,
+          });
+      }
+
+      return { assets, nextCursor: page.data.next_cursor };
+    },
   };
 }
 
@@ -205,6 +248,15 @@ export function createCloudinaryProfilePhotoClient({
       }),
     getResource: (publicId) =>
       cloudinary.api.resource(publicId, { resource_type: 'image', type: 'upload' }),
+    // Admin API listing; with a prefix, results come back in public ID order.
+    listResources: (prefix, cursor) =>
+      cloudinary.api.resources({
+        max_results: 500,
+        prefix,
+        resource_type: 'image',
+        type: 'upload',
+        ...(cursor === undefined ? {} : { next_cursor: cursor }),
+      }),
     signUpload: (parameters) => cloudinary.utils.api_sign_request(parameters, apiSecret),
     verifyResponse: (publicId, version, signature) => {
       const expectedSignature = cloudinary.utils.api_sign_request(

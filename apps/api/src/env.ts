@@ -21,6 +21,7 @@ const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
   CHAT_REACTIONS_ENABLED: z.enum(['true', 'false']).default('false'),
   NOTIFICATIONS_ENABLED: z.enum(['true', 'false']).default('false'),
   PUSH_ENABLED: z.enum(['true', 'false']).default('false'),
+  MEDIA_RECONCILE_ENABLED: z.enum(['true', 'false']).default('false'),
   EXPO_PUSH_ACCESS_TOKEN: z.preprocess(
     (value) => (value === '' ? undefined : value),
     z
@@ -64,6 +65,8 @@ export interface ApiServiceEnvironment extends ApiEnvironment {
   chatReactionsEnabled: boolean;
   notificationsEnabled: boolean;
   pushEnabled: boolean;
+  /** Periodically delete Cloudinary uploads that no profile or pull request references. */
+  mediaReconcileEnabled: boolean;
   expoPushAccessToken: string | null;
   expoProjectId: string | null;
   clerkPublishableKey: string;
@@ -107,6 +110,7 @@ export function readApiServiceEnvironment(
     chatReactionsEnabled: environment.CHAT_REACTIONS_ENABLED === 'true',
     notificationsEnabled: environment.NOTIFICATIONS_ENABLED === 'true',
     pushEnabled: environment.PUSH_ENABLED === 'true',
+    mediaReconcileEnabled: environment.MEDIA_RECONCILE_ENABLED === 'true',
     expoPushAccessToken: environment.EXPO_PUSH_ACCESS_TOKEN ?? null,
     expoProjectId: environment.EXPO_PROJECT_ID ?? null,
     clerkPublishableKey: environment.CLERK_PUBLISHABLE_KEY,
