@@ -3,12 +3,12 @@ import { resolve } from 'node:path';
 import appConfig from '../../app.json';
 
 describe('Merge native branding', () => {
-  it('renames the product without replacing existing app and session identifiers', () => {
+  it('ships under the Merge store identifier and keeps the session identifiers', () => {
     expect(appConfig.expo.name).toBe('Merge');
     expect(appConfig.expo.slug).toBe('pro-date');
     expect(appConfig.expo.scheme).toBe('prodate');
-    expect(appConfig.expo.ios.bundleIdentifier).toBe('com.prodate.mobile');
-    expect(appConfig.expo.android.package).toBe('com.prodate.mobile');
+    expect(appConfig.expo.ios.bundleIdentifier).toBe('dev.jacked.merge');
+    expect(appConfig.expo.android.package).toBe('dev.jacked.merge');
   });
 
   it('configures a native launch mark with no artificial startup delay', () => {
