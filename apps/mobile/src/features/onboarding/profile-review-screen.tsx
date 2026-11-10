@@ -7,6 +7,7 @@ import { AppText } from '../../components/app-text';
 import { colors, radii, spacing } from '../../theme/tokens';
 import { OnboardingStepLayout } from './onboarding-step-layout';
 import { ProfilePreviewCard } from './profile-preview-card';
+import { useSingleFlight } from './use-single-flight';
 
 interface ProfileReviewScreenProps {
   onDiscover?: (() => void) | undefined;
@@ -46,7 +47,7 @@ export function ProfileReviewScreen({
   const [publishError, setPublishError] = useState<string | null>(null);
   const [isReviewingPublished, setIsReviewingPublished] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const reload = useCallback(async () => {
     setLoadError(null);
     setIsLoading(true);
 
@@ -58,6 +59,8 @@ export function ProfileReviewScreen({
       setIsLoading(false);
     }
   }, [loadProfileReview]);
+  // Repeated Retry taps share one request instead of sending one each.
+  const refresh = useSingleFlight(reload);
 
   useEffect(() => {
     let isActive = true;
