@@ -22,6 +22,26 @@ function photo(index: number): ProfilePhoto {
   };
 }
 
+// The drag gesture needs a native runtime; its drop logic is tested in photo-drop-target.test.
+jest.mock('./draggable-photo', () => {
+  const Native = jest.requireActual<typeof import('react-native')>('react-native');
+  return {
+    DraggablePhoto: ({
+      children,
+      style,
+      testID,
+    }: {
+      children: React.ReactNode;
+      style: import('react-native').StyleProp<import('react-native').ViewStyle>;
+      testID: string;
+    }) => (
+      <Native.View style={style} testID={testID}>
+        {children}
+      </Native.View>
+    ),
+  };
+});
+
 describe('ProfilePhotosScreen', () => {
   afterEach(() => {
     jest.restoreAllMocks();

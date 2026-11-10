@@ -24,6 +24,7 @@ import type { LocalProfilePhoto } from '../../api/profile-photos';
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { DraggablePhoto } from './draggable-photo';
 import { OnboardingStepLayout } from './onboarding-step-layout';
 import { ProfileStepFooter } from './profile-step-footer';
 
@@ -157,6 +158,19 @@ export function ProfilePhotosScreen({
     });
   };
 
+  const movePhotoTo = (from: number, to: number) => {
+    if (from === to || activePosition !== null || isSaving) return;
+
+    setPhotos((current) => {
+      const moved = current[from];
+      if (moved === undefined || to < 0 || to >= current.length) return current;
+      const next = current.filter((_, position) => position !== from);
+      next.splice(to, 0, moved);
+
+      return next.map((photo, position) => ({ ...photo, position }));
+    });
+  };
+
   const confirmRemove = (photo: ProfilePhoto, position: number) => {
     if (activePosition !== null || isSaving) return;
 
@@ -226,6 +240,7 @@ export function ProfilePhotosScreen({
       </View>
       <AppText style={styles.supportingText}>
         Add four to six photos. A clear face, your favourite places, and life beyond the laptop.
+        Hold and drag to reorder; the first photo is your main one.
       </AppText>
 
       {isLoading ? (
@@ -289,10 +304,18 @@ export function ProfilePhotosScreen({
             const photoOrderIndex = photos.findIndex((photo) => photo.id === currentPhoto.id);
 
             return (
-              <View
+              <DraggablePhoto
                 key={currentPhoto.id}
                 testID={`profile-photo-slot-${index}`}
                 style={[styles.photoCard, photoCardSize]}
+                index={photoOrderIndex}
+                count={photos.length}
+                columns={2}
+                cellWidth={photoCardSize.width}
+                cellHeight={photoCardSize.height}
+                gap={spacing.md}
+                disabled={activePosition !== null || isSaving}
+                onMove={movePhotoTo}
               >
                 <Image
                   accessible
@@ -312,7 +335,7 @@ export function ProfilePhotosScreen({
                 <View style={styles.photoHeader}>
                   <View style={styles.positionBadge}>
                     <AppText style={styles.positionText} variant="caption">
-                      {index === 0 ? 'LEAD' : `0${index + 1}`}
+                      {index === 0 ? 'Main' : `${index + 1}`}
                     </AppText>
                   </View>
                   <Pressable
@@ -357,7 +380,7 @@ export function ProfilePhotosScreen({
                     <ArrowRight size={18} color={colors.ink} />
                   </Pressable>
                 </View>
-              </View>
+              </DraggablePhoto>
             );
           })}
         </View>

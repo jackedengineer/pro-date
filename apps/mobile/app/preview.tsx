@@ -19,11 +19,12 @@ import {
   MessagingPreviewProvider,
   type MessagingRuntime,
 } from '../src/features/messaging/messaging-provider';
+import { ProfilePhotosScreen } from '../src/features/onboarding/profile-photos-screen';
 import { MyProfile } from '../src/features/profile/my-profile';
 import { WelcomeScreen } from '../src/features/welcome/welcome-screen';
 import { colors, spacing } from '../src/theme/tokens';
 
-const screens = ['welcome', 'discover', 'requests', 'merged', 'profile', 'chat'] as const;
+const screens = ['welcome', 'discover', 'requests', 'merged', 'profile', 'photos', 'chat'] as const;
 
 /**
  * Design-time gallery: real screens over stand-in data, so layout can be checked (and stressed
@@ -76,6 +77,15 @@ export default function PreviewRoute() {
           <View style={styles.screen} key={`${screen}:${data}:${empty}`}>
             {screen === 'welcome' ? (
               <WelcomeScreen onGetStarted={() => {}} />
+            ) : screen === 'photos' ? (
+              <ProfilePhotosScreen
+                completePhotos={() => Promise.resolve()}
+                loadPhotos={() => Promise.resolve(previewReview(data, empty).photos)}
+                onBack={() => setParams({ screen: 'profile' })}
+                pickPhoto={() => Promise.resolve(null)}
+                removePhoto={() => Promise.resolve(previewReview(data, empty).photos)}
+                uploadPhoto={() => Promise.resolve(previewReview(data, empty).photos)}
+              />
             ) : screen === 'chat' ? (
               <ConversationScreen id="10000000-0000-4000-8000-000000000400" />
             ) : (
