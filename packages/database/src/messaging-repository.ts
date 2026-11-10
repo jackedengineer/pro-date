@@ -1,3 +1,4 @@
+import { CONVERSATION_UNAVAILABLE } from '@pro-date/contracts';
 import type {
   Message,
   InteractionChangesQuery,
@@ -89,7 +90,7 @@ export async function requireConversationAccess(
   return current;
 }
 const unavailable = () =>
-  new DiscoveryError('NOT_FOUND', 404, 'This conversation is no longer available.');
+  new DiscoveryError(CONVERSATION_UNAVAILABLE, 404, 'This conversation is no longer available.');
 const toMessage = (row: typeof messages.$inferSelect): Message => ({
   ...row,
   createdAt: row.createdAt.toISOString(),

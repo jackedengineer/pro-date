@@ -1,8 +1,8 @@
-import type { Conversation, Message } from '@pro-date/contracts';
+import { CONVERSATION_UNAVAILABLE, type Conversation, type Message } from '@pro-date/contracts';
 import { ApiRequestError } from '../../api/http-client';
 import type { MessagingApi } from '../../api/messaging';
 import type { ChatStorage, OutgoingMessage } from './chat-storage';
-import { ChatThread } from './chat-thread';
+import { ChatThread, MAX_SERVER_REFUSALS } from './chat-thread';
 
 export const owner = '10000000-0000-4000-8000-000000000001';
 export const conversation: Conversation = {
@@ -481,7 +481,7 @@ describe('durable chat thread', () => {
     await thread.send('Hello Avery');
     jest
       .mocked(api.conversation)
-      .mockRejectedValue(new ApiRequestError('Unavailable', 404, 'NOT_FOUND', false));
+      .mockRejectedValue(new ApiRequestError('Unavailable', 404, CONVERSATION_UNAVAILABLE, false));
     thread.setEnabled(true);
     await thread.sync();
     expect(thread.getSnapshot().unavailable).toBe(true);
@@ -497,5 +497,100 @@ describe('durable chat thread', () => {
     await expect(thread.send('Hello Avery')).rejects.toThrow('save');
     expect(thread.getSnapshot().rows).toEqual([]);
     thread.dispose();
+  });
+
+  it('keeps local history and queued messages when a 404 is not the conversation verdict', async () => {
+    const { api, storage, make } = setup();
+    const thread = make();
+    await thread.ready;
+    await thread.send('Hello Avery');
+    // A proxy, misrouted deploy or missing route answers 404 without the explicit code.
+    jest
+      .mocked(api.conversation)
+      .mockRejectedValue(new ApiRequestError('Not found', 404, 'NOT_FOUND', false));
+    thread.setEnabled(true);
+    await thread.sync();
+    expect(thread.getSnapshot().unavailable).toBe(false);
+    expect(thread.getSnapshot().rows).toHaveLength(1);
+    expect(storage.clear).not.toHaveBeenCalled();
+    thread.dispose();
+  });
+  it('marks only the affected message failed on a stray 404 send', async () => {
+    const { api, storage, make } = setup();
+    const thread = make();
+    await thread.ready;
+    jest
+      .mocked(api.send)
+      .mockRejectedValue(new ApiRequestError('Not found', 404, 'REQUEST_FAILED', false));
+    await thread.send('Hello Avery');
+    thread.setEnabled(true);
+    await thread.flush();
+    expect(thread.getSnapshot().unavailable).toBe(false);
+    expect(thread.getSnapshot().rows[0]?.status).toBe('failed');
+    expect((await storage.read(conversation.id)).outgoing).toHaveLength(1);
+    thread.dispose();
+  });
+  describe('a message the server keeps refusing', () => {
+    function twoMessageThread(firstFailure: ApiRequestError) {
+      const test = setup();
+      const ids = ['10000000-0000-4000-8000-0000000000a1', '10000000-0000-4000-8000-0000000000a2'];
+      let next = 0;
+      jest
+        .mocked(test.api.send)
+        .mockImplementation((_id, input) =>
+          input.clientId === ids[0]
+            ? Promise.reject(firstFailure)
+            : Promise.resolve({ ...message(2), clientId: input.clientId, body: input.body }),
+        );
+      const thread = new ChatThread(
+        conversation.id,
+        owner,
+        test.storage,
+        test.api,
+        () => ids[next++]!,
+        jest.fn(),
+      );
+      return { ...test, thread, ids };
+    }
+    async function flushTimes(thread: ChatThread, times: number) {
+      for (let attempt = 0; attempt < times; attempt++) await thread.flush();
+    }
+
+    it('stops blocking later messages after repeated refusals, keeping it for Retry', async () => {
+      const { api, thread, ids } = twoMessageThread(
+        new ApiRequestError('Replies are unavailable right now.', 503, 'PROFILE_UNAVAILABLE', true),
+      );
+      await thread.ready;
+      await thread.send('First');
+      await thread.send('Second');
+      thread.setEnabled(true);
+      await flushTimes(thread, MAX_SERVER_REFUSALS - 1);
+      expect(jest.mocked(api.send).mock.calls.every((call) => call[1].clientId === ids[0])).toBe(
+        true,
+      );
+      await thread.flush();
+      const rows = thread.getSnapshot().rows;
+      expect(rows.find((row) => row.body === 'First')?.status).toBe('failed');
+      expect(rows.find((row) => row.body === 'Second')?.status).toBe('sent');
+      expect(jest.mocked(api.send).mock.calls.at(-1)?.[1].clientId).toBe(ids[1]);
+      thread.dispose();
+    });
+
+    it.each([
+      ['an unreachable server', new ApiRequestError('Offline', 0, 'NETWORK', true)],
+      ['rate limiting', new ApiRequestError('Slow down', 429, 'RATE_LIMITED', true)],
+    ])('keeps waiting through %s instead of failing the message', async (_label, failure) => {
+      const { api, thread, ids } = twoMessageThread(failure);
+      await thread.ready;
+      await thread.send('First');
+      await thread.send('Second');
+      thread.setEnabled(true);
+      await flushTimes(thread, MAX_SERVER_REFUSALS * 2);
+      expect(thread.getSnapshot().rows.find((row) => row.body === 'First')?.status).toBe('queued');
+      expect(jest.mocked(api.send).mock.calls.every((call) => call[1].clientId === ids[0])).toBe(
+        true,
+      );
+      thread.dispose();
+    });
   });
 });

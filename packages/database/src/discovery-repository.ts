@@ -24,6 +24,7 @@ export class DiscoveryError extends Error {
   constructor(
     readonly code:
       | 'NOT_FOUND'
+      | 'CONVERSATION_UNAVAILABLE'
       | 'CONFLICT'
       | 'INVALID_CURSOR'
       | 'RATE_LIMITED'

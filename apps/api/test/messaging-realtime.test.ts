@@ -273,3 +273,106 @@ describe('authenticated realtime hints', () => {
     }
   });
 });
+
+describe('realtime session refresh', () => {
+  async function start(
+    authenticate: (token: string) => Promise<{ userId: string; expiresAt: number }>,
+    handshakeToken: string,
+    refreshIntervalMs = 0,
+  ) {
+    const http = createServer();
+    const realtime = createMessagingRealtime(http, {
+      repository: { claimEvents: vi.fn().mockResolvedValue([]) } as unknown as MessagingRepository,
+      logger: pino({ level: 'silent' }),
+      authenticate,
+      refreshIntervalMs,
+    });
+    http.listen(0, '127.0.0.1');
+    await once(http, 'listening');
+    const address = http.address();
+    if (address === null || typeof address === 'string') throw new Error('Missing address');
+    const client = io(`http://127.0.0.1:${address.port}`, {
+      transports: ['websocket'],
+      auth: { token: handshakeToken },
+      reconnection: false,
+    });
+    await socketEvent(client, 'connect');
+    return {
+      client,
+      realtime,
+      refresh: (token: unknown) => client.timeout(2000).emitWithAck('auth:refresh', token),
+      async close() {
+        client.disconnect();
+        await realtime.close();
+      },
+    };
+  }
+
+  it('closes a socket whose token expires without a refresh', async () => {
+    const harness = await start(
+      () => Promise.resolve({ userId: first, expiresAt: Date.now() + 150 }),
+      'short',
+    );
+    try {
+      expect((await socketEvent(harness.client, 'disconnect'))[0]).toBe('io server disconnect');
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it('keeps the socket open past the first token when the client refreshes in time', async () => {
+    const longLived = Date.now() + 60_000;
+    const authenticate = vi.fn((token: string) =>
+      Promise.resolve({
+        userId: first,
+        expiresAt: token === 'fresh' ? longLived : Date.now() + 300,
+      }),
+    );
+    const harness = await start(authenticate, 'short');
+    try {
+      await expect(harness.refresh('fresh')).resolves.toEqual({ ok: true, expiresAt: longLived });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(harness.client.connected).toBe(true);
+      expect(harness.realtime.admissionSnapshot().verifications).toBe(0);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("refuses another account's token and closes the socket", async () => {
+    const harness = await start(
+      (token) =>
+        Promise.resolve({
+          userId: token === 'someone-else' ? second : first,
+          expiresAt: Date.now() + 60_000,
+        }),
+      'mine',
+    );
+    try {
+      const closed = socketEvent(harness.client, 'disconnect');
+      await expect(harness.refresh('someone-else')).resolves.toEqual({
+        ok: false,
+        code: 'AUTH_REQUIRED',
+      });
+      expect((await closed)[0]).toBe('io server disconnect');
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it('rejects malformed and too-frequent refreshes without verifying them', async () => {
+    const authenticate = vi.fn(() =>
+      Promise.resolve({ userId: first, expiresAt: Date.now() + 60_000 }),
+    );
+    const harness = await start(authenticate, 'mine', 60_000);
+    try {
+      await expect(harness.refresh(42)).resolves.toEqual({ ok: false, code: 'AUTH_REQUIRED' });
+      await expect(harness.refresh('fresh')).resolves.toMatchObject({ ok: true });
+      await expect(harness.refresh('again')).resolves.toEqual({ ok: false, code: 'RATE_LIMITED' });
+      expect(authenticate).toHaveBeenCalledTimes(2);
+      expect(harness.client.connected).toBe(true);
+    } finally {
+      await harness.close();
+    }
+  });
+});

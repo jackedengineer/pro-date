@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
 export const messageBodySchema = z.string().trim().min(1).max(2000);
+/**
+ * The API's explicit verdict that a conversation is gone for this member (unmatched, blocked or
+ * never theirs). Clients may delete local history only on this code; any other 404, including one
+ * from a proxy, a misrouted deploy or a missing message, must leave local data intact.
+ */
+export const CONVERSATION_UNAVAILABLE = 'CONVERSATION_UNAVAILABLE';
 export const sendMessageSchema = z.strictObject({
   clientId: z.uuid(),
   body: messageBodySchema,
@@ -141,6 +147,20 @@ export const realtimeAdmissionErrorSchema = z.object({
   retryAfterMs: z.number().int().min(0).max(300_000).optional(),
 });
 export type RealtimeAdmissionError = z.infer<typeof realtimeAdmissionErrorSchema>;
+
+/**
+ * Session tokens are short-lived, and the API closes a socket when its token expires. A connected
+ * client sends a fresh token on this event before then, so the socket stays open.
+ */
+export const REALTIME_AUTH_REFRESH_EVENT = 'auth:refresh';
+export const realtimeAuthRefreshAckSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), expiresAt: z.number().int().positive() }),
+  z.object({
+    ok: z.literal(false),
+    code: z.enum(['AUTH_REQUIRED', 'RATE_LIMITED', 'SERVER_BUSY']),
+  }),
+]);
+export type RealtimeAuthRefreshAck = z.infer<typeof realtimeAuthRefreshAckSchema>;
 
 export type SendMessage = z.infer<typeof sendMessageSchema>;
 export type Message = z.infer<typeof messageSchema>;

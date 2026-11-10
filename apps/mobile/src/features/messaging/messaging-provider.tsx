@@ -2,6 +2,7 @@ import { useAuth } from '@clerk/expo';
 import {
   conversationChangedSchema,
   conversationInteractionsChangedSchema,
+  REALTIME_AUTH_REFRESH_EVENT,
   type Conversation,
 } from '@pro-date/contracts';
 import {
@@ -35,6 +36,7 @@ import { ChatThread } from './chat-thread';
 import type { ChatStorage } from './chat-storage';
 import { cachedChatOwner, forgetChatAccounts, openChatStorage } from './sqlite-chat-storage';
 import { RealtimeReconnect } from './realtime-reconnect';
+import { RealtimeSessionRefresher, tokenExpiresAt } from './realtime-session-refresh';
 import { InboxRefresh } from './inbox-refresh';
 
 export class MessagingRuntime {
@@ -241,6 +243,7 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
             authRef.current.userId === session,
         );
         runtimeRef.current = runtime;
+        let handshakeToken: string | null = null;
         const socket = io(apiUrl, {
           autoConnect: false,
           transports: ['websocket'],
@@ -248,9 +251,26 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
           reconnectionDelayMax: 10_000,
           auth: (done) => {
             void getToken()
-              .then((token) => done({ token }))
-              .catch(() => done({ token: null }));
+              .then((token) => {
+                handshakeToken = token;
+                done({ token });
+              })
+              .catch(() => {
+                handshakeToken = null;
+                done({ token: null });
+              });
           },
+        });
+        const sessionRefresh = new RealtimeSessionRefresher({
+          // A cached token may be the one about to expire, so mint a new one.
+          getFreshToken: async () =>
+            authRef.current.userId === session && authRef.current.isSignedIn
+              ? authRef.current.getToken({ skipCache: true })
+              : null,
+          send: (token) =>
+            socket
+              .timeout(10_000)
+              .emitWithAck(REALTIME_AUTH_REFRESH_EVENT, token) as Promise<unknown>,
         });
         let foreground = AppState.currentState === 'active';
         let online = true;
@@ -271,6 +291,7 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
         };
         socket.on('connect', () => {
           recovery.connected();
+          sessionRefresh.start(handshakeToken === null ? null : tokenExpiresAt(handshakeToken));
           if (foreground && online) {
             runtime.setEnabled(true);
             void queries.invalidateQueries({ queryKey: ['conversations', ownerId] });
@@ -285,6 +306,7 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
           if (parsed.success) runtime.interactionHint(parsed.data.conversationId);
         });
         socket.on('disconnect', (reason) => {
+          sessionRefresh.stop();
           if (reason === 'io server disconnect') recovery.expired();
         });
         socket.on('connect_error', (error) => recovery.rejected(error, socket.active));
@@ -303,6 +325,7 @@ function ConfiguredProvider({ children, apiUrl }: PropsWithChildren<{ apiUrl: st
           })
           .catch(() => {});
         cleanupConnection = () => {
+          sessionRefresh.stop();
           recovery.dispose();
           socket.removeAllListeners();
           socket.disconnect();

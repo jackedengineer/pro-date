@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import type { Conversation } from '@pro-date/contracts';
+import { CONVERSATION_UNAVAILABLE, type Conversation } from '@pro-date/contracts';
 import type { MessagingApi } from '../../api/messaging';
 import { ApiRequestError } from '../../api/http-client';
 import type { ChatStorage } from './chat-storage';
@@ -288,7 +288,7 @@ describe('conversation UI', () => {
     const view = await render(<Subject />);
     jest
       .mocked(api.conversation)
-      .mockRejectedValue(new ApiRequestError('Unavailable', 404, 'NOT_FOUND', false));
+      .mockRejectedValue(new ApiRequestError('Unavailable', 404, CONVERSATION_UNAVAILABLE, false));
     await act(async () => {
       thread.setEnabled(true);
       await thread.sync();

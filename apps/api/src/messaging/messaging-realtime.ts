@@ -1,6 +1,11 @@
 import type { Server as HttpServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
-import type { ConversationChanged, RealtimeAdmissionError } from '@pro-date/contracts';
+import {
+  REALTIME_AUTH_REFRESH_EVENT,
+  type ConversationChanged,
+  type RealtimeAdmissionError,
+  type RealtimeAuthRefreshAck,
+} from '@pro-date/contracts';
 import type { MessagingRepository } from '@pro-date/database';
 import type { Logger } from 'pino';
 import { Server } from 'socket.io';
@@ -16,6 +21,8 @@ interface Options {
   authTimeoutMs?: number;
   /** Header set by a trusted gateway with the real client IP; null uses the TCP peer. */
   trustedClientIpHeader?: string | null;
+  /** Shortest gap between two session refreshes on one socket. */
+  refreshIntervalMs?: number;
 }
 
 // Behind a proxy every socket shares the proxy's TCP address, which would turn per-peer
@@ -41,7 +48,8 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
   }
   // Native clients only, matching the REST API's existing browser-origin policy.
   const io = new Server<
-    Record<string, never>,
+    // Client input is untrusted: the handler validates both the token and the ack callback.
+    { [REALTIME_AUTH_REFRESH_EVENT]: (token: unknown, ack: unknown) => void },
     {
       'conversation:changed': (payload: ConversationChanged) => void;
       'conversation:interactions-changed': (payload: {
@@ -135,11 +143,66 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
   io.on('connection', (socket) => {
     // Clients cannot choose or join arbitrary rooms. Each verified account gets its own room.
     void socket.join(`user:${socket.data.userId}`);
-    const expiry = setTimeout(
-      () => socket.disconnect(true),
-      Math.min(2_147_483_647, socket.data.expiresAt - Date.now()),
-    );
-    expiry.unref();
+    let expiry: ReturnType<typeof setTimeout> | undefined;
+    const scheduleExpiry = () => {
+      clearTimeout(expiry);
+      expiry = setTimeout(
+        () => socket.disconnect(true),
+        Math.max(0, Math.min(2_147_483_647, socket.data.expiresAt - Date.now())),
+      );
+      expiry.unref();
+    };
+    scheduleExpiry();
+    let refreshing = false;
+    let lastRefreshAt = Number.NEGATIVE_INFINITY;
+    socket.on(REALTIME_AUTH_REFRESH_EVENT, (token, ack) => {
+      if (typeof ack !== 'function') return;
+      const reply = (result: RealtimeAuthRefreshAck) => {
+        (ack as (result: RealtimeAuthRefreshAck) => void)(result);
+      };
+      if (typeof token !== 'string' || token.length === 0 || token.length > 8192) {
+        reply({ ok: false, code: 'AUTH_REQUIRED' });
+        return;
+      }
+      const now = Date.now();
+      if (refreshing || now - lastRefreshAt < (options.refreshIntervalMs ?? 5000)) {
+        reply({ ok: false, code: 'RATE_LIMITED' });
+        return;
+      }
+      // Refreshes share the handshake's verification budget.
+      const releaseVerification = admission.reserveVerification();
+      if (releaseVerification === null) {
+        reply({ ok: false, code: 'SERVER_BUSY' });
+        return;
+      }
+      refreshing = true;
+      lastRefreshAt = now;
+      void Promise.resolve()
+        .then(() => options.authenticate(token))
+        .then((auth) => {
+          if (stopped || !socket.connected) return;
+          if (auth.userId !== socket.data.userId) {
+            // Another account signed in on this device; this socket's room is no longer theirs.
+            reply({ ok: false, code: 'AUTH_REQUIRED' });
+            socket.disconnect(true);
+            return;
+          }
+          if (!Number.isFinite(auth.expiresAt) || auth.expiresAt <= Date.now()) {
+            reply({ ok: false, code: 'AUTH_REQUIRED' });
+            return;
+          }
+          if (auth.expiresAt > socket.data.expiresAt) {
+            socket.data.expiresAt = auth.expiresAt;
+            scheduleExpiry();
+          }
+          reply({ ok: true, expiresAt: socket.data.expiresAt });
+        })
+        .catch(() => reply({ ok: false, code: 'AUTH_REQUIRED' }))
+        .finally(() => {
+          refreshing = false;
+          releaseVerification();
+        });
+    });
     socket.on('disconnect', () => clearTimeout(expiry));
   });
   let pending: Promise<void> | null = null;

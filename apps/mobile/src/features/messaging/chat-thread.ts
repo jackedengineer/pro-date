@@ -1,4 +1,5 @@
 import {
+  CONVERSATION_UNAVAILABLE,
   messageBodySchema,
   type ChatCapabilities,
   type Conversation,
@@ -10,6 +11,28 @@ import {
 import { ApiRequestError } from '../../api/http-client';
 import type { MessagingApi } from '../../api/messaging';
 import type { ChatStorage, OutgoingMessage } from './chat-storage';
+
+/** A message keeps retrying through outages, but not through this many server refusals. */
+export const MAX_SERVER_REFUSALS = 8;
+
+/** Only the API's explicit verdict deletes local history; a stray 404 must not. */
+export function isConversationGone(failure: unknown): boolean {
+  return (
+    failure instanceof ApiRequestError &&
+    failure.status === 404 &&
+    failure.code === CONVERSATION_UNAVAILABLE
+  );
+}
+
+/** The server answered and refused (5xx/408), as opposed to being unreachable or rate limiting. */
+function isServerRefusal(failure: unknown): boolean {
+  return (
+    failure instanceof ApiRequestError &&
+    failure.retryable &&
+    failure.status > 0 &&
+    failure.status !== 429
+  );
+}
 
 export type ChatRow = Omit<Message, 'id' | 'sequence'> & {
   key: string;
@@ -70,7 +93,9 @@ export class ChatThread {
   private sending: Promise<void> | null = null;
   private syncAgain = false;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
-  private attempts = 0;
+  // Per message: backoff steps, and server refusals counted toward MAX_SERVER_REFUSALS.
+  private sendRetries = new Map<string, number>();
+  private sendRefusals = new Map<string, number>();
   private controllers = new Set<AbortController>();
   readonly ready: Promise<void>;
   constructor(
@@ -257,6 +282,7 @@ export class ChatThread {
     void this.flush();
   }
   async retry(clientId: string) {
+    this.forgetAttempts(clientId);
     await this.storage.setFailure(clientId, null);
     this.outgoing = this.outgoing.map((o) =>
       o.clientId === clientId ? { ...o, failure: null } : o,
@@ -266,10 +292,15 @@ export class ChatThread {
     await this.flush();
   }
   async remove(clientId: string) {
+    this.forgetAttempts(clientId);
     await this.storage.remove(clientId);
     this.outgoing = this.outgoing.filter((o) => o.clientId !== clientId);
     this.statuses.delete(clientId);
     this.publish();
+  }
+  private forgetAttempts(clientId: string) {
+    this.sendRetries.delete(clientId);
+    this.sendRefusals.delete(clientId);
   }
   flush(): Promise<void> {
     if (!this.enabled || this.disposed || this.snapshot.unavailable) return Promise.resolve();
@@ -306,18 +337,29 @@ export class ChatThread {
         await this.accept([message]);
         await this.refreshContexts([message.id], request.signal);
         this.statuses.delete(pending.clientId);
-        this.attempts = 0;
+        this.forgetAttempts(pending.clientId);
       } catch (failure: unknown) {
         this.statuses.delete(pending.clientId);
         if (this.disposed || this.snapshot.unavailable) return;
-        if (failure instanceof ApiRequestError && failure.status === 404) {
+        if (isConversationGone(failure)) {
           await this.revoke();
           return;
         }
-        const retryable = !(failure instanceof ApiRequestError) || failure.retryable;
+        const refusals =
+          (this.sendRefusals.get(pending.clientId) ?? 0) + (isServerRefusal(failure) ? 1 : 0);
+        this.sendRefusals.set(pending.clientId, refusals);
+        // Outages and rate limits wait indefinitely; repeated refusals for one message must not
+        // hold every later message in this conversation behind it.
+        const exhausted = refusals >= MAX_SERVER_REFUSALS;
+        const retryable =
+          (!(failure instanceof ApiRequestError) || failure.retryable) && !exhausted;
         if (!retryable) {
-          const reason =
-            failure instanceof Error ? failure.message : 'Message not sent. Try again.';
+          this.forgetAttempts(pending.clientId);
+          const reason = exhausted
+            ? 'Merge couldn’t send this message. Tap Retry to try again.'
+            : failure instanceof Error
+              ? failure.message
+              : 'Message not sent. Try again.';
           try {
             await this.storage.setFailure(pending.clientId, reason);
           } catch {
@@ -327,11 +369,10 @@ export class ChatThread {
             o.clientId === pending.clientId ? { ...o, failure: reason } : o,
           );
         } else if (this.enabled) {
+          const step = this.sendRetries.get(pending.clientId) ?? 0;
+          this.sendRetries.set(pending.clientId, step + 1);
           clearTimeout(this.retryTimer);
-          this.retryTimer = setTimeout(
-            () => void this.flush(),
-            Math.min(30_000, 1000 * 2 ** this.attempts++),
-          );
+          this.retryTimer = setTimeout(() => void this.flush(), Math.min(30_000, 1000 * 2 ** step));
         }
         this.publish();
         if (retryable) return;
@@ -404,7 +445,7 @@ export class ChatThread {
       await this.syncInteractions();
     } catch (failure: unknown) {
       if (this.disposed || this.snapshot.unavailable) return;
-      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      if (isConversationGone(failure)) await this.revoke();
       else if (!request.signal.aborted)
         this.publish({
           error:
@@ -451,7 +492,7 @@ export class ChatThread {
       return ids.every((id) => page.data.some((context) => context.messageId === id));
     } catch (failure: unknown) {
       if (signal.aborted || this.disposed || this.snapshot.unavailable) return false;
-      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      if (isConversationGone(failure)) await this.revoke();
       else
         this.publish({
           contextError: 'Couldn’t refresh message details. Try refreshing the conversation.',
@@ -523,7 +564,7 @@ export class ChatThread {
       this.interactionsDirty = true;
     } catch (failure: unknown) {
       if (request.signal.aborted || this.disposed || this.snapshot.unavailable) return;
-      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      if (isConversationGone(failure)) await this.revoke();
       else {
         if (failure instanceof ApiRequestError && failure.code === 'INVALID_CURSOR')
           this.interactionCursor = null;
@@ -571,7 +612,7 @@ export class ChatThread {
       if (request.signal.aborted) throw new Error('Reaction outcome unknown.');
     } catch (failure: unknown) {
       if (this.disposed || this.snapshot.unavailable) return;
-      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      if (isConversationGone(failure)) await this.revoke();
       else
         this.reactionErrors.set(
           messageId,
@@ -629,7 +670,7 @@ export class ChatThread {
       this.olderCursor = page.olderCursor;
       this.publish({ hasOlder: this.olderCursor !== null });
     } catch (failure: unknown) {
-      if (failure instanceof ApiRequestError && failure.status === 404) await this.revoke();
+      if (isConversationGone(failure)) await this.revoke();
       else if (!request.signal.aborted)
         this.publish({ error: 'We couldn’t load earlier messages. Try again.' });
     } finally {

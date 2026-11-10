@@ -27,12 +27,11 @@ import {
 import { KeyboardChatScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import Reanimated, { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ApiRequestError } from '../../api/http-client';
 import { AppText } from '../../components/app-text';
 import { colors } from '../../theme/tokens';
 import { EmptyState, ErrorNotice, QuietButton } from '../discovery/discovery-shared';
 import { ProfileSafetySheet } from '../discovery/profile-safety-sheet';
-import type { ChatRow, ThreadSnapshot } from './chat-thread';
+import { isConversationGone, type ChatRow, type ThreadSnapshot } from './chat-thread';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
 import { ReactionPicker } from './reaction-picker';
@@ -166,7 +165,7 @@ export function ConversationScreen({ id }: { id: string }) {
     try {
       await runtime!.api.unmatch(id);
     } catch (failure: unknown) {
-      if (!(failure instanceof ApiRequestError && failure.status === 404)) {
+      if (!isConversationGone(failure)) {
         handleFailure(failure);
         return;
       }
