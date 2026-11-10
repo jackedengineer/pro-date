@@ -5,6 +5,7 @@ import GitPullRequest from 'lucide-react-native/icons/git-pull-request';
 import GitMerge from 'lucide-react-native/icons/git-merge';
 import UserRound from 'lucide-react-native/icons/user-round';
 import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconButton } from '../../components/icon-button';
 import { SignOutIconButton } from '../account/account-actions';
 
@@ -16,6 +17,8 @@ import { ConnectionList } from './connection-list';
 import { DiscoveryFeed } from './discovery-feed';
 import { DiscoveryFiltersSheet } from './discovery-filters-sheet';
 
+const screenEdges = ['top', 'left', 'right'] as const;
+const tabBarEdges = ['bottom', 'left', 'right'] as const;
 const tabs = [
   { id: 'discover', label: 'Discover', icon: Compass },
   { id: 'requests', label: 'Requests', icon: GitPullRequest },
@@ -55,7 +58,8 @@ export function DiscoveryScreen({
   });
   const [showFilters, setShowFilters] = useState(false);
   return (
-    <Screen>
+    // The tab bar owns the bottom inset, so its surface runs to the edge of the screen.
+    <Screen edges={screenEdges}>
       <View style={styles.header}>
         <AppText variant="largeTitle" numberOfLines={1} style={styles.headerTitle}>
           {tab === 'discover' ? 'Merge' : tab === 'requests' ? 'Pull requests' : 'Merged'}
@@ -91,33 +95,35 @@ export function DiscoveryScreen({
           mergedInbox
         )}
       </View>
-      <View style={styles.tabs} accessibilityRole="tablist">
-        {tabs.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="tab"
-            accessibilityLabel={item.label}
-            accessibilityState={{ selected: tab === item.id }}
-            onPress={() => selectTab(item.id)}
-            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
-          >
-            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <item.icon
-                size={24}
-                color={tab === item.id ? colors.plum : colors.muted}
-                strokeWidth={tab === item.id ? 2.2 : 1.7}
-              />
-            </View>
-            <AppText
-              numberOfLines={1}
-              style={[styles.tabLabel, tab === item.id && styles.activeLabel]}
-              variant="caption"
+      <SafeAreaView edges={tabBarEdges} style={styles.tabBar}>
+        <View style={styles.tabs} accessibilityRole="tablist">
+          {tabs.map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="tab"
+              accessibilityLabel={item.label}
+              accessibilityState={{ selected: tab === item.id }}
+              onPress={() => selectTab(item.id)}
+              style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
             >
-              {item.label}
-            </AppText>
-          </Pressable>
-        ))}
-      </View>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <item.icon
+                  size={24}
+                  color={tab === item.id ? colors.plum : colors.muted}
+                  strokeWidth={tab === item.id ? 2.2 : 1.7}
+                />
+              </View>
+              <AppText
+                numberOfLines={1}
+                style={[styles.tabLabel, tab === item.id && styles.activeLabel]}
+                variant="caption"
+              >
+                {item.label}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+      </SafeAreaView>
       {showFilters ? (
         <DiscoveryFiltersSheet
           filters={filters}
@@ -154,12 +160,12 @@ const styles = StyleSheet.create({
   filterText: { flexShrink: 1 },
   body: { flex: 1 },
   // A platform tab bar: icon over label, no pill, no slide between peers.
-  tabs: {
-    flexDirection: 'row',
+  tabBar: {
     borderTopWidth: hairline,
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
   },
+  tabs: { flexDirection: 'row' },
   tab: {
     flex: 1,
     minHeight: 56,
