@@ -39,7 +39,24 @@ export function EmailEntryScreen({
 
   return (
     <Screen style={styles.screen}>
-      <FormScrollView>
+      <FormScrollView
+        footer={
+          <>
+            <AuthMethodSwitch
+              disabled={isSubmitting}
+              label="Use phone instead"
+              onPress={onUsePhone}
+            />
+            <AppButton
+              accessibilityLabel={isSubmitting ? 'Sending code' : 'Continue'}
+              disabled={!canContinue}
+              label={isSubmitting ? 'Sending code…' : 'Continue'}
+              loading={isSubmitting}
+              onPress={continueWithEmailAddress}
+            />
+          </>
+        }
+      >
         <IconButton
           label="Go back"
           icon={BackIcon}
@@ -82,21 +99,6 @@ export function EmailEntryScreen({
             <AppText variant="caption">No password needed.</AppText>
           </View>
         </View>
-
-        <View style={styles.footer}>
-          <AuthMethodSwitch
-            disabled={isSubmitting}
-            label="Use phone instead"
-            onPress={onUsePhone}
-          />
-          <AppButton
-            accessibilityLabel={isSubmitting ? 'Sending code' : 'Continue'}
-            disabled={!canContinue}
-            label={isSubmitting ? 'Sending code…' : 'Continue'}
-            loading={isSubmitting}
-            onPress={continueWithEmailAddress}
-          />
-        </View>
       </FormScrollView>
     </Screen>
   );
@@ -118,10 +120,6 @@ const styles = StyleSheet.create({
   fieldGroup: {
     gap: spacing.sm,
     marginTop: spacing.lg,
-  },
-  footer: {
-    gap: spacing.sm,
-    marginTop: 'auto',
   },
   input: {
     backgroundColor: colors.surface,

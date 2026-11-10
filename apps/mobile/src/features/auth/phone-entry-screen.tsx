@@ -47,7 +47,24 @@ export function PhoneEntryScreen({
 
   return (
     <Screen style={styles.screen}>
-      <FormScrollView>
+      <FormScrollView
+        footer={
+          <>
+            <AuthMethodSwitch
+              disabled={isSubmitting}
+              label="Use email instead"
+              onPress={onUseEmail}
+            />
+            <AppButton
+              accessibilityLabel={isSubmitting ? 'Sending code' : 'Continue'}
+              disabled={e164PhoneNumber === null || isSubmitting}
+              label={isSubmitting ? 'Sending code…' : 'Continue'}
+              loading={isSubmitting}
+              onPress={continueWithPhoneNumber}
+            />
+          </>
+        }
+      >
         <IconButton
           label="Go back"
           icon={BackIcon}
@@ -94,21 +111,6 @@ export function PhoneEntryScreen({
             <AppText variant="caption">Standard messaging rates may apply.</AppText>
           </View>
         </View>
-
-        <View style={styles.footer}>
-          <AuthMethodSwitch
-            disabled={isSubmitting}
-            label="Use email instead"
-            onPress={onUseEmail}
-          />
-          <AppButton
-            accessibilityLabel={isSubmitting ? 'Sending code' : 'Continue'}
-            disabled={e164PhoneNumber === null || isSubmitting}
-            label={isSubmitting ? 'Sending code…' : 'Continue'}
-            loading={isSubmitting}
-            onPress={continueWithPhoneNumber}
-          />
-        </View>
       </FormScrollView>
     </Screen>
   );
@@ -136,10 +138,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.danger,
-  },
-  footer: {
-    gap: spacing.sm,
-    marginTop: 'auto',
   },
   input: {
     color: colors.ink,

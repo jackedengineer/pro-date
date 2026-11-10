@@ -13,3 +13,17 @@ it('keeps forms scrollable with native keyboard insets and handled taps', async 
   expect(props.automaticallyAdjustKeyboardInsets).toBe(true);
   expect(props.keyboardShouldPersistTaps).toBe('handled');
 });
+
+it('pins form actions above the keyboard instead of leaving them under it', async () => {
+  const view = await render(
+    <FormScrollView footer={<Text>Continue</Text>}>
+      <Text>Form content</Text>
+    </FormScrollView>,
+  );
+  const scroll = view.container.queryAll((node) => node.props.keyboardDismissMode !== undefined)[0];
+  const props = scroll?.props as ScrollViewProps;
+  // The footer sits outside the scroll area, and only one keyboard strategy is active.
+  expect(props.automaticallyAdjustKeyboardInsets).toBe(false);
+  expect(view.getByText('Continue')).toBeTruthy();
+  expect(scroll?.queryAll((node) => node.props.children === 'Continue') ?? []).toHaveLength(0);
+});

@@ -51,7 +51,19 @@ export function OtpVerificationScreen({
 
   return (
     <Screen style={styles.screen}>
-      <FormScrollView>
+      <FormScrollView
+        footer={
+          <>
+            <AppButton
+              accessibilityLabel={isSubmitting ? 'Verifying code' : 'Verify code'}
+              disabled={!canSubmit}
+              label={isSubmitting ? 'Verifying…' : 'Verify code'}
+              loading={isSubmitting}
+              onPress={submitCode}
+            />
+          </>
+        }
+      >
         <IconButton
           label={changeDestinationAccessibilityLabel}
           icon={BackIcon}
@@ -113,16 +125,6 @@ export function OtpVerificationScreen({
             </Pressable>
           </View>
         </View>
-
-        <View style={styles.footer}>
-          <AppButton
-            accessibilityLabel={isSubmitting ? 'Verifying code' : 'Verify code'}
-            disabled={!canSubmit}
-            label={isSubmitting ? 'Verifying…' : 'Verify code'}
-            loading={isSubmitting}
-            onPress={submitCode}
-          />
-        </View>
       </FormScrollView>
     </Screen>
   );
@@ -160,9 +162,6 @@ const styles = StyleSheet.create({
   fieldGroup: {
     gap: spacing.md,
     marginTop: spacing.lg,
-  },
-  footer: {
-    marginTop: 'auto',
   },
   destination: {
     fontFamily: typography.family.medium,
