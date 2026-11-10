@@ -1,6 +1,6 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import ChevronLeft from 'lucide-react-native/icons/chevron-left';
+import { BackIcon } from '../../components/back-icon';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import { IconButton } from '../../components/icon-button';
 import { useReducedMotionPreference } from '../../theme/motion';
@@ -177,7 +177,7 @@ export function ConversationScreen({ id }: { id: string }) {
     <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={styles.header}>
         <View style={styles.member}>
-          <IconButton label="Back to Merged" icon={ChevronLeft} onPress={backToMerged} />
+          <IconButton label="Back to Merged" icon={BackIcon} onPress={backToMerged} />
           <Image
             source={state.conversation?.member.photoUrl ?? null}
             contentFit="cover"

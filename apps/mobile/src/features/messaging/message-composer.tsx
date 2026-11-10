@@ -3,10 +3,11 @@ import type { MessageQuote } from '@pro-date/contracts';
 import X from 'lucide-react-native/icons/x';
 import { IconButton } from '../../components/icon-button';
 import { QuotedMessage } from './message-quote';
-import { Pressable, StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
+import { StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
+import { PressableScale } from '../../components/pressable-scale';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import { AppText } from '../../components/app-text';
-import { colors, hairline, typography } from '../../theme/tokens';
+import { colors, hairline, touchTarget, typography } from '../../theme/tokens';
 
 export function MessageComposer({
   onSend,
@@ -82,22 +83,22 @@ export function MessageComposer({
           placeholderTextColor={colors.muted}
           style={styles.input}
         />
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Send message"
           accessibilityState={{ disabled: disabled || saving || draft.trim().length === 0 }}
           disabled={disabled || saving || draft.trim().length === 0}
           onPress={() => void send()}
-          style={({ pressed }) => [
+          style={[
             styles.send,
             (disabled || saving || draft.trim().length === 0) && styles.disabled,
-            pressed && styles.pressed,
           ]}
+          pressedStyle={styles.pressed}
         >
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <ArrowUp size={24} color={colors.white} strokeWidth={2} />
           </View>
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );
@@ -131,14 +132,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   send: {
-    width: 44,
-    height: 44,
+    width: touchTarget,
+    height: touchTarget,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
     backgroundColor: colors.plum,
   },
   disabled: { backgroundColor: colors.border },
-  pressed: { backgroundColor: colors.plumPressed, transform: [{ scale: 0.94 }] },
+  pressed: { backgroundColor: colors.plumPressed },
   error: { color: colors.danger, marginBottom: 8 },
 });

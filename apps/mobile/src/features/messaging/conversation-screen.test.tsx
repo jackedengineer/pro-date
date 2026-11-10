@@ -31,7 +31,12 @@ jest.mock('react-native-keyboard-controller', () =>
 );
 jest.mock('react-native-reanimated', () => {
   const React = jest.requireActual<typeof import('react')>('react');
+  const shared = jest.requireActual<typeof import('../../../__mocks__/react-native-reanimated')>(
+    '../../../__mocks__/react-native-reanimated',
+  );
   return {
+    ...shared,
+    __esModule: true,
     useSharedValue: (initial: number) => React.useRef({ value: initial, set: jest.fn() }).current,
   };
 });

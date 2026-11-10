@@ -1,10 +1,14 @@
 import type { DiscoveryProfile, PullRequestTarget } from '@pro-date/contracts';
 import { useCallback, useRef, useState } from 'react';
 import X from 'lucide-react-native/icons/x';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import type { DiscoveryActions, DiscoveryFilters } from '../../api/discovery';
 import { AppText } from '../../components/app-text';
+import { PressableScale } from '../../components/pressable-scale';
+import { triggerFeedback } from '../../theme/feedback';
+import { useReducedMotionPreference } from '../../theme/motion';
 import { cardShadow, colors, hairline, radii, spacing } from '../../theme/tokens';
 import { DiscoveryProfileCard } from './discovery-profile-card';
 import { EmptyState, ErrorNotice, QuietButton, sharedStyles } from './discovery-shared';
@@ -34,6 +38,7 @@ export function DiscoveryFeed({
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const passing = useRef(false);
+  const reducedMotion = useReducedMotionPreference();
   const advance = async (id: string) => {
     list.remove(id);
     if (list.items.length === 1 && list.hasMore) await list.loadMore();
@@ -92,7 +97,11 @@ export function DiscoveryFeed({
             />
           </>
         ) : (
-          <>
+          // The next profile fades in so the swap is not a hard cut; short, because it is frequent.
+          <Animated.View
+            style={sharedStyles.stack}
+            {...(reducedMotion ? {} : { entering: FadeIn.duration(150) })}
+          >
             <DiscoveryProfileCard
               profile={profile}
               onLike={
@@ -116,23 +125,20 @@ export function DiscoveryFeed({
             {list.error === null && actionError === null ? null : (
               <QuietButton label="Refresh discovery" onPress={() => void list.refresh()} />
             )}
-          </>
+          </Animated.View>
         )}
       </ScrollView>
       {profile === undefined ? null : (
         // Passing is the most-used action here, so it stays in reach instead of below the fold.
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel={busy ? 'Moving on…' : 'Pass · see next profile'}
           accessibilityState={{ disabled: busy || list.loading, busy }}
           disabled={busy || list.loading}
           hitSlop={8}
           onPress={() => void pass()}
-          style={({ pressed }) => [
-            styles.pass,
-            pressed && styles.passPressed,
-            (busy || list.loading) && styles.passDisabled,
-          ]}
+          style={[styles.pass, (busy || list.loading) && styles.passDisabled]}
+          pressedStyle={styles.passPressed}
         >
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             {busy ? (
@@ -141,7 +147,7 @@ export function DiscoveryFeed({
               <X color={colors.ink} size={26} strokeWidth={1.8} />
             )}
           </View>
-        </Pressable>
+        </PressableScale>
       )}
       {target === null || profile === undefined ? null : (
         <PullRequestComposer
@@ -152,10 +158,12 @@ export function DiscoveryFeed({
             const receipt = await actions.send(input);
             setTarget(null);
             if (receipt.status === 'MERGED' && receipt.matchId !== null) {
+              triggerFeedback('success');
               list.remove(profile.userId);
               onMerged(receipt.matchId);
               return;
             }
+            triggerFeedback('impact');
             setNotice('Pull request sent. The next move is theirs.');
             await advance(profile.userId);
           }}
@@ -195,6 +203,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...cardShadow,
   },
-  passPressed: { backgroundColor: colors.sand, transform: [{ scale: 0.94 }] },
+  passPressed: { backgroundColor: colors.sand },
   passDisabled: { opacity: 0.6 },
 });

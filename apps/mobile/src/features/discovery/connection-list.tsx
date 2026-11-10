@@ -8,7 +8,8 @@ import { IconButton } from '../../components/icon-button';
 import type { DiscoveryActions } from '../../api/discovery';
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
-import { colors, radii, spacing } from '../../theme/tokens';
+import { triggerFeedback } from '../../theme/feedback';
+import { colors, radii, spacing, typography } from '../../theme/tokens';
 import { DiscoveryProfileCard, TargetPreview } from './discovery-profile-card';
 import { EmptyState, ErrorNotice, QuietButton, sharedStyles } from './discovery-shared';
 import { DiscoverySheet } from './discovery-sheet';
@@ -43,6 +44,7 @@ export function ConnectionList({
       setNotice(
         decision === 'MERGED' ? 'Your merge is in Merged. Say hello.' : 'Request declined.',
       );
+      if (decision === 'MERGED') triggerFeedback('success');
       if (decision === 'MERGED' && receipt.matchId !== null) onMerged?.(receipt.matchId);
       else if (list.items.length === 1 && list.hasMore) await list.loadMore();
     } catch (failure: unknown) {
@@ -101,7 +103,7 @@ export function ConnectionList({
               <TargetPreview target={item.target} />
               {item.comment.length === 0 ? null : (
                 <View style={styles.comment}>
-                  <AppText variant="quote">“{item.comment}”</AppText>
+                  <AppText style={styles.commentText}>“{item.comment}”</AppText>
                 </View>
               )}
               <View style={styles.actions}>
@@ -189,6 +191,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   action: { flexGrow: 1, flexBasis: 120 },
+  commentText: { fontFamily: typography.family.serif, fontSize: 18, lineHeight: 26 },
   // Their words, set apart from our interface by a rule rather than another box.
   comment: {
     borderLeftWidth: 3,

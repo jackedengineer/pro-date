@@ -1,7 +1,9 @@
 import { StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppText } from '../../components/app-text';
-import { colors, radii, spacing } from '../../theme/tokens';
+import { useReducedMotionPreference } from '../../theme/motion';
+import { colors, duration, radii, spacing } from '../../theme/tokens';
 
 interface OnboardingProgressProps {
   current: number;
@@ -10,6 +12,7 @@ interface OnboardingProgressProps {
 
 export function OnboardingProgress({ current, total }: OnboardingProgressProps) {
   const progress = Math.min(Math.max(current / total, 0), 1);
+  const reduced = useReducedMotionPreference();
 
   return (
     <View style={styles.container}>
@@ -19,7 +22,18 @@ export function OnboardingProgress({ current, total }: OnboardingProgressProps) 
         accessibilityValue={{ max: total, min: 0, now: current }}
         style={styles.track}
       >
-        <View style={[styles.fill, { width: `${progress * 100}%` }]} />
+        {/* Out of flow and childless, so animating width re-lays-out nothing else. */}
+        <Animated.View
+          style={[
+            styles.fill,
+            {
+              width: `${progress * 100}%`,
+              transitionProperty: 'width',
+              transitionDuration: reduced ? 0 : duration.standard,
+              transitionTimingFunction: 'ease-out',
+            },
+          ]}
+        />
       </View>
       <AppText style={styles.label} variant="caption">
         {current} / {total}
@@ -37,16 +51,19 @@ const styles = StyleSheet.create({
   fill: {
     backgroundColor: colors.plum,
     borderRadius: radii.pill,
-    height: '100%',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    top: 0,
   },
   label: {
     fontVariant: ['tabular-nums'],
   },
   track: {
-    backgroundColor: colors.plumSoft,
+    backgroundColor: colors.sand,
     borderRadius: radii.pill,
     flex: 1,
-    height: 6,
+    height: 4,
     overflow: 'hidden',
   },
 });

@@ -77,7 +77,8 @@ function AppStack() {
   return (
     <Stack
       screenOptions={{
-        animation: reduced ? 'none' : 'slide_from_right',
+        // Each platform's own push; a cross-fade when the member asked for less motion.
+        animation: reduced ? 'fade' : 'default',
         contentStyle: styles.root,
         headerShown: false,
       }}

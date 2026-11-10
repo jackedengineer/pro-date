@@ -8,9 +8,10 @@ import { Image } from 'expo-image';
 import Heart from 'lucide-react-native/icons/heart';
 import { useReducedMotionPreference } from '../../theme/motion';
 import { useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '../../components/app-text';
+import { PressableScale } from '../../components/pressable-scale';
 import { cardShadow, colors, hairline, radii, spacing, typography } from '../../theme/tokens';
 
 const intents: Record<RelationshipIntent, string> = {
@@ -40,11 +41,14 @@ export function TargetPreview({ target }: { target: PullRequestTarget }) {
       />
     );
   return (
-    <View style={styles.prompt}>
-      <AppText style={styles.question} variant="caption">
+    // A reminder of what they liked, not the full answer: it is the reader's own line.
+    <View style={styles.targetPrompt}>
+      <AppText style={styles.question} variant="caption" numberOfLines={2}>
         {PROFILE_PROMPT_CATALOGUE.find((prompt) => prompt.id === target.promptId)?.text}
       </AppText>
-      <AppText variant="quote">{target.answer}</AppText>
+      <AppText style={styles.targetAnswer} numberOfLines={3}>
+        {target.answer}
+      </AppText>
     </View>
   );
 }
@@ -65,15 +69,16 @@ export function DiscoveryProfileCard({
   ].filter((value): value is string => value !== null);
   const likeButton = (label: string, target: PullRequestTarget) =>
     onLike === undefined ? null : (
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityHint="Send a like for this item, with an optional comment"
         onPress={() => onLike(target)}
-        style={({ pressed }) => [styles.likeButton, pressed && styles.pressed]}
+        style={styles.likeButton}
+        pressedStyle={styles.pressed}
       >
         <Heart size={24} color={colors.coral} strokeWidth={2} />
-      </Pressable>
+      </PressableScale>
     );
   return (
     <View style={styles.profile}>
@@ -172,7 +177,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...cardShadow,
   },
-  pressed: { backgroundColor: colors.coralSoft, transform: [{ scale: 0.94 }] },
+  pressed: { backgroundColor: colors.coralSoft },
   details: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingVertical: spacing.xs },
   pill: {
     borderRadius: radii.pill,
@@ -192,6 +197,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   question: { fontFamily: typography.family.medium },
+  targetPrompt: {
+    backgroundColor: colors.sand,
+    borderCurve: 'continuous',
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  targetAnswer: { fontFamily: typography.family.serif, fontSize: 17, lineHeight: 24 },
   promptAction: { height: 52, marginRight: -spacing.sm, marginBottom: -spacing.sm },
   targetPhoto: {
     width: '100%',
