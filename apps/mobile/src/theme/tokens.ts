@@ -14,7 +14,7 @@ export const colors = {
   danger: '#9D2F2B',
   dangerSoft: '#F7E3E0',
   ink: '#211A1F',
-  muted: '#756A72',
+  muted: '#6E636B',
   overlay: 'rgba(33, 26, 31, 0.42)',
   plum: '#5A2E4F',
   plumPressed: '#422239',

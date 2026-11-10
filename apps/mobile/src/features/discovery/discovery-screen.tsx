@@ -91,11 +91,11 @@ export function DiscoveryScreen({
           mergedInbox
         )}
       </View>
-      <View style={styles.tabs}>
+      <View style={styles.tabs} accessibilityRole="tablist">
         {tabs.map((item) => (
           <Pressable
             key={item.id}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityLabel={item.label}
             accessibilityState={{ selected: tab === item.id }}
             onPress={() => selectTab(item.id)}

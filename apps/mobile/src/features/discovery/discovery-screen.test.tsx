@@ -40,7 +40,7 @@ describe('DiscoveryScreen', () => {
     await fireEvent.press(view.getByRole('button', { name: 'Send pull request' }));
     expect(await view.findByText('Your turn')).toBeTruthy();
     expect(merged).toHaveBeenCalledWith(discoveryFixture.userId);
-    expect(view.getByRole('button', { name: 'Merged' })).toHaveProp('accessibilityState', {
+    expect(view.getByRole('tab', { name: 'Merged' })).toHaveProp('accessibilityState', {
       selected: true,
     });
   });
@@ -73,12 +73,12 @@ describe('DiscoveryScreen', () => {
         mergedInbox={<Text>Your turn</Text>}
       />,
     );
-    await fireEvent.press(view.getByRole('button', { name: 'Requests' }));
+    await fireEvent.press(view.getByRole('tab', { name: 'Requests' }));
     await view.findByRole('button', { name: 'Merge request from Avery' });
     await fireEvent.press(view.getByRole('button', { name: 'Merge request from Avery' }));
     expect(await view.findByText('Offline. Try merging again.')).toBeTruthy();
     expect(merged).not.toHaveBeenCalled();
-    expect(view.getByRole('button', { name: 'Requests' })).toHaveProp('accessibilityState', {
+    expect(view.getByRole('tab', { name: 'Requests' })).toHaveProp('accessibilityState', {
       selected: true,
     });
   });
@@ -129,7 +129,7 @@ describe('DiscoveryScreen', () => {
         }
       />,
     );
-    await fireEvent.press(view.getByRole('button', { name: 'Requests' }));
+    await fireEvent.press(view.getByRole('tab', { name: 'Requests' }));
     expect(await view.findByText('Tell me about this project.', { exact: false })).toBeTruthy();
     await fireEvent.press(view.getByRole('button', { name: 'Merge request from Avery' }));
     await waitFor(() =>
@@ -139,7 +139,7 @@ describe('DiscoveryScreen', () => {
     expect(merged).toHaveBeenCalledWith(discoveryFixture.userId);
     expect(api.listMatches).not.toHaveBeenCalled();
     expect(view.queryByRole('button', { name: 'Messages' })).toBeNull();
-    expect(view.getByRole('button', { name: 'Merged' })).toHaveProp('accessibilityState', {
+    expect(view.getByRole('tab', { name: 'Merged' })).toHaveProp('accessibilityState', {
       selected: true,
     });
     await fireEvent.press(view.getByRole('button', { name: 'Chat with Avery' }));
@@ -231,7 +231,7 @@ describe('DiscoveryScreen', () => {
     const view = await render(
       <DiscoveryScreen actions={api} onOpenProfile={jest.fn()} mergedInbox={null} />,
     );
-    await fireEvent.press(view.getByRole('button', { name: 'Requests' }));
+    await fireEvent.press(view.getByRole('tab', { name: 'Requests' }));
     expect(await view.findByText('Your next hello starts here.')).toBeTruthy();
     expect(api.respond).not.toHaveBeenCalled();
     await fireEvent.press(view.getByRole('button', { name: 'Refresh requests' }));
@@ -251,7 +251,7 @@ describe('DiscoveryScreen', () => {
     );
     expect(view.getByText('Your turn')).toBeTruthy();
     expect(api.listMatches).not.toHaveBeenCalled();
-    await fireEvent.press(view.getByRole('button', { name: 'Discover' }));
+    await fireEvent.press(view.getByRole('tab', { name: 'Discover' }));
     expect(tabChanged).toHaveBeenCalledWith('discover');
     await view.rerender(
       <DiscoveryScreen
