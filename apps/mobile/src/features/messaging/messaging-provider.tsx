@@ -143,6 +143,8 @@ interface MessagingState {
 }
 const Context = createContext<MessagingState>({ runtime: null, error: null, retry: () => {} });
 export const useMessaging = () => useContext(Context);
+/** Supplies a stand-in runtime to the design-time `/preview` route. */
+export const MessagingPreviewProvider = Context.Provider;
 export function MessagingProvider({ children }: PropsWithChildren) {
   return isClerkConfigured && apiBaseUrl !== null ? (
     <ConfiguredProvider apiUrl={apiBaseUrl}>{children}</ConfiguredProvider>

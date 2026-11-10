@@ -51,7 +51,7 @@ export function ReactionPicker({
   const [entrance] = useState(() => new Animated.Value(1));
   const [menuHeight, setMenuHeight] = useState(104);
   const [keyboardTop, setKeyboardTop] = useState<number | null>(
-    () => Keyboard.metrics()?.screenY ?? null,
+    () => Keyboard.metrics?.()?.screenY ?? null,
   );
   const messageId = row?.messageId ?? null;
   useEffect(() => {
