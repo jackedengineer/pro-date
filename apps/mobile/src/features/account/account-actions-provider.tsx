@@ -3,9 +3,12 @@ import { router } from 'expo-router';
 import { useCallback, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { Alert } from 'react-native';
 
-import { isClerkConfigured } from '../../config/public-env';
+import { deleteAccount as requestAccountDeletion } from '../../api/account';
+import { SUPPORT_EMAIL } from '../../config/legal';
+import { apiBaseUrl, isClerkConfigured } from '../../config/public-env';
 import { useNotificationDevice } from '../notifications/notification-provider';
 import { AccountActionsContext } from './account-actions';
+import { runAccountDeletion } from './delete-account';
 import { runSignOut, type UnconfirmedRevocationChoice } from './sign-out';
 
 function confirmSignOut() {
@@ -16,6 +19,20 @@ function confirmSignOut() {
       [
         { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
         { text: 'Sign out', style: 'destructive', onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    );
+  });
+}
+
+function confirmAccountDeletion() {
+  return new Promise<boolean>((resolve) => {
+    Alert.alert(
+      'Delete your account?',
+      'This permanently deletes your profile, photos, pull requests, merges and messages for you and the people you talked to. It can’t be undone.',
+      [
+        { text: 'Keep account', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Delete account', style: 'destructive', onPress: () => resolve(true) },
       ],
       { cancelable: true, onDismiss: () => resolve(false) },
     );
@@ -38,7 +55,7 @@ function askAboutUnconfirmedAlerts() {
 }
 
 function ConfiguredAccountActionsProvider({ children }: PropsWithChildren) {
-  const { signOut: endClerkSession } = useAuth();
+  const { signOut: endClerkSession, getToken } = useAuth();
   const { beforeSignOut, canRevoke } = useNotificationDevice();
   const inFlight = useRef(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -66,7 +83,43 @@ function ConfiguredAccountActionsProvider({ children }: PropsWithChildren) {
       });
   }, [beforeSignOut, canRevoke, endClerkSession]);
 
-  const value = useMemo(() => ({ signOut, isSigningOut }), [signOut, isSigningOut]);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const deleteAccount = useCallback(() => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    void runAccountDeletion({
+      confirm: confirmAccountDeletion,
+      requestDeletion: () => {
+        setIsDeletingAccount(true);
+        if (apiBaseUrl === null) return Promise.reject(new Error('Merge isn’t connected.'));
+        return requestAccountDeletion({ apiBaseUrl, getToken });
+      },
+      endSession: () => endClerkSession(),
+    })
+      .then((outcome) => {
+        if (outcome.status === 'FAILED') {
+          Alert.alert('Couldn’t delete your account', outcome.message);
+          return;
+        }
+        if (outcome.status !== 'DELETED') return;
+        router.replace('/');
+        Alert.alert(
+          'Your account is deleted',
+          outcome.signInRemoved
+            ? 'Your profile, photos and messages are gone.'
+            : `Your profile, photos and messages are gone. Your sign-in details couldn’t be removed just now. Email ${SUPPORT_EMAIL} and they’ll be removed for you.`,
+        );
+      })
+      .finally(() => {
+        inFlight.current = false;
+        setIsDeletingAccount(false);
+      });
+  }, [endClerkSession, getToken]);
+
+  const value = useMemo(
+    () => ({ signOut, isSigningOut, deleteAccount, isDeletingAccount }),
+    [signOut, isSigningOut, deleteAccount, isDeletingAccount],
+  );
   return <AccountActionsContext.Provider value={value}>{children}</AccountActionsContext.Provider>;
 }
 

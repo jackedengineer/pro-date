@@ -5,6 +5,7 @@ import type {
   CompleteProfilePromptsRequest,
   CompleteProfilePhotosRequest,
   CreateProfilePhotoRequest,
+  AccountDeletionResponse,
   CurrentUserResponse,
   HeightUpdate,
   HealthResponse,
@@ -60,6 +61,7 @@ import {
 } from './media/profile-photo-service.js';
 import type { ProfilePromptService } from './profile/profile-prompt-service.js';
 import type { ProfilePublicationService } from './profile/profile-publication-service.js';
+import type { AccountDeletionService } from './account/account-deletion-service.js';
 import { createRateLimiter, type RateLimit } from './rate-limiter.js';
 
 type ReadinessStatus = 'up' | 'down';
@@ -96,6 +98,8 @@ export interface ApiAppOptions {
   clock?: () => Date;
   findOrCreateCurrentUser?: (clerkSubject: string) => Promise<CurrentUserRecord>;
   logger?: Logger;
+  /** Permanent account deletion. Absent in tests and partial configurations. */
+  accountDeletionService?: AccountDeletionService;
   profilePhotoService?: ProfilePhotoService;
   profilePublicationService?: ProfilePublicationService;
   profilePromptService?: ProfilePromptService;
@@ -163,6 +167,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
     (() => Promise.reject(new Error('Current-user persistence is not configured.')));
   const logger = options.logger ?? createLogger();
   const profilePhotoService = options.profilePhotoService;
+  const accountDeletionService = options.accountDeletionService;
   const profilePublicationService = options.profilePublicationService;
   const profilePromptService = options.profilePromptService;
   const readinessCheck = options.readinessCheck ?? (() => Promise.resolve({ application: 'up' }));
@@ -257,6 +262,41 @@ export function createApiApp(options: ApiAppOptions = {}) {
 
       response.status(503).json(body);
     }
+  });
+
+  // Both stores require that a member can delete their account, and its data, from the app.
+  app.delete('/v1/users/me', async (request, response) => {
+    const clerkSubject = resolveClerkSubject(request);
+
+    if (clerkSubject === null || clerkSubject.length === 0) {
+      const body = {
+        error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(401).json(body);
+      return;
+    }
+
+    if (accountDeletionService === undefined) {
+      const body = {
+        error: {
+          code: 'ACCOUNT_DELETION_UNAVAILABLE',
+          message: 'Account deletion is not available right now. Try again shortly.',
+        },
+        requestId: getRequestId(request),
+      } satisfies ApiErrorResponse;
+
+      response.status(503).json(body);
+      return;
+    }
+
+    const body = {
+      data: await accountDeletionService.deleteAccount(clerkSubject),
+      requestId: getRequestId(request),
+    } satisfies AccountDeletionResponse;
+
+    response.status(200).json(body);
   });
 
   app.put('/v1/users/me', async (request, response) => {

@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { verifyToken } from '@clerk/backend';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 import { clerkMiddleware, getAuth } from '@clerk/express';
 import { z } from 'zod';
 import {
@@ -15,6 +15,7 @@ import {
   createProfileRepository,
 } from '@pro-date/database';
 
+import { createAccountDeletionService } from './account/account-deletion-service.js';
 import { createApiApp } from './app.js';
 import { registerDatabasePoolErrorHandler } from './database-pool.js';
 import { readApiServiceEnvironment } from './env.js';
@@ -48,6 +49,8 @@ const messagingRepository = createMessagingRepository(database, {
   expoProjectId: environment.expoProjectId,
 });
 let notifyMessaging = () => {};
+let disconnectAccount: (userId: string) => void = () => {};
+const clerk = createClerkClient({ secretKey: environment.clerkSecretKey });
 const photoProvider =
   environment.cloudinary === null
     ? undefined
@@ -89,7 +92,30 @@ const orphanUploadSweeper =
       })
     : null;
 
+const accountDeletionService = createAccountDeletionService({
+  deleteUserData: (clerkSubject) => currentUserRepository.deleteByClerkSubject(clerkSubject),
+  deleteMedia:
+    photoProvider === undefined ? null : (userId) => photoProvider.deleteAllUploads(userId),
+  deleteIdentity: async (clerkSubject) => {
+    try {
+      await clerk.users.deleteUser(clerkSubject);
+    } catch (error: unknown) {
+      // Already gone is the outcome we wanted.
+      if (typeof error === 'object' && error !== null && 'status' in error && error.status === 404)
+        return;
+      throw error;
+    }
+  },
+  onDeleted: (userId) => disconnectAccount(userId),
+  onStepFailure: (step, error) =>
+    logger.error(
+      { event: 'account_deletion_incomplete', step, error: describeError(error) },
+      'Account data was deleted but a follow-up step failed',
+    ),
+});
+
 const app = createApiApp({
+  accountDeletionService,
   notificationDevices: {
     enabled: environment.notificationsEnabled,
     projectId: environment.expoProjectId,
@@ -169,6 +195,7 @@ const messagingRealtime = createMessagingRealtime(server, {
 notifyMessaging = () => {
   void messagingRealtime.flush();
 };
+disconnectAccount = (userId) => messagingRealtime.disconnectUser(userId);
 server.listen(environment.port, environment.host, () => {
   logger.info(
     {

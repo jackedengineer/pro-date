@@ -5,6 +5,7 @@ export {
   type ProDateDatabase,
 } from './client.js';
 export {
+  buildCurrentUserDeleteQuery,
   buildCurrentUserUpsertQuery,
   createCurrentUserRepository,
   type CurrentUserRecord,

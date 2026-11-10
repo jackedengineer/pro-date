@@ -25,6 +25,13 @@ export function buildCurrentUserUpsertQuery(database: ProDateDatabase, clerkSubj
     });
 }
 
+export function buildCurrentUserDeleteQuery(database: ProDateDatabase, clerkSubject: string) {
+  return database
+    .delete(users)
+    .where(eq(users.clerkSubject, clerkSubject))
+    .returning({ id: users.id });
+}
+
 export function createCurrentUserRepository(database: ProDateDatabase) {
   return {
     async findByClerkSubject(clerkSubject: string): Promise<CurrentUserRecord | null> {
@@ -38,6 +45,15 @@ export function createCurrentUserRepository(database: ProDateDatabase) {
         .where(eq(users.clerkSubject, clerkSubject))
         .limit(1);
       return user ?? null;
+    },
+    /**
+     * Deletes the member and, through the schema's cascades, everything that belongs to them:
+     * profile, photos, prompts, pull requests, matches, messages, blocks, reports and devices.
+     * Returns the deleted id, or null when there was no account to delete.
+     */
+    async deleteByClerkSubject(clerkSubject: string): Promise<string | null> {
+      const [deleted] = await buildCurrentUserDeleteQuery(database, clerkSubject);
+      return deleted?.id ?? null;
     },
     async findOrCreateByClerkSubject(clerkSubject: string): Promise<CurrentUserRecord> {
       const [currentUser] = await buildCurrentUserUpsertQuery(database, clerkSubject);

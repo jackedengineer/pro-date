@@ -22,6 +22,11 @@ const cloudinaryDeleteResponseSchema = z.object({
   result: z.enum(['not found', 'ok']),
 });
 
+const cloudinaryBulkDeleteResponseSchema = z.object({
+  deleted: z.record(z.string(), z.string()),
+  partial: z.boolean().optional(),
+});
+
 const cloudinaryListResponseSchema = z.object({
   next_cursor: z.string().min(1).optional(),
   resources: z.array(
@@ -50,6 +55,7 @@ interface UploadParameters {
 export interface ProfilePhotoCloudinaryClient {
   buildDeliveryUrl: (publicId: string, version: number) => string;
   deleteResource: (publicId: string) => Promise<unknown>;
+  deleteResourcesByPrefix: (prefix: string) => Promise<unknown>;
   getResource: (publicId: string) => Promise<unknown>;
   listResources: (prefix: string, cursor: string | undefined) => Promise<unknown>;
   signUpload: (parameters: UploadParameters) => string;
@@ -181,6 +187,26 @@ export function createProfilePhotoProvider({
       }
     },
 
+    /**
+     * Removes every image a member ever uploaded, confirmed or not. The prefix is built from the
+     * internal user id only, so it can never reach another member's folder.
+     */
+    async deleteAllUploads(userId: string) {
+      if (!/^[0-9a-f-]{36}$/.test(userId)) throw new Error('A user id is required.');
+      const prefix = `${PROFILE_UPLOAD_ROOT}${userId}/`;
+      // Each call removes up to 1,000 assets and reports whether more remain.
+      for (let pass = 0; pass < 5; pass++) {
+        const result = cloudinaryBulkDeleteResponseSchema.safeParse(
+          await client.deleteResourcesByPrefix(prefix),
+        );
+        if (!result.success) {
+          throw new Error('The media provider returned an unexpected deletion response.');
+        }
+        if (result.data.partial !== true) return;
+      }
+      throw new Error('The media provider still holds uploads for this member.');
+    },
+
     getDeliveryUrl(publicId: string, version: number) {
       return client.buildDeliveryUrl(publicId, version);
     },
@@ -242,6 +268,12 @@ export function createCloudinaryProfilePhotoClient({
       }),
     deleteResource: (publicId) =>
       cloudinary.uploader.destroy(publicId, {
+        invalidate: true,
+        resource_type: 'image',
+        type: 'upload',
+      }),
+    deleteResourcesByPrefix: (prefix) =>
+      cloudinary.api.delete_resources_by_prefix(prefix, {
         invalidate: true,
         resource_type: 'image',
         type: 'upload',

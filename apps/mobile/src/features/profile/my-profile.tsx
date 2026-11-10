@@ -4,9 +4,10 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
+import { LegalLinkList } from '../../components/legal-links';
 import { SegmentedControl } from '../../components/segmented-control';
 import { colors, hairline, radii, spacing } from '../../theme/tokens';
-import { SignOutButton } from '../account/account-actions';
+import { DeleteAccountButton, SignOutButton } from '../account/account-actions';
 import { DiscoveryProfileCard } from '../discovery/discovery-profile-card';
 import { ErrorNotice, QuietButton } from '../discovery/discovery-shared';
 import type { EditableStep } from '../onboarding/profile-onboarding-flow';
@@ -165,7 +166,11 @@ export function MyProfile({
         </>
       )}
       <View style={styles.account}>
-        <SignOutButton />
+        <LegalLinkList />
+        <View style={styles.accountActions}>
+          <SignOutButton />
+          <DeleteAccountButton />
+        </View>
       </View>
     </ScrollView>
   );
@@ -188,6 +193,12 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     borderTopWidth: hairline,
     marginTop: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  accountActions: {
+    borderTopColor: colors.border,
+    borderTopWidth: hairline,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
   },
 });

@@ -4,6 +4,7 @@ import Heart from 'lucide-react-native/icons/heart';
 
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
+import { LegalNotice } from '../../components/legal-links';
 import { Reveal } from '../../components/reveal';
 import { Screen } from '../../components/screen';
 import { cardShadow, colors, hairline, radii, spacing } from '../../theme/tokens';
@@ -63,9 +64,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
 
         <Reveal order={3} style={styles.footer}>
           <AppButton label="Get started" onPress={onGetStarted} />
-          <AppText style={styles.terms} variant="caption">
-            By continuing, you confirm you are 18 or older.
-          </AppText>
+          <LegalNotice />
         </Reveal>
       </ScrollView>
     </Screen>
@@ -154,9 +153,6 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.muted,
     maxWidth: 330,
-  },
-  terms: {
-    textAlign: 'center',
   },
   wordmark: {
     color: colors.plum,

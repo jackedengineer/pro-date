@@ -11,7 +11,7 @@ type PressableProps = ComponentProps<typeof Pressable>;
 interface AppButtonProps extends Omit<PressableProps, 'children'> {
   label: string;
   loading?: boolean;
-  variant?: 'primary' | 'secondary' | 'quiet' | 'danger';
+  variant?: 'primary' | 'secondary' | 'quiet' | 'quietDanger' | 'danger';
   feedback?: 'selection';
 }
 
@@ -43,7 +43,13 @@ export function AppButton({
       Animated.timing(scale, { toValue: value, duration: 130, useNativeDriver: true }).start();
   };
   const filled = variant === 'primary' || variant === 'danger';
-  const labelColor = isDisabled ? colors.muted : filled ? colors.white : colors.plum;
+  const labelColor = isDisabled
+    ? colors.muted
+    : filled
+      ? colors.white
+      : variant === 'quietDanger'
+        ? colors.danger
+        : colors.plum;
 
   return (
     <Pressable
@@ -116,6 +122,7 @@ const pressedVariants = StyleSheet.create({
   primary: { backgroundColor: colors.plumPressed },
   secondary: { backgroundColor: colors.plumSoft },
   quiet: { backgroundColor: colors.plumSoft },
+  quietDanger: { backgroundColor: colors.dangerSoft },
   danger: { opacity: 0.86 },
 });
 
@@ -127,5 +134,6 @@ const variants = StyleSheet.create({
     borderColor: colors.fieldBorder,
   },
   quiet: { backgroundColor: 'transparent', minHeight: 48, paddingVertical: spacing.sm },
+  quietDanger: { backgroundColor: 'transparent', minHeight: 48, paddingVertical: spacing.sm },
   danger: { backgroundColor: colors.danger },
 });

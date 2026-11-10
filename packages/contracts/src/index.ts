@@ -90,6 +90,8 @@ export type {
   ProfileReviewMissingSection,
   ProfileReviewResponse,
 } from './profile-publication';
+export { accountDeletionResponseSchema } from './account';
+export type { AccountDeletionResponse } from './account';
 export * from './discovery';
 export * from './messaging';
 export * from './notifications';

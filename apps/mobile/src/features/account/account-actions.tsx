@@ -9,6 +9,9 @@ import { IconButton } from '../../components/icon-button';
 export interface AccountActions {
   signOut: () => void;
   isSigningOut: boolean;
+  /** Asks for confirmation, then permanently deletes the account and everything in it. */
+  deleteAccount: () => void;
+  isDeletingAccount: boolean;
 }
 export const AccountActionsContext = createContext<AccountActions | null>(null);
 export const useAccountActions = () => useContext(AccountActionsContext);
@@ -22,7 +25,24 @@ export function SignOutButton() {
       label="Sign out"
       variant="quiet"
       loading={actions.isSigningOut}
+      disabled={actions.isDeletingAccount}
       onPress={actions.signOut}
+    />
+  );
+}
+
+/** The stores require this to be reachable inside the app, not only on a website. */
+export function DeleteAccountButton() {
+  const actions = useAccountActions();
+  if (actions === null) return null;
+  return (
+    <AppButton
+      label={actions.isDeletingAccount ? 'Deleting…' : 'Delete account'}
+      accessibilityLabel={actions.isDeletingAccount ? 'Deleting account' : 'Delete account'}
+      variant="quietDanger"
+      loading={actions.isDeletingAccount}
+      disabled={actions.isSigningOut}
+      onPress={actions.deleteAccount}
     />
   );
 }

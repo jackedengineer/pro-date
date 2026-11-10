@@ -16,6 +16,7 @@ function createClient(
   return {
     buildDeliveryUrl: vi.fn().mockReturnValue('https://res.cloudinary.com/demo/profile.jpg'),
     deleteResource: vi.fn().mockResolvedValue({ result: 'ok' }),
+    deleteResourcesByPrefix: vi.fn().mockResolvedValue({ deleted: {} }),
     getResource: vi.fn().mockResolvedValue({
       asset_id: 'asset-immutable-id',
       bytes: 1_250_000,
@@ -211,5 +212,24 @@ describe('profile photo provider', () => {
     });
 
     await expect(provider.listUploads(undefined)).rejects.toThrow('unexpected listing response');
+  });
+
+  it("deletes everything under one member's folder and nothing else", async () => {
+    const deleteResourcesByPrefix = vi
+      .fn()
+      .mockResolvedValueOnce({ deleted: { a: 'deleted' }, partial: true })
+      .mockResolvedValueOnce({ deleted: { b: 'deleted' } });
+    const provider = createProfilePhotoProvider({
+      apiKey: '123456789012345',
+      cloudName: 'pro-date-dev',
+      client: createClient({ deleteResourcesByPrefix }),
+    });
+
+    await provider.deleteAllUploads(userId);
+
+    expect(deleteResourcesByPrefix).toHaveBeenCalledTimes(2);
+    expect(deleteResourcesByPrefix).toHaveBeenCalledWith(`pro-date/users/${userId}/`);
+    await expect(provider.deleteAllUploads('')).rejects.toThrow('A user id is required.');
+    await expect(provider.deleteAllUploads('../other')).rejects.toThrow('A user id is required.');
   });
 });

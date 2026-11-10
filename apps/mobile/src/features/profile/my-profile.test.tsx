@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+import { AccountActionsContext } from '../account/account-actions';
 import { asDiscoveryProfile, MyProfile } from './my-profile';
 import { publishedReview } from './profile-test-fixtures';
 
@@ -95,5 +96,28 @@ describe('MyProfile', () => {
 
     await view.rerender(<MyProfile {...props} reloadKey={1} />);
     await waitFor(() => expect(loadProfileReview).toHaveBeenCalledTimes(3));
+  });
+
+  it('offers the public pages and account deletion inside the app', async () => {
+    const deleteAccount = jest.fn();
+    const view = await render(
+      <AccountActionsContext.Provider
+        value={{ signOut: jest.fn(), isSigningOut: false, deleteAccount, isDeletingAccount: false }}
+      >
+        <MyProfile
+          loadProfileReview={jest.fn().mockResolvedValue(publishedReview)}
+          onEdit={jest.fn()}
+          onFinishSetup={jest.fn()}
+        />
+      </AccountActionsContext.Provider>,
+    );
+
+    await view.findByText(/^Avery, \d+$/);
+    for (const name of ['Privacy policy', 'Terms of use', 'Safety standards', 'Help and contact'])
+      expect(view.getByRole('link', { name })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Sign out' })).toBeTruthy();
+
+    await fireEvent.press(view.getByRole('button', { name: 'Delete account' }));
+    expect(deleteAccount).toHaveBeenCalledTimes(1);
   });
 });

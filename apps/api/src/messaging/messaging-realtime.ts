@@ -299,6 +299,10 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
   return {
     flush,
     admissionSnapshot: () => admission.snapshot(),
+    /** Closes every live connection for an account that no longer exists. */
+    disconnectUser(userId: string) {
+      io.in(`user:${userId}`).disconnectSockets(true);
+    },
     async close() {
       stopped = true;
       clearInterval(timer);
