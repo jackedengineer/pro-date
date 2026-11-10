@@ -46,7 +46,7 @@ export const MergedConversationRow = memo(function MergedConversationRow({
       )}
       <View style={styles.summary}>
         <View style={styles.heading}>
-          <AppText variant="button" numberOfLines={1} style={styles.name}>
+          <AppText variant="headline" numberOfLines={1} style={styles.name}>
             {member.displayName}
           </AppText>
           <AppText variant="caption" style={styles.date}>
@@ -77,21 +77,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    padding: spacing.md,
-    minHeight: 96,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    minHeight: 80,
   },
-  summary: { flex: 1, gap: spacing.xs },
+  summary: { flex: 1, gap: 2 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { flex: 1 },
   date: { color: colors.muted, fontVariant: ['tabular-nums'] },
   preview: { color: colors.muted, fontSize: 14, lineHeight: 21 },
   invitation: { color: colors.plum, fontSize: 14, lineHeight: 21 },
   newMatch: { color: colors.muted },
-  avatar: { width: 60, height: 60, borderRadius: radii.lg, backgroundColor: colors.plumSoft },
-  photoOutline: { borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)' },
+  avatar: { width: 56, height: 56, borderRadius: radii.pill, backgroundColor: colors.sand },
+  photoOutline: { borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0, 0, 0, 0.1)' },
   initial: { alignItems: 'center', justifyContent: 'center' },
   initialText: { color: colors.plum },
-  pressed: { backgroundColor: colors.plumSoft },
+  pressed: { backgroundColor: colors.sand },
 });

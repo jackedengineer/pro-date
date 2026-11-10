@@ -40,7 +40,7 @@ export function MergedInbox({ onOpenConversation }: { onOpenConversation: (id: s
     ({ item }: { item: MergedInboxRow }) =>
       item.type === 'header' ? (
         <View style={styles.section} accessibilityRole="header">
-          <AppText variant="button">
+          <AppText variant="eyebrow" style={styles.sectionTitle}>
             {item.turn === 'YOUR_TURN' ? 'Your turn' : 'Their turn'}
           </AppText>
           <AppText variant="caption" style={styles.count}>
@@ -175,12 +175,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.plumSoft,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.background,
   },
-  count: { color: colors.plum, fontVariant: ['tabular-nums'] },
+  sectionTitle: { fontSize: 13 },
+  count: { fontVariant: ['tabular-nums'] },
   empty: { paddingHorizontal: spacing.lg },
   center: { padding: spacing.lg, gap: spacing.md },
   footer: { padding: spacing.lg, gap: spacing.md },
@@ -188,21 +188,21 @@ const styles = StyleSheet.create({
   skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   skeletonAvatar: {
     width: 56,
-    height: 60,
-    borderRadius: radii.lg,
-    backgroundColor: colors.plumSoft,
+    height: 56,
+    borderRadius: radii.pill,
+    backgroundColor: colors.sand,
   },
   skeletonText: { flex: 1, gap: spacing.sm },
   skeletonName: {
     height: 16,
     width: '45%',
     borderRadius: spacing.xs,
-    backgroundColor: colors.plumSoft,
+    backgroundColor: colors.sand,
   },
   skeletonLine: {
     height: 12,
     width: '80%',
     borderRadius: spacing.xs,
-    backgroundColor: colors.plumSoft,
+    backgroundColor: colors.sand,
   },
 });

@@ -6,7 +6,7 @@ import { QuotedMessage } from './message-quote';
 import { Pressable, StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
 import ArrowUp from 'lucide-react-native/icons/arrow-up';
 import { AppText } from '../../components/app-text';
-import { colors, typography } from '../../theme/tokens';
+import { colors, hairline, typography } from '../../theme/tokens';
 
 export function MessageComposer({
   onSend,
@@ -44,7 +44,7 @@ export function MessageComposer({
         setDraft('');
       }
     } catch (failure: unknown) {
-      setError(failure instanceof Error ? failure.message : 'We couldn’t save this message.');
+      setError(failure instanceof Error ? failure.message : 'Couldn’t save this message.');
     } finally {
       guard.current = false;
       setSaving(false);
@@ -78,7 +78,7 @@ export function MessageComposer({
           multiline
           maxLength={2000}
           submitBehavior="newline"
-          placeholder="Message…"
+          placeholder="Message"
           placeholderTextColor={colors.muted}
           style={styles.input}
         />
@@ -104,22 +104,23 @@ export function MessageComposer({
 }
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
+    backgroundColor: colors.background,
+    borderTopWidth: hairline,
     borderTopColor: colors.border,
-    paddingTop: 10,
-    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingHorizontal: 12,
   },
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   reply: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   quote: { flex: 1 },
   input: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 44,
     maxHeight: 144,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
+    paddingVertical: 10,
+    borderCurve: 'continuous',
+    borderRadius: 22,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.fieldBorder,
@@ -130,14 +131,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   send: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
+    borderRadius: 22,
     backgroundColor: colors.plum,
   },
-  disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.7 },
+  disabled: { backgroundColor: colors.border },
+  pressed: { backgroundColor: colors.plumPressed, transform: [{ scale: 0.94 }] },
   error: { color: colors.danger, marginBottom: 8 },
 });

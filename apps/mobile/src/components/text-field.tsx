@@ -32,6 +32,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.fieldBorder,
     borderWidth: 1,
+    borderCurve: 'continuous',
     borderRadius: radii.md,
     color: colors.ink,
     fontFamily: typography.family.body,
@@ -40,5 +41,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  focused: { borderColor: colors.plum },
+  focused: { borderColor: colors.plum, borderWidth: 2, paddingHorizontal: spacing.md - 1 },
 });

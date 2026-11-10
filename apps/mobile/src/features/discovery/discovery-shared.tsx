@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Heart from 'lucide-react-native/icons/heart';
 import { AppText } from '../../components/app-text';
-import { colors, radii, spacing } from '../../theme/tokens';
+import { colors, hairline, radii, spacing } from '../../theme/tokens';
 
 export function QuietButton({
   label,
@@ -49,7 +49,7 @@ export function EmptyState({ title, body }: { title: string; body: string }) {
         <Heart size={24} color={colors.plum} strokeWidth={1.6} />
       </View>
       <AppText variant="title">{title}</AppText>
-      <AppText style={sharedStyles.muted}>{body}</AppText>
+      <AppText style={sharedStyles.emptyBody}>{body}</AppText>
     </View>
   );
 }
@@ -59,6 +59,7 @@ export const sharedStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   muted: { color: colors.muted },
   quietButton: {
+    borderCurve: 'continuous',
     borderRadius: radii.sm,
     minHeight: 48,
     paddingHorizontal: spacing.md,
@@ -69,21 +70,29 @@ export const sharedStyles = StyleSheet.create({
   quietText: { color: colors.plum },
   pressed: { backgroundColor: colors.plumSoft },
   disabled: { opacity: 0.45 },
-  error: { borderRadius: radii.sm, backgroundColor: colors.dangerSoft, padding: spacing.md },
-  errorText: { color: colors.danger },
-  empty: { paddingVertical: spacing.xl, gap: spacing.md },
-  emptyIcon: {
-    width: 52,
-    height: 52,
+  error: {
+    borderCurve: 'continuous',
     borderRadius: radii.md,
-    backgroundColor: colors.plumSoft,
+    backgroundColor: colors.dangerSoft,
+    padding: spacing.md,
+  },
+  errorText: { color: colors.danger },
+  empty: { paddingVertical: spacing.xl, gap: spacing.sm },
+  emptyBody: { color: colors.muted, maxWidth: 340 },
+  emptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.pill,
+    backgroundColor: colors.sand,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    borderCurve: 'continuous',
+    borderRadius: radii.lg,
+    borderWidth: hairline,
     borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.md,

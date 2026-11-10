@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentProps } from 'react';
 import { ActivityIndicator, Animated, Pressable, StyleSheet } from 'react-native';
 
-import { colors, radii, spacing } from '../theme/tokens';
+import { colors, hairline, radii, spacing } from '../theme/tokens';
 import { AppText } from './app-text';
 import { triggerFeedback } from '../theme/feedback';
 import { useReducedMotionPreference } from '../theme/motion';
@@ -76,7 +76,7 @@ export function AppButton({
           style={[
             styles.base,
             variants[variant],
-            pressed && !isDisabled && styles.pressed,
+            pressed && !isDisabled && pressedVariants[variant],
             isDisabled && styles.disabled,
             { transform: [{ scale }] },
           ]}
@@ -96,6 +96,7 @@ export function AppButton({
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radii.md,
     flexDirection: 'row',
     gap: spacing.sm,
@@ -108,14 +109,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.plumSoft,
     borderColor: colors.plumSoft,
   },
-  pressed: {
-    opacity: 0.82,
-  },
+});
+
+// A pressed control darkens in place; fading the whole button reads as disabled.
+const pressedVariants = StyleSheet.create({
+  primary: { backgroundColor: colors.plumPressed },
+  secondary: { backgroundColor: colors.plumSoft },
+  quiet: { backgroundColor: colors.plumSoft },
+  danger: { opacity: 0.86 },
 });
 
 const variants = StyleSheet.create({
   primary: { backgroundColor: colors.plum },
-  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  secondary: {
+    backgroundColor: colors.surface,
+    borderWidth: hairline,
+    borderColor: colors.fieldBorder,
+  },
   quiet: { backgroundColor: 'transparent', minHeight: 48, paddingVertical: spacing.sm },
   danger: { backgroundColor: colors.danger },
 });

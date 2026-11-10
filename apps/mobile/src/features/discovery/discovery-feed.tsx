@@ -1,10 +1,11 @@
 import type { DiscoveryProfile, PullRequestTarget } from '@pro-date/contracts';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import X from 'lucide-react-native/icons/x';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { DiscoveryActions, DiscoveryFilters } from '../../api/discovery';
 import { AppText } from '../../components/app-text';
-import { colors } from '../../theme/tokens';
+import { cardShadow, colors, hairline, radii, spacing } from '../../theme/tokens';
 import { DiscoveryProfileCard } from './discovery-profile-card';
 import { EmptyState, ErrorNotice, QuietButton, sharedStyles } from './discovery-shared';
 import { ProfileSafetySheet } from './profile-safety-sheet';
@@ -50,7 +51,7 @@ export function DiscoveryFeed({
       setActionError(
         failure instanceof Error
           ? failure.message
-          : 'We could not move to the next profile. Try again.',
+          : 'Couldn’t move to the next profile. Try again.',
       );
     } finally {
       passing.current = false;
@@ -58,10 +59,10 @@ export function DiscoveryFeed({
     }
   };
   return (
-    <>
+    <View style={styles.feed}>
       <ScrollView
         key={profile?.userId ?? 'empty'}
-        contentContainerStyle={sharedStyles.content}
+        contentContainerStyle={[sharedStyles.content, profile !== undefined && styles.clearPass]}
         showsVerticalScrollIndicator={false}
       >
         {notice === null ? null : (
@@ -71,7 +72,7 @@ export function DiscoveryFeed({
         )}
         <ErrorNotice message={list.error ?? actionError} />
         {list.loading ? (
-          <View accessibilityRole="progressbar">
+          <View accessibilityRole="progressbar" style={styles.loading}>
             <ActivityIndicator color={colors.plum} />
             <AppText variant="caption">Finding your kind of people…</AppText>
           </View>
@@ -103,15 +104,10 @@ export function DiscoveryFeed({
                     }
               }
             />
-            <AppText style={sharedStyles.muted} variant="caption">
-              Like a photo or prompt to send a pull request. Keep it specific; that’s where a good
-              hello starts.
+            <AppText style={styles.hint} variant="caption">
+              Like a photo or an answer to send a pull request. A specific like makes the best
+              hello.
             </AppText>
-            <QuietButton
-              label={busy ? 'Moving on…' : 'Pass · see next profile'}
-              onPress={() => void pass()}
-              disabled={busy || list.loading}
-            />
             <QuietButton
               label="Report or block"
               onPress={() => setShowSafety(true)}
@@ -123,6 +119,30 @@ export function DiscoveryFeed({
           </>
         )}
       </ScrollView>
+      {profile === undefined ? null : (
+        // Passing is the most-used action here, so it stays in reach instead of below the fold.
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={busy ? 'Moving on…' : 'Pass · see next profile'}
+          accessibilityState={{ disabled: busy || list.loading, busy }}
+          disabled={busy || list.loading}
+          hitSlop={8}
+          onPress={() => void pass()}
+          style={({ pressed }) => [
+            styles.pass,
+            pressed && styles.passPressed,
+            (busy || list.loading) && styles.passDisabled,
+          ]}
+        >
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {busy ? (
+              <ActivityIndicator color={colors.muted} size="small" />
+            ) : (
+              <X color={colors.ink} size={26} strokeWidth={1.8} />
+            )}
+          </View>
+        </Pressable>
+      )}
       {target === null || profile === undefined ? null : (
         <PullRequestComposer
           profile={profile}
@@ -153,6 +173,28 @@ export function DiscoveryFeed({
           }}
         />
       )}
-    </>
+    </View>
   );
 }
+const styles = StyleSheet.create({
+  feed: { flex: 1 },
+  clearPass: { paddingBottom: 112 },
+  loading: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
+  hint: { textAlign: 'center', paddingHorizontal: spacing.md },
+  pass: {
+    position: 'absolute',
+    left: spacing.lg,
+    bottom: spacing.md,
+    width: 56,
+    height: 56,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface,
+    borderWidth: hairline,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...cardShadow,
+  },
+  passPressed: { backgroundColor: colors.sand, transform: [{ scale: 0.94 }] },
+  passDisabled: { opacity: 0.6 },
+});

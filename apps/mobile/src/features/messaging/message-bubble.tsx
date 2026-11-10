@@ -1,7 +1,7 @@
 import { memo, useRef } from 'react';
 import { Pressable, StyleSheet, View, type ViewInstance } from 'react-native';
 import { AppText } from '../../components/app-text';
-import { colors } from '../../theme/tokens';
+import { colors, hairline } from '../../theme/tokens';
 import type { ChatRow } from './chat-thread';
 import { QuotedMessage } from './message-quote';
 import { SwipeToReply } from './swipe-to-reply';
@@ -99,7 +99,7 @@ export const MessageBubble = memo(function MessageBubble({
       >
         {row.replyTo === null ? null : <QuotedMessage quote={row.replyTo} light={mine} />}
         <AppText style={mine ? styles.light : undefined}>{row.body}</AppText>
-        <AppText variant="caption" style={[styles.meta, mine && styles.light]}>
+        <AppText variant="caption" style={[styles.meta, mine && styles.lightMeta]}>
           {time}
           {mine ? ` · ${state}` : ''}
         </AppText>
@@ -147,25 +147,28 @@ export const MessageBubble = memo(function MessageBubble({
   );
 });
 const styles = StyleSheet.create({
-  row: { marginHorizontal: 16, marginVertical: 4 },
+  row: { marginHorizontal: 16, marginVertical: 3 },
   right: { alignItems: 'flex-end' },
   left: { alignItems: 'flex-start' },
   bubble: {
-    maxWidth: '86%',
+    maxWidth: '82%',
     paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 8,
+    paddingTop: 9,
+    paddingBottom: 7,
+    borderCurve: 'continuous',
     borderRadius: 20,
   },
   incoming: {
     backgroundColor: colors.surface,
     borderBottomLeftRadius: 6,
-    borderWidth: 1,
+    borderWidth: hairline,
     borderColor: colors.border,
   },
   outgoing: { backgroundColor: colors.plum, borderBottomRightRadius: 6 },
   light: { color: colors.white },
-  meta: { marginTop: 6, fontSize: 13, color: colors.muted },
+  meta: { marginTop: 2, fontSize: 12, lineHeight: 16, color: colors.muted },
+  // 7.6:1 on plum: quiet, and still well above AA for small text.
+  lightMeta: { color: '#E3D5DE' },
   failure: { maxWidth: '86%' },
   error: { color: colors.danger },
   actions: { flexDirection: 'row', justifyContent: 'flex-end' },

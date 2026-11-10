@@ -1,6 +1,6 @@
 import type { ComponentProps, ComponentType } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, radii } from '../theme/tokens';
+import { colors, radii, touchTarget } from '../theme/tokens';
 
 interface IconButtonProps extends Omit<ComponentProps<typeof Pressable>, 'children'> {
   label: string;
@@ -43,9 +43,9 @@ export function IconButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 44,
-    minWidth: 44,
-    borderRadius: radii.sm,
+    minHeight: touchTarget,
+    minWidth: touchTarget,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

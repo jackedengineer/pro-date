@@ -1,6 +1,6 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import { IconButton } from '../../components/icon-button';
 import { useReducedMotionPreference } from '../../theme/motion';
@@ -28,7 +28,7 @@ import { KeyboardChatScrollView, KeyboardStickyView } from 'react-native-keyboar
 import Reanimated, { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../../components/app-text';
-import { colors } from '../../theme/tokens';
+import { colors, hairline } from '../../theme/tokens';
 import { EmptyState, ErrorNotice, QuietButton } from '../discovery/discovery-shared';
 import { ProfileSafetySheet } from '../discovery/profile-safety-sheet';
 import { isConversationGone, type ChatRow, type ThreadSnapshot } from './chat-thread';
@@ -91,7 +91,7 @@ export function ConversationScreen({ id }: { id: string }) {
   useEffect(() => runtime!.watch(id), [runtime, id]);
   const handleFailure = useCallback(
     (failure: unknown) =>
-      setActionError(failure instanceof Error ? failure.message : 'We couldn’t save this change.'),
+      setActionError(failure instanceof Error ? failure.message : 'Couldn’t save this change.'),
     [],
   );
   const retry = useCallback(
@@ -177,17 +177,17 @@ export function ConversationScreen({ id }: { id: string }) {
     <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={styles.header}>
         <View style={styles.member}>
-          <IconButton label="Back to Merged" icon={ArrowLeft} onPress={backToMerged} />
+          <IconButton label="Back to Merged" icon={ChevronLeft} onPress={backToMerged} />
           <Image
             source={state.conversation?.member.photoUrl ?? null}
             contentFit="cover"
             style={styles.avatar}
           />
           <View style={styles.name}>
-            <AppText variant="button" numberOfLines={1}>
+            <AppText variant="headline" numberOfLines={1}>
               {state.conversation?.member.displayName ?? 'Conversation'}
             </AppText>
-            <AppText variant="caption">
+            <AppText variant="caption" numberOfLines={1}>
               {state.unavailable
                 ? 'No longer available'
                 : state.online
@@ -374,15 +374,14 @@ function ConversationEmptyState({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   header: {
-    borderBottomWidth: 1,
+    borderBottomWidth: hairline,
     borderBottomColor: colors.border,
     paddingHorizontal: 8,
-    paddingTop: 4,
-    paddingBottom: 8,
+    paddingBottom: 4,
   },
-  member: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64 },
-  avatar: { width: 40, height: 40, borderRadius: 16, backgroundColor: colors.plumSoft },
-  name: { flex: 1 },
+  member: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 56 },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.sand },
+  name: { flex: 1, marginLeft: 4 },
   tools: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -399,7 +398,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: colors.surface,
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: hairline,
     borderColor: colors.border,
     marginBottom: 8,
   },

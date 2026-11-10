@@ -8,7 +8,7 @@ import { IconButton } from '../../components/icon-button';
 import type { DiscoveryActions } from '../../api/discovery';
 import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
-import { colors, radii } from '../../theme/tokens';
+import { colors, radii, spacing } from '../../theme/tokens';
 import { DiscoveryProfileCard, TargetPreview } from './discovery-profile-card';
 import { EmptyState, ErrorNotice, QuietButton, sharedStyles } from './discovery-shared';
 import { DiscoverySheet } from './discovery-sheet';
@@ -47,7 +47,7 @@ export function ConnectionList({
       else if (list.items.length === 1 && list.hasMore) await list.loadMore();
     } catch (failure: unknown) {
       setError(
-        failure instanceof Error ? failure.message : 'We could not save your response. Try again.',
+        failure instanceof Error ? failure.message : 'Couldn’t save your response. Try again.',
       );
     } finally {
       reviewing.current = false;
@@ -89,10 +89,10 @@ export function ConnectionList({
                   style={styles.avatar}
                 />
                 <View style={styles.name}>
-                  <AppText variant="button">
+                  <AppText variant="headline" numberOfLines={1}>
                     {profile.displayName}, {profile.age}
                   </AppText>
-                  <AppText variant="caption">
+                  <AppText variant="caption" numberOfLines={2}>
                     Liked your {item.target.type === 'PHOTO' ? 'photo' : 'prompt'} ·{' '}
                     {profile.locationLabel}
                   </AppText>
@@ -101,7 +101,7 @@ export function ConnectionList({
               <TargetPreview target={item.target} />
               {item.comment.length === 0 ? null : (
                 <View style={styles.comment}>
-                  <AppText>“{item.comment}”</AppText>
+                  <AppText variant="quote">“{item.comment}”</AppText>
                 </View>
               )}
               <View style={styles.actions}>
@@ -179,8 +179,8 @@ export function ConnectionList({
   );
 }
 const styles = StyleSheet.create({
-  avatar: { width: 64, height: 80, borderRadius: radii.sm, backgroundColor: colors.plumSoft },
-  name: { flex: 1 },
+  avatar: { width: 56, height: 56, borderRadius: radii.pill, backgroundColor: colors.sand },
+  name: { flex: 1, gap: 2 },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -189,5 +189,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   action: { flexGrow: 1, flexBasis: 120 },
-  comment: { padding: 16, backgroundColor: colors.plumSoft, borderRadius: radii.sm },
+  // Their words, set apart from our interface by a rule rather than another box.
+  comment: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.coral,
+    paddingLeft: spacing.md,
+    paddingVertical: spacing.xs,
+  },
 });

@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '../../components/app-text';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { cardShadow, colors, hairline, radii, spacing, typography } from '../../theme/tokens';
 
 const intents: Record<RelationshipIntent, string> = {
   LONG_TERM: 'Long-term relationship',
@@ -44,7 +44,7 @@ export function TargetPreview({ target }: { target: PullRequestTarget }) {
       <AppText style={styles.question} variant="caption">
         {PROFILE_PROMPT_CATALOGUE.find((prompt) => prompt.id === target.promptId)?.text}
       </AppText>
-      <AppText style={styles.answer}>{target.answer}</AppText>
+      <AppText variant="quote">{target.answer}</AppText>
     </View>
   );
 }
@@ -72,13 +72,13 @@ export function DiscoveryProfileCard({
         onPress={() => onLike(target)}
         style={({ pressed }) => [styles.likeButton, pressed && styles.pressed]}
       >
-        <Heart size={24} color={colors.plum} strokeWidth={1.8} />
+        <Heart size={24} color={colors.coral} strokeWidth={2} />
       </Pressable>
     );
   return (
     <View style={styles.profile}>
       <View style={styles.title}>
-        <AppText variant="title">
+        <AppText variant="display">
           {profile.displayName}, {profile.age}
         </AppText>
         <AppText variant="caption">{profile.locationLabel}</AppText>
@@ -118,7 +118,7 @@ export function DiscoveryProfileCard({
                 ))}
                 <View style={styles.intent}>
                   <AppText variant="eyebrow">Looking for</AppText>
-                  <AppText>{intents[profile.relationshipIntent]}</AppText>
+                  <AppText variant="headline">{intents[profile.relationshipIntent]}</AppText>
                 </View>
               </View>
             ) : null}
@@ -127,7 +127,7 @@ export function DiscoveryProfileCard({
                 <AppText style={styles.question} variant="caption">
                   {PROFILE_PROMPT_CATALOGUE.find((item) => item.id === prompt.promptId)?.text}
                 </AppText>
-                <AppText style={styles.answer}>{prompt.answer}</AppText>
+                <AppText variant="quote">{prompt.answer}</AppText>
                 {onLike === undefined ? null : (
                   <View style={styles.promptAction}>
                     {likeButton(`Like prompt ${index + 1}`, {
@@ -148,14 +148,15 @@ export function DiscoveryProfileCard({
 }
 
 const styles = StyleSheet.create({
-  profile: { gap: spacing.lg },
-  title: { gap: spacing.xs },
-  section: { gap: spacing.lg },
+  profile: { gap: spacing.md },
+  title: { gap: 2 },
+  section: { gap: spacing.md },
   photo: {
     width: '100%',
-    borderRadius: radii.md,
+    borderCurve: 'continuous',
+    borderRadius: radii.lg,
     overflow: 'hidden',
-    backgroundColor: colors.plumSoft,
+    backgroundColor: colors.sand,
   },
   likeButton: {
     position: 'absolute',
@@ -167,35 +168,42 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: hairline,
     borderColor: colors.border,
+    ...cardShadow,
   },
-  pressed: { backgroundColor: colors.plumSoft },
-  details: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  pressed: { backgroundColor: colors.coralSoft, transform: [{ scale: 0.94 }] },
+  details: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingVertical: spacing.xs },
   pill: {
     borderRadius: radii.pill,
-    backgroundColor: colors.plumSoft,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    backgroundColor: colors.sand,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
-  detailText: { color: colors.plum },
-  intent: { width: '100%', gap: spacing.xs, paddingTop: spacing.sm },
+  detailText: { color: colors.ink },
+  intent: { width: '100%', gap: 2, paddingTop: spacing.sm },
   prompt: {
     backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderCurve: 'continuous',
+    borderRadius: radii.lg,
     padding: spacing.lg,
-    gap: spacing.md,
-    borderWidth: 1,
+    gap: spacing.sm,
+    borderWidth: hairline,
     borderColor: colors.border,
   },
-  question: { color: colors.plum, fontFamily: typography.family.medium },
-  answer: { fontSize: 20, lineHeight: 30, fontFamily: typography.family.medium },
-  promptAction: { height: 52, marginRight: -spacing.md, marginBottom: -spacing.md },
+  question: { fontFamily: typography.family.medium },
+  promptAction: { height: 52, marginRight: -spacing.sm, marginBottom: -spacing.sm },
   targetPhoto: {
     width: '100%',
     height: 220,
+    borderCurve: 'continuous',
     borderRadius: radii.md,
-    backgroundColor: colors.plumSoft,
+    backgroundColor: colors.sand,
   },
-  removedPhoto: { padding: spacing.lg, backgroundColor: colors.plumSoft, borderRadius: radii.md },
+  removedPhoto: {
+    padding: spacing.lg,
+    backgroundColor: colors.sand,
+    borderCurve: 'continuous',
+    borderRadius: radii.md,
+  },
 });
