@@ -10,6 +10,7 @@ import {
   buildPreferencesUpsertQuery,
   buildProfileUpsertQuery,
 } from '../src/profile-repository.js';
+import { snapToPrivacyGrid } from '../src/location-privacy.js';
 import * as schema from '../src/schema.js';
 
 const userId = '729438da-99b3-4d3d-b566-bfe94401829b';
@@ -100,21 +101,24 @@ describe('profile repository', () => {
     expect(params).toContain('{"WOMEN","NON_BINARY_PEOPLE"}');
   });
 
-  it('stores exact coordinates as a parameterized PostGIS geography without returning them', () => {
+  it('stores only a privacy-grid point as a parameterized PostGIS geography', () => {
     const database = drizzle.mock({ schema });
+    const device = { latitude: 19.076, longitude: 72.8777 };
+    const snapped = snapToPrivacyGrid(device);
     const { params, sql } = buildLocationUpsertQuery(database, userId, {
       countryCode: 'IN',
-      latitude: 19.076,
       locality: 'Mumbai',
-      longitude: 72.8777,
       region: 'Maharashtra',
+      ...device,
     }).toSQL();
 
     expect(sql).toContain('ST_SetSRID(ST_MakePoint(');
     expect(sql).toContain('::geography');
     expect(sql).not.toContain('returning "location"');
-    expect(params).toContain(72.8777);
-    expect(params).toContain(19.076);
+    expect(params).toContain(snapped.longitude);
+    expect(params).toContain(snapped.latitude);
+    expect(params).not.toContain(device.longitude);
+    expect(params).not.toContain(device.latitude);
   });
 
   it('builds an idempotent canonical-height upsert', () => {

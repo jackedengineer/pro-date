@@ -6,6 +6,7 @@ import { AppButton } from '../../components/app-button';
 import { AppText } from '../../components/app-text';
 import { Screen } from '../../components/screen';
 import { colors, spacing } from '../../theme/tokens';
+import { SignOutButton } from '../account/account-actions';
 import { ProfileOnboardingFlow, type ProfileOnboardingFlowProps } from './profile-onboarding-flow';
 
 interface CurrentUserBootstrapScreenProps extends Omit<ProfileOnboardingFlowProps, 'initialUser'> {
@@ -68,6 +69,7 @@ export function CurrentUserBootstrapScreen({
               setAttempt((value) => value + 1);
             }}
           />
+          <SignOutButton />
         </View>
       </Screen>
     );

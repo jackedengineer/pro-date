@@ -49,13 +49,13 @@ describe('bounded chat extensions', () => {
       messageContextSchema.parse({ messageId: id, revision: 0, replyTo: null, reactions: [] }),
     ).toEqual({ messageId: id, revision: 0, replyTo: null, reactions: [] });
     expect(
-      messageContextSchema.safeParse({
+      messageContextSchema.parse({
         messageId: id,
         revision: 0,
         replyTo: null,
         reactions: [],
         sequence: 10,
-      }).success,
-    ).toBe(false);
+      }),
+    ).not.toHaveProperty('sequence');
   });
 });

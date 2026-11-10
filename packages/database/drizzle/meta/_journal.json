@@ -113,6 +113,13 @@
       "when": 1792566051444,
       "tag": "0015_message-reactions",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794290712935,
+      "tag": "0016_snap-profile-locations",
+      "breakpoints": true
     }
   ]
 }

@@ -98,6 +98,33 @@ describe('chat storage SQL against a real SQLite engine', () => {
     await forgetChatAccounts();
     expect(await cachedChatOwner('clerk-test-owner')).toBeNull();
   });
+  it('treats cache rows from an older app version as misses without touching unsent intent', async () => {
+    const storage = await openChatStorage(owner, 'clerk-test-owner');
+    const summary = {
+      id,
+      member: { userId: clientId, displayName: 'Avery', photoUrl: null },
+      createdAt: pending.createdAt,
+      activityAt: pending.createdAt,
+      lastMessage: null,
+    };
+    await storage.saveConversations([summary]);
+    await storage.saveMessages(id, [message]);
+    await storage.saveCapabilities(id, { replies: true, reactions: false });
+    await storage.enqueue(pending);
+    // Simulate rows an incompatible build wrote: a missing required field and unreadable JSON.
+    database.prepare('UPDATE chat_conversations SET summary = ?').run('{"id":"legacy"}');
+    database.prepare('UPDATE chat_features SET capabilities = ?').run('not json');
+    database.prepare('UPDATE chat_messages SET created_at = ?').run('yesterday');
+
+    expect(await storage.cachedConversations()).toEqual([]);
+    expect(await storage.read(id)).toMatchObject({
+      conversation: null,
+      messages: [],
+      capabilities: null,
+      outgoing: [pending],
+    });
+    await storage.close(false);
+  });
   it('persists outgoing intent across reopening and atomically replaces it with a confirmed message', async () => {
     const first = await openChatStorage(owner);
     await first.enqueue(pending);

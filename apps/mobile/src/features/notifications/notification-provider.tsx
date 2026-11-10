@@ -19,6 +19,8 @@ const fallback = {
   status: 'SETUP_PENDING' as NotificationStatus,
   enable: pending,
   beforeSignOut: () => Promise.resolve(false),
+  // No lifecycle means no messaging runtime this session, so there is no device to revoke here.
+  canRevoke: false,
 };
 const Context = createContext(fallback);
 export const useNotificationDevice = () => useContext(Context);
@@ -86,6 +88,7 @@ export function NotificationProvider({ children }: PropsWithChildren) {
         enable: lifecycle?.enable ?? pending,
         beforeSignOut:
           lifecycle === null ? fallback.beforeSignOut : () => lifecycle.beforeSignOut(),
+        canRevoke: lifecycle !== null,
       }}
     >
       <NotificationEvents />

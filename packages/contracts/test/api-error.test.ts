@@ -50,7 +50,7 @@ describe('apiErrorResponseSchema', () => {
     expect(apiErrorResponseSchema.safeParse(response).success).toBe(false);
   });
 
-  it('rejects internal diagnostics', () => {
+  it('strips internal diagnostics from the parsed error', () => {
     const response = {
       error: {
         code: 'INTERNAL_ERROR',
@@ -60,6 +60,6 @@ describe('apiErrorResponseSchema', () => {
       requestId: 'a537e843-0100-489f-9719-fc2123a53810',
     };
 
-    expect(apiErrorResponseSchema.safeParse(response).success).toBe(false);
+    expect(apiErrorResponseSchema.parse(response).error).not.toHaveProperty('stack');
   });
 });

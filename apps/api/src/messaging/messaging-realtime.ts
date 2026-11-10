@@ -4,6 +4,7 @@ import type { ConversationChanged, RealtimeAdmissionError } from '@pro-date/cont
 import type { MessagingRepository } from '@pro-date/database';
 import type { Logger } from 'pino';
 import { Server } from 'socket.io';
+import { describeError } from '../logger.js';
 import { RealtimeAdmission, type AdmissionLimits } from './realtime-admission.js';
 
 interface Options {
@@ -180,7 +181,7 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
           {
             event: 'messaging_outbox_deferred',
             dispatchId: randomUUID(),
-            errorType: failure instanceof Error ? failure.name : 'UnknownError',
+            error: describeError(failure),
           },
           'Realtime dispatch deferred; REST recovery remains authoritative',
         );

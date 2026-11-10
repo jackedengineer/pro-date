@@ -5,7 +5,7 @@ import {
   createNotificationReceiptRepository,
 } from '@pro-date/database';
 import { readNotificationWorkerEnvironment } from '../env.js';
-import { createLogger } from '../logger.js';
+import { createLogger, describeError } from '../logger.js';
 import { registerDatabasePoolErrorHandler } from '../database-pool.js';
 import { createExpoPushProvider } from './expo-push-provider.js';
 import { createNotificationWorker } from './notification-worker.js';
@@ -81,9 +81,9 @@ async function main() {
   );
   await tick();
 }
-void main().catch(() => {
+void main().catch((failure: unknown) => {
   startupLogger.fatal(
-    { event: 'push_worker_startup_error' },
+    { event: 'push_worker_startup_error', error: describeError(failure) },
     'Worker setup failed. Check server-only configuration; no credentials are logged.',
   );
   process.exitCode = 1;

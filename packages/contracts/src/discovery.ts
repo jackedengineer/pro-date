@@ -4,11 +4,20 @@ import { displayNameSchema, relationshipIntentSchema } from './profile';
 import { profilePhotoSchema } from './profile-photo';
 import { profilePromptAnswerSchema, profilePromptIdSchema } from './profile-prompt';
 
+// Coarse, fixed steps: a fine-grained radius is a precision probe, not a user need.
+export const DISCOVERY_RADIUS_OPTIONS_KM = [25, 50, 100, 200] as const;
+
 export const discoveryQuerySchema = z
   .strictObject({
     cursor: z.string().min(1).max(1600).optional(),
     limit: z.coerce.number().int().min(1).max(20).default(10),
-    radiusKm: z.coerce.number().int().min(1).max(200).default(50),
+    radiusKm: z.coerce
+      .number()
+      .int()
+      .refine((value) => (DISCOVERY_RADIUS_OPTIONS_KM as readonly number[]).includes(value), {
+        message: 'Choose 25, 50, 100 or 200 km.',
+      })
+      .default(50),
     minAge: z.coerce.number().int().min(18).max(99).default(18),
     maxAge: z.coerce.number().int().min(18).max(99).default(99),
   })
@@ -20,7 +29,7 @@ export const inboxQuerySchema = z.strictObject({
 });
 
 // Discovery never includes a birthday, exact coordinates, private preferences, or hidden details.
-export const discoveryProfileSchema = z.strictObject({
+export const discoveryProfileSchema = z.object({
   userId: z.uuid(),
   displayName: displayNameSchema,
   age: z.number().int().min(18).max(150),
@@ -34,12 +43,12 @@ export const discoveryProfileSchema = z.strictObject({
 });
 
 export const pullRequestTargetSchema = z.discriminatedUnion('type', [
-  z.strictObject({
+  z.object({
     type: z.literal('PHOTO'),
     id: z.uuid(),
     deliveryUrl: profilePhotoSchema.shape.deliveryUrl,
   }),
-  z.strictObject({
+  z.object({
     type: z.literal('PROMPT'),
     id: z.uuid(),
     promptId: profilePromptIdSchema,
@@ -64,45 +73,45 @@ export const reportProfileSchema = z.strictObject({
   details: z.string().trim().max(1000).default(''),
 });
 
-export const pullRequestReceiptSchema = z.strictObject({
+export const pullRequestReceiptSchema = z.object({
   id: z.uuid(),
   status: z.enum(['PENDING', 'MERGED', 'DECLINED']),
   matchId: z.uuid().nullable(),
 });
-export const incomingPullRequestSchema = z.strictObject({
+export const incomingPullRequestSchema = z.object({
   id: z.uuid(),
   sender: discoveryProfileSchema,
   target: pullRequestTargetSchema,
   comment: z.string().max(280),
   createdAt: z.iso.datetime({ offset: true }),
 });
-export const matchSchema = z.strictObject({
+export const matchSchema = z.object({
   id: z.uuid(),
   profile: discoveryProfileSchema,
   createdAt: z.iso.datetime({ offset: true }),
 });
 
-export const discoveryResponseSchema = z.strictObject({
+export const discoveryResponseSchema = z.object({
   data: z.array(discoveryProfileSchema).max(20),
   nextCursor: z.string().nullable(),
   requestId: z.uuid(),
 });
-export const inboxResponseSchema = z.strictObject({
+export const inboxResponseSchema = z.object({
   data: z.array(incomingPullRequestSchema).max(20),
   nextCursor: z.string().nullable(),
   requestId: z.uuid(),
 });
-export const matchesResponseSchema = z.strictObject({
+export const matchesResponseSchema = z.object({
   data: z.array(matchSchema).max(20),
   nextCursor: z.string().nullable(),
   requestId: z.uuid(),
 });
-export const pullRequestReceiptResponseSchema = z.strictObject({
+export const pullRequestReceiptResponseSchema = z.object({
   data: pullRequestReceiptSchema,
   requestId: z.uuid(),
 });
-export const actionResponseSchema = z.strictObject({
-  data: z.strictObject({ saved: z.literal(true) }),
+export const actionResponseSchema = z.object({
+  data: z.object({ saved: z.literal(true) }),
   requestId: z.uuid(),
 });
 

@@ -18,6 +18,19 @@ const outgoingSchema = z.object({
   failure: z.string().nullable(),
   replyTo: messageQuoteSchema.optional(),
 });
+// Server-derived rows are a display cache: the thread always runs a baseline REST sync on open.
+// A row written by an older app version (or damaged) is a cache miss, never a startup failure.
+function cachedRow<T>(rowSchema: z.ZodType<T>, row: unknown): T[] {
+  const parsed = rowSchema.safeParse(row);
+  return parsed.success ? [parsed.data] : [];
+}
+function cached<T>(rowSchema: z.ZodType<T>, json: string): T | null {
+  try {
+    return cachedRow(rowSchema, JSON.parse(json))[0] ?? null;
+  } catch {
+    return null;
+  }
+}
 const schema = `
 PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS chat_conversations (owner TEXT NOT NULL, id TEXT NOT NULL, summary TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(owner, id));
@@ -150,9 +163,9 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
         id,
       );
       return {
-        conversation:
-          summary === null ? null : conversationSchema.parse(JSON.parse(summary.summary)),
-        messages: rows.map((row) => messageSchema.parse(row)),
+        conversation: summary === null ? null : cached(conversationSchema, summary.summary),
+        messages: rows.flatMap((row) => cachedRow(messageSchema, row)),
+        // The queue is the only copy of unsent intent: never silently drop it.
         outgoing: pending.map(({ replyContext, ...row }) =>
           outgoingSchema.parse({
             ...row,
@@ -161,11 +174,9 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
               : { replyTo: messageQuoteSchema.parse(JSON.parse(replyContext)) }),
           }),
         ),
-        contexts: contexts.map((row) => messageContextSchema.parse(JSON.parse(row.context))),
+        contexts: contexts.flatMap((row) => cached(messageContextSchema, row.context) ?? []),
         capabilities:
-          features === null
-            ? null
-            : chatCapabilitiesSchema.parse(JSON.parse(features.capabilities)),
+          features === null ? null : cached(chatCapabilitiesSchema, features.capabilities),
       };
     },
     saveConversation: (conversation) =>
@@ -198,7 +209,7 @@ export async function openChatStorage(owner: string, subject?: string): Promise<
         Date.now() - 7 * 86_400_000,
       );
       return rows
-        .map((row) => conversationSchema.parse(JSON.parse(row.summary)))
+        .flatMap((row) => cached(conversationSchema, row.summary) ?? [])
         .sort((a, b) => b.activityAt.localeCompare(a.activityAt));
     },
     saveMessages: (id, messages) =>

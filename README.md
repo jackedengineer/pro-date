@@ -418,7 +418,8 @@ Fake-provider, SQL-boundary and mobile lifecycle tests plus Android/iOS Hermes e
 - Block and report are available from discovery and conversation contexts. Blocking removes mutual visibility and prevents new interaction.
 - Reports preserve the minimum evidence needed for later review. V0 has no admin dashboard, so reporting must never imply an immediate human response that does not exist.
 - Image uploads use constrained signed parameters, MIME/content validation, size limits, metadata removal, and derived delivery assets. Repeated confirmations return the saved photo even after reordering. Unknown database outcomes never trigger destructive provider compensation; grace-period orphan reconciliation remains a release task.
-- Exact coordinates, phone numbers, session tokens, private message bodies, and provider secrets are excluded from logs and error telemetry.
+- Device coordinates are never stored: every saved location is snapped to a ~1.1 km grid vertex, and discovery accepts only 25/50/100/200 km radii, so repeated radius probes from spoofed positions cannot trilaterate a member below grid precision. Migration `0016_snap-profile-locations` coarsens rows saved before this rule.
+- Exact coordinates, phone numbers, session tokens, private message bodies, and provider secrets are excluded from logs and error telemetry. Error logs carry the error type, Postgres SQLSTATE/constraint/table and stack frames, never error messages, because Drizzle query errors embed every bound parameter.
 - Clerk tokens are verified by the backend; authorization is evaluated against internal account and resource state on every protected operation.
 - Rate limits are differentiated by authentication, discovery, engagement, messaging, media, and webhook risk.
 - Provider webhook signatures are verified against the raw request body before parsing.

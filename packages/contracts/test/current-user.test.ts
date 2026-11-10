@@ -33,7 +33,7 @@ describe('currentUserResponseSchema', () => {
     ).toBe('DETAILS');
   });
 
-  it('rejects provider identifiers outside the public user contract', () => {
+  it('strips provider identifiers outside the public user contract', () => {
     const response = {
       ...baseResponse,
       data: {
@@ -42,7 +42,7 @@ describe('currentUserResponseSchema', () => {
       },
     };
 
-    expect(currentUserResponseSchema.safeParse(response).success).toBe(false);
+    expect(currentUserResponseSchema.parse(response)).toEqual(baseResponse);
   });
 
   it.each([

@@ -6,6 +6,7 @@ import { IconButton } from '../../components/icon-button';
 
 import { Screen } from '../../components/screen';
 import { spacing } from '../../theme/tokens';
+import { SignOutIconButton } from '../account/account-actions';
 import { OnboardingProgress } from './onboarding-progress';
 
 interface OnboardingStepLayoutProps {
@@ -31,6 +32,7 @@ export function OnboardingStepLayout({
           <View style={styles.progress}>
             <OnboardingProgress current={current} total={9} />
           </View>
+          <SignOutIconButton />
         </View>
 
         <View style={styles.content}>{children}</View>

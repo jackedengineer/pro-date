@@ -93,8 +93,8 @@ export const updateProfileRequestSchema = z
     },
   );
 
-export const profileResponseSchema = z.strictObject({
-  data: z.strictObject({
+export const profileResponseSchema = z.object({
+  data: z.object({
     arePronounsVisible: z.boolean(),
     birthDate: birthDateSchema.nullable(),
     displayName: displayNameSchema.nullable(),

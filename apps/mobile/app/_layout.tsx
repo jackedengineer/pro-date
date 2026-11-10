@@ -15,6 +15,7 @@ import { ClerkAuthProvider } from '../src/auth/clerk-auth-provider';
 import { resolveBootstrapState } from '../src/bootstrap/resolve-bootstrap-state';
 import { colors, spacing } from '../src/theme/tokens';
 import { MotionProvider, useReducedMotionPreference } from '../src/theme/motion';
+import { AccountActionsProvider } from '../src/features/account/account-actions-provider';
 import { MessagingProvider } from '../src/features/messaging/messaging-provider';
 import { NotificationProvider } from '../src/features/notifications/notification-provider';
 
@@ -53,7 +54,9 @@ export default function RootLayout() {
               <KeyboardProvider>
                 <MessagingProvider>
                   <NotificationProvider>
-                    <AppStack />
+                    <AccountActionsProvider>
+                      <AppStack />
+                    </AccountActionsProvider>
                   </NotificationProvider>
                 </MessagingProvider>
               </KeyboardProvider>

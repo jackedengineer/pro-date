@@ -1,3 +1,8 @@
+// Compatibility rule: request/query schemas are strict (z.strictObject) so the API rejects
+// unknown input. Response and socket schemas use z.object, which strips unknown keys, so an
+// additive server change never breaks an app version already installed on a phone.
+// Exceptions: security-protocol messages (push payload, device-binding receipt) stay strict and
+// fail closed; the push payload evolves only through its version literal.
 export { apiErrorDetailSchema, apiErrorResponseSchema } from './api-error';
 export type { ApiErrorDetail, ApiErrorResponse } from './api-error';
 export {

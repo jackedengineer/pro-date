@@ -1,4 +1,5 @@
 import type { NotificationJobRepository, NotificationReceiptRepository } from '@pro-date/database';
+import { errorFields } from '../logger.js';
 import type { ExpoPushProvider } from './expo-push-provider.js';
 
 interface WorkerPorts {
@@ -38,8 +39,11 @@ export function createNotificationWorker(ports: WorkerPorts) {
           if ('code' in result && result.code === 'INVALID_DEVICE')
             await ports.jobs.retire(receipt.deviceId, receipt.deviceGeneration);
           ports.observe('push_receipt', { outcome: status });
-        } catch {
-          ports.observe('push_receipt_error', { outcome: 'RETRY_AFTER_LEASE' });
+        } catch (failure: unknown) {
+          ports.observe('push_receipt_error', {
+            outcome: 'RETRY_AFTER_LEASE',
+            ...errorFields(failure),
+          });
         }
       }),
     );
@@ -95,8 +99,11 @@ export function createNotificationWorker(ports: WorkerPorts) {
             durationMs: Math.max(0, now() - startedAt),
             queueAgeMs: Math.max(0, startedAt - attempt.createdAt.getTime()),
           });
-        } catch {
-          ports.observe('push_attempt_error', { outcome: 'RECOVER_AFTER_LEASE' });
+        } catch (failure: unknown) {
+          ports.observe('push_attempt_error', {
+            outcome: 'RECOVER_AFTER_LEASE',
+            ...errorFields(failure),
+          });
         }
       }),
     );
@@ -108,8 +115,8 @@ export function createNotificationWorker(ports: WorkerPorts) {
       if (closed || ports.provider === null || now() < circuitUntil) return;
       await receipts();
       if (!closed && now() >= circuitUntil) await send();
-    } catch {
-      ports.observe('push_cycle_error', { outcome: 'RETRY_NEXT_CYCLE' });
+    } catch (failure: unknown) {
+      ports.observe('push_cycle_error', { outcome: 'RETRY_NEXT_CYCLE', ...errorFields(failure) });
     }
   }
   return {

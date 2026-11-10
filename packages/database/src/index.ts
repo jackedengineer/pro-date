@@ -10,6 +10,11 @@ export {
   type CurrentUserRecord,
 } from './current-user-repository.js';
 export {
+  LOCATION_PRIVACY_CELL_DEGREES,
+  snapToPrivacyGrid,
+  type Coordinates,
+} from './location-privacy.js';
+export {
   buildProfilePhotoCompactQuery,
   buildProfilePhotoDeleteQuery,
   buildProfilePhotoFindQuery,

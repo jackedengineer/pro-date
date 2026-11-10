@@ -7,22 +7,22 @@ export const sendMessageSchema = z.strictObject({
   replyToMessageId: z.uuid().optional(),
 });
 
-export const chatCapabilitiesSchema = z.strictObject({
+export const chatCapabilitiesSchema = z.object({
   replies: z.boolean(),
   reactions: z.boolean(),
 });
-export const messageQuoteSchema = z.strictObject({
+export const messageQuoteSchema = z.object({
   messageId: z.uuid(),
   senderId: z.uuid(),
   excerpt: z.string().min(1).max(240),
 });
 export const reactionKindSchema = z.enum(['HEART', 'LAUGH', 'LOVE', 'FIRE', 'CLAP', 'LIKE']);
-export const reactionStateSchema = z.strictObject({
+export const reactionStateSchema = z.object({
   userId: z.uuid(),
   reaction: reactionKindSchema.nullable(),
   revision: z.number().int().nonnegative(),
 });
-export const messageContextSchema = z.strictObject({
+export const messageContextSchema = z.object({
   messageId: z.uuid(),
   revision: z.number().int().nonnegative(),
   replyTo: messageQuoteSchema.nullable(),
@@ -41,11 +41,11 @@ export const messageContextQuerySchema = z.strictObject({
         .refine((ids) => new Set(ids).size === ids.length),
     ),
 });
-export const chatCapabilitiesResponseSchema = z.strictObject({
+export const chatCapabilitiesResponseSchema = z.object({
   data: chatCapabilitiesSchema,
   requestId: z.uuid(),
 });
-export const messageContextResponseSchema = z.strictObject({
+export const messageContextResponseSchema = z.object({
   data: z.array(messageContextSchema).max(50),
   revision: z.number().int().nonnegative(),
   requestId: z.uuid(),
@@ -58,17 +58,17 @@ export const interactionChangesQuerySchema = z.strictObject({
   afterRevision: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   limit: z.coerce.number().int().min(1).max(50).default(50),
 });
-export const interactionChangesResponseSchema = z.strictObject({
+export const interactionChangesResponseSchema = z.object({
   data: z.array(messageContextSchema).max(50),
   nextRevision: z.number().int().nonnegative(),
   latestRevision: z.number().int().nonnegative(),
   requestId: z.uuid(),
 });
-export const messageReactionResponseSchema = z.strictObject({
+export const messageReactionResponseSchema = z.object({
   data: messageContextSchema,
   requestId: z.uuid(),
 });
-export const conversationInteractionsChangedSchema = z.strictObject({
+export const conversationInteractionsChangedSchema = z.object({
   conversationId: z.uuid(),
   revision: z.number().int().positive(),
 });
@@ -92,7 +92,7 @@ export const messageHistoryQuerySchema = z
   .refine((query) => query.cursor === undefined || query.afterSequence === undefined, {
     message: 'Choose older history or forward synchronization, not both.',
   });
-export const messageSchema = z.strictObject({
+export const messageSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
   senderId: z.uuid(),
@@ -101,29 +101,29 @@ export const messageSchema = z.strictObject({
   body: messageBodySchema,
   createdAt: z.iso.datetime({ offset: true }),
 });
-export const conversationMemberSchema = z.strictObject({
+export const conversationMemberSchema = z.object({
   userId: z.uuid(),
   displayName: z.string().min(1).max(40),
   photoUrl: z.url().startsWith('https://').nullable(),
 });
-export const conversationSchema = z.strictObject({
+export const conversationSchema = z.object({
   id: z.uuid(),
   member: conversationMemberSchema,
   createdAt: z.iso.datetime({ offset: true }),
   activityAt: z.iso.datetime({ offset: true }),
   lastMessage: messageSchema.nullable(),
 });
-export const conversationsResponseSchema = z.strictObject({
+export const conversationsResponseSchema = z.object({
   data: z.array(conversationSchema).max(20),
   nextCursor: z.string().nullable(),
   requestId: z.uuid(),
 });
-export const conversationResponseSchema = z.strictObject({
+export const conversationResponseSchema = z.object({
   data: conversationSchema,
   requestId: z.uuid(),
 });
-export const messageResponseSchema = z.strictObject({ data: messageSchema, requestId: z.uuid() });
-export const messageHistoryResponseSchema = z.strictObject({
+export const messageResponseSchema = z.object({ data: messageSchema, requestId: z.uuid() });
+export const messageHistoryResponseSchema = z.object({
   data: z.array(messageSchema).max(50),
   olderCursor: z.string().nullable(),
   nextAfterSequence: z.number().int().nonnegative().nullable(),
@@ -131,12 +131,12 @@ export const messageHistoryResponseSchema = z.strictObject({
   requestId: z.uuid(),
 });
 // Hints never carry private message text; REST always rechecks authorization.
-export const conversationChangedSchema = z.strictObject({
+export const conversationChangedSchema = z.object({
   conversationId: z.uuid(),
   sequence: z.number().int().positive(),
 });
 
-export const realtimeAdmissionErrorSchema = z.strictObject({
+export const realtimeAdmissionErrorSchema = z.object({
   code: z.enum(['AUTH_REQUIRED', 'AUTH_TIMEOUT', 'RATE_LIMITED', 'SERVER_BUSY']),
   retryAfterMs: z.number().int().min(0).max(300_000).optional(),
 });

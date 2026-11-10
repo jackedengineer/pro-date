@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { discoveryQuerySchema, sendPullRequestSchema } from '../src/discovery';
+import {
+  DISCOVERY_RADIUS_OPTIONS_KM,
+  discoveryQuerySchema,
+  sendPullRequestSchema,
+} from '../src/discovery';
 
 describe('discovery contracts', () => {
   it('provides bounded defaults and rejects invalid age ranges', () => {
@@ -13,6 +17,13 @@ describe('discovery contracts', () => {
     expect(discoveryQuerySchema.safeParse({ minAge: 30, maxAge: 20 }).success).toBe(false);
     expect(discoveryQuerySchema.safeParse({ limit: 1000 }).success).toBe(false);
     expect(discoveryQuerySchema.safeParse({ minAge: 17 }).success).toBe(false);
+  });
+
+  it('accepts only the coarse radius steps the app offers', () => {
+    for (const radiusKm of DISCOVERY_RADIUS_OPTIONS_KM)
+      expect(discoveryQuerySchema.parse({ radiusKm: String(radiusKm) }).radiusKm).toBe(radiusKm);
+    for (const radiusKm of [1, 2, 26, 49, 199, 201, 50.5])
+      expect(discoveryQuerySchema.safeParse({ radiusKm }).success).toBe(false);
   });
 
   it('requires a specific photo or prompt and normalizes an optional opening comment', () => {

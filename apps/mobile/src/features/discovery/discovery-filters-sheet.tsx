@@ -1,4 +1,4 @@
-import { discoveryQuerySchema } from '@pro-date/contracts';
+import { DISCOVERY_RADIUS_OPTIONS_KM, discoveryQuerySchema } from '@pro-date/contracts';
 import { useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import Check from 'lucide-react-native/icons/check';
@@ -32,7 +32,7 @@ export function DiscoveryFiltersSheet({
       </AppText>
       <AppText variant="button">Maximum distance</AppText>
       <View style={styles.radii}>
-        {[25, 50, 100, 200].map((value) => (
+        {DISCOVERY_RADIUS_OPTIONS_KM.map((value) => (
           <Pressable
             key={value}
             accessibilityRole="radio"

@@ -165,7 +165,9 @@ export const profilePromptAnswerInputSchema = z.strictObject({
   promptId: profilePromptIdSchema,
 });
 
-export const profilePromptAnswerSchema = profilePromptAnswerInputSchema.extend({
+// A response: built from the input shape, but not its unknown-key rejection.
+export const profilePromptAnswerSchema = z.object({
+  ...profilePromptAnswerInputSchema.shape,
   id: z.uuid(),
 });
 
@@ -190,7 +192,7 @@ export const completeProfilePromptsRequestSchema = z
     },
   );
 
-export const profilePromptListResponseSchema = z.strictObject({
+export const profilePromptListResponseSchema = z.object({
   data: z.array(profilePromptAnswerSchema).max(PROFILE_PROMPT_COUNT),
   onboardingStep: onboardingStepSchema,
   requestId: z.uuid(),

@@ -10,9 +10,12 @@ jest.mock('./notification-provider', () => ({ useNotificationDevice: jest.fn() }
 const enableDevice = jest.fn();
 beforeEach(() => {
   enableDevice.mockReset().mockResolvedValue('SETUP_PENDING');
-  jest
-    .mocked(useNotificationDevice)
-    .mockReturnValue({ status: 'SETUP_PENDING', enable: enableDevice, beforeSignOut: jest.fn() });
+  jest.mocked(useNotificationDevice).mockReturnValue({
+    status: 'SETUP_PENDING',
+    enable: enableDevice,
+    beforeSignOut: jest.fn(),
+    canRevoke: true,
+  });
 });
 
 const owner = '10000000-0000-4000-8000-000000000001';
@@ -102,9 +105,12 @@ describe('notification preference controls', () => {
   });
   it('offers system settings after denial and never claims this device is ready', async () => {
     const { subject } = setup();
-    jest
-      .mocked(useNotificationDevice)
-      .mockReturnValue({ status: 'DENIED', enable: enableDevice, beforeSignOut: jest.fn() });
+    jest.mocked(useNotificationDevice).mockReturnValue({
+      status: 'DENIED',
+      enable: enableDevice,
+      beforeSignOut: jest.fn(),
+      canRevoke: true,
+    });
     const open = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
     try {
       const view = await render(subject);

@@ -179,9 +179,9 @@ describe('profileResponseSchema', () => {
     expect(profileResponseSchema.parse(response)).toEqual(response);
   });
 
-  it('rejects provider identifiers in the public response', () => {
+  it('strips provider identifiers from the public response', () => {
     expect(
-      profileResponseSchema.safeParse({
+      profileResponseSchema.parse({
         data: {
           ...emptyProfileDraft,
           clerkSubject: 'user_private_provider_identifier',
@@ -189,8 +189,8 @@ describe('profileResponseSchema', () => {
           onboardingStep: 'BIRTHDAY',
         },
         requestId: 'a537e843-0100-489f-9719-fc2123a53810',
-      }).success,
-    ).toBe(false);
+      }).data,
+    ).not.toHaveProperty('clerkSubject');
   });
 
   it('accepts the saved birthday checkpoint as a complete profile draft', () => {

@@ -10,6 +10,7 @@ import type {
 import { eq, sql } from 'drizzle-orm';
 
 import type { ProDateDatabase } from './client.js';
+import { snapToPrivacyGrid } from './location-privacy.js';
 import { profiles, users } from './schema.js';
 
 type ProfileInsertDatabase = Pick<ProDateDatabase, 'insert'>;
@@ -148,7 +149,9 @@ export function buildLocationUpsertQuery(
   userId: string,
   location: LocationUpdate,
 ) {
-  const point = sql`ST_SetSRID(ST_MakePoint(${location.longitude}, ${location.latitude}), 4326)::geography`;
+  // Never persist device precision: discovery radius checks would expose it (see location-privacy).
+  const { latitude, longitude } = snapToPrivacyGrid(location);
+  const point = sql`ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography`;
   const values = {
     location: point,
     locationCountryCode: location.countryCode,

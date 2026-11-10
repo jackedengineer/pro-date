@@ -44,7 +44,7 @@ describe('healthResponseSchema', () => {
     expect(healthResponseSchema.safeParse(response).success).toBe(false);
   });
 
-  it('rejects fields outside the public contract', () => {
+  it('strips fields outside the public contract', () => {
     const response = {
       internalError: 'database password rejected',
       requestId: '4b4573b7-3087-49f3-a22b-c1d453cfe957',
@@ -53,6 +53,6 @@ describe('healthResponseSchema', () => {
       timestamp: '2026-10-04T10:30:00.000Z',
     };
 
-    expect(healthResponseSchema.safeParse(response).success).toBe(false);
+    expect(healthResponseSchema.parse(response)).not.toHaveProperty('internalError');
   });
 });

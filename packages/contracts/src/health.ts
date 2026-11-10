@@ -6,13 +6,13 @@ const healthResponseBase = {
   timestamp: z.iso.datetime({ offset: true }),
 };
 
-const healthyResponseSchema = z.strictObject({
+const healthyResponseSchema = z.object({
   ...healthResponseBase,
   checks: z.record(z.string().min(1).max(64), z.literal('up')).optional(),
   status: z.literal('ok'),
 });
 
-const unavailableResponseSchema = z.strictObject({
+const unavailableResponseSchema = z.object({
   ...healthResponseBase,
   checks: z.record(z.string().min(1).max(64), z.enum(['up', 'down'])).optional(),
   status: z.literal('unavailable'),

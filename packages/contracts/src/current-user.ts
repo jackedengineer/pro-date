@@ -14,8 +14,8 @@ export const onboardingStepSchema = z.enum([
   'COMPLETE',
 ]);
 
-export const currentUserResponseSchema = z.strictObject({
-  data: z.strictObject({
+export const currentUserResponseSchema = z.object({
+  data: z.object({
     id: z.uuid(),
     onboardingStep: onboardingStepSchema,
     onboardingStatus: onboardingStatusSchema,

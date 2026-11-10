@@ -26,8 +26,8 @@ export const profilePhotoPositionSchema = z
   .min(0)
   .max(PROFILE_PHOTO_MAX_COUNT - 1);
 
-export const profilePhotoUploadIntentResponseSchema = z.strictObject({
-  data: z.strictObject({
+export const profilePhotoUploadIntentResponseSchema = z.object({
+  data: z.object({
     apiKey: z.string().trim().min(1).max(255),
     cloudName: z.string().trim().min(1).max(255),
     maxBytes: z.literal(PROFILE_PHOTO_MAX_BYTES),
@@ -46,7 +46,7 @@ export const createProfilePhotoRequestSchema = z.strictObject({
   version: z.number().int().positive(),
 });
 
-export const profilePhotoSchema = z.strictObject({
+export const profilePhotoSchema = z.object({
   deliveryUrl: z.url().startsWith('https://res.cloudinary.com/'),
   height: z.number().int().positive(),
   id: profilePhotoIdSchema,
@@ -54,7 +54,7 @@ export const profilePhotoSchema = z.strictObject({
   width: z.number().int().positive(),
 });
 
-export const profilePhotoListResponseSchema = z.strictObject({
+export const profilePhotoListResponseSchema = z.object({
   data: z.array(profilePhotoSchema).max(PROFILE_PHOTO_MAX_COUNT),
   onboardingStep: onboardingStepSchema,
   requestId: z.uuid(),

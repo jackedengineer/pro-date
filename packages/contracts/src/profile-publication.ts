@@ -6,7 +6,7 @@ import { profileResponseSchema } from './profile';
 
 export const profileReviewMissingSectionSchema = z.enum(['BASICS', 'PHOTOS', 'PROMPTS']);
 
-export const profileReviewSchema = z.strictObject({
+export const profileReviewSchema = z.object({
   missingSections: z.array(profileReviewMissingSectionSchema).max(3),
   photos: z.array(profilePhotoSchema).max(6),
   profile: profileResponseSchema.shape.data,
@@ -14,7 +14,7 @@ export const profileReviewSchema = z.strictObject({
   publishedAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
-export const profileReviewResponseSchema = z.strictObject({
+export const profileReviewResponseSchema = z.object({
   data: profileReviewSchema,
   requestId: z.uuid(),
 });

@@ -39,7 +39,7 @@ import helmet from 'helmet';
 import type { Logger } from 'pino';
 import pinoHttp from 'pino-http';
 
-import { createLogger } from './logger.js';
+import { createLogger, describeError } from './logger.js';
 import { createDiscoveryRouter } from './discovery/discovery-routes.js';
 import type { DiscoveryService } from './discovery/discovery-service.js';
 import { createMessagingRouter } from './messaging/messaging-routes.js';
@@ -231,10 +231,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
 
       response.status(503).json(body);
     } catch (error: unknown) {
-      request.log.warn(
-        { errorType: error instanceof Error ? error.name : 'UnknownError' },
-        'Readiness check failed',
-      );
+      request.log.warn({ error: describeError(error) }, 'Readiness check failed');
 
       const body = {
         checks: { application: 'down' },
@@ -883,10 +880,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
       return;
     }
 
-    request.log.error(
-      { errorType: error instanceof Error ? error.name : 'UnknownError' },
-      'Unhandled request error',
-    );
+    request.log.error({ error: describeError(error) }, 'Unhandled request error');
 
     const body = {
       error: {

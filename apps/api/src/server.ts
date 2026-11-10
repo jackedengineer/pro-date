@@ -18,7 +18,7 @@ import {
 import { createApiApp } from './app.js';
 import { registerDatabasePoolErrorHandler } from './database-pool.js';
 import { readApiServiceEnvironment } from './env.js';
-import { createLogger } from './logger.js';
+import { createLogger, describeError } from './logger.js';
 import { createDiscoveryService } from './discovery/discovery-service.js';
 import { createMessagingRealtime } from './messaging/messaging-realtime.js';
 import { createMessagingService } from './messaging/messaging-service.js';
@@ -187,16 +187,13 @@ function shutdown(signal: NodeJS.Signals) {
       process.exitCode = 0;
     })
     .catch((poolError: unknown) => {
-      logger.error(
-        { errorType: poolError instanceof Error ? poolError.name : 'UnknownError' },
-        'Database pool failed to close',
-      );
+      logger.error({ error: describeError(poolError) }, 'Database pool failed to close');
       process.exitCode = 1;
     });
 }
 
 server.on('error', (error) => {
-  logger.fatal({ errorType: error.name }, 'HTTP server error');
+  logger.fatal({ error: describeError(error) }, 'HTTP server error');
   process.exitCode = 1;
 });
 

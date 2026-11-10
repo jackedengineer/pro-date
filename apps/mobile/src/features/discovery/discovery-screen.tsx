@@ -6,6 +6,7 @@ import MessageCircle from 'lucide-react-native/icons/message-circle';
 import UserRound from 'lucide-react-native/icons/user-round';
 import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
 import { IconButton } from '../../components/icon-button';
+import { SignOutIconButton } from '../account/account-actions';
 
 import type { DiscoveryActions, DiscoveryFilters } from '../../api/discovery';
 import { AppText } from '../../components/app-text';
@@ -59,7 +60,10 @@ export function DiscoveryScreen({
         <AppText variant="title" style={styles.headerTitle}>
           {tab === 'discover' ? 'Merge' : tab === 'requests' ? 'Pull requests' : 'Merged'}
         </AppText>
-        <IconButton label="My profile" icon={UserRound} onPress={onOpenProfile} />
+        <View style={styles.headerActions}>
+          <IconButton label="My profile" icon={UserRound} onPress={onOpenProfile} />
+          <SignOutIconButton />
+        </View>
       </View>
       {tab === 'discover' ? (
         <View style={styles.filters}>
@@ -129,6 +133,7 @@ export function DiscoveryScreen({
 }
 const styles = StyleSheet.create({
   headerTitle: { flexShrink: 1 },
+  headerActions: { flexDirection: 'row', gap: spacing.xs },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
