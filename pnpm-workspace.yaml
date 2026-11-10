@@ -14,6 +14,8 @@ allowBuilds:
   core-js: false
   esbuild: true
   unrs-resolver@1.12.2: true
+  # Cloudflare's runtime for Wrangler; its install script links the platform binary.
+  workerd@1.20261103.1: true
 
 # Exact Expo SDK 57 compatibility patches selected and verified by expo-doctor.
 minimumReleaseAgeExclude:

@@ -1,0 +1,14 @@
+# Allowlist: only what apps/api/Dockerfile needs. Everything else, including every .env file,
+# node_modules, the mobile app and Git history, stays out of the build context.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!apps/api/package.json
+!apps/api/build.mjs
+!apps/api/src/**
+!packages/contracts/package.json
+!packages/contracts/src/**
+!packages/database/package.json
+!packages/database/src/**

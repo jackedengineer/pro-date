@@ -8,6 +8,15 @@ const apiEnvironmentSchema = z.object({
 });
 
 const apiServiceEnvironmentSchema = apiEnvironmentSchema.extend({
+  // Set only behind a gateway that overwrites this header on every request (the Cloudflare
+  // edge Worker does). Never set it where clients can reach the API directly.
+  TRUSTED_CLIENT_IP_HEADER: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .regex(/^[a-z0-9-]{1,64}$/)
+      .optional(),
+  ),
   CHAT_REPLIES_ENABLED: z.enum(['true', 'false']).default('false'),
   CHAT_REACTIONS_ENABLED: z.enum(['true', 'false']).default('false'),
   NOTIFICATIONS_ENABLED: z.enum(['true', 'false']).default('false'),
@@ -50,6 +59,7 @@ export interface ApiEnvironment {
 }
 
 export interface ApiServiceEnvironment extends ApiEnvironment {
+  trustedClientIpHeader: string | null;
   chatRepliesEnabled: boolean;
   chatReactionsEnabled: boolean;
   notificationsEnabled: boolean;
@@ -92,6 +102,7 @@ export function readApiServiceEnvironment(
       : null;
 
   return {
+    trustedClientIpHeader: environment.TRUSTED_CLIENT_IP_HEADER ?? null,
     chatRepliesEnabled: environment.CHAT_REPLIES_ENABLED === 'true',
     chatReactionsEnabled: environment.CHAT_REACTIONS_ENABLED === 'true',
     notificationsEnabled: environment.NOTIFICATIONS_ENABLED === 'true',

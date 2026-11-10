@@ -76,6 +76,7 @@ describe('readApiEnvironment', () => {
     ).toEqual({
       clerkPublishableKey: 'pk_test_example',
       notificationsEnabled: false,
+      trustedClientIpHeader: null,
       chatRepliesEnabled: false,
       chatReactionsEnabled: false,
       pushEnabled: false,

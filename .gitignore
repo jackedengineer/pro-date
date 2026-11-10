@@ -18,6 +18,11 @@ node_modules/
 *.jks
 *.mobileprovision
 
+# Cloudflare Wrangler local state and local-only secrets
+.wrangler/
+.dev.vars
+.dev.vars.*
+
 # Expo and generated native projects
 .expo/
 .expo-shared/

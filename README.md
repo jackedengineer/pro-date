@@ -128,9 +128,12 @@ flowchart TB
         RT[Socket.IO client]
     end
 
-    subgraph Railway[Railway - Singapore]
-        API[Express 5 REST API + Socket.IO]
-        WORKER[Private outbox worker]
+    subgraph Cloudflare[Cloudflare - merge-api.jacked.dev]
+        EDGE[Edge Worker: TLS, DDoS, client IP]
+        DO[Durable Object: container supervisor]
+        API[Container: Express 5 REST API + Socket.IO]
+        WORKER[Push worker: planned container]
+        EDGE --> DO --> API
     end
 
     subgraph Data[Neon - Singapore]
@@ -143,8 +146,8 @@ flowchart TB
     PUSH[Expo Push Service]
     SENTRY[Sentry]
 
-    UI --> Q -->|HTTPS /v1| API
-    RT <-->|WSS| API
+    UI --> Q -->|HTTPS /v1| EDGE
+    RT <-->|WSS| EDGE
     UI --> CLERK
     UI -->|signed upload| MEDIA
     UI --> RC
@@ -159,33 +162,33 @@ flowchart TB
     WORKER --> SENTRY
 ```
 
-The backend is a modular monolith deployed as two processes from one codebase: a public API/realtime service and a private worker. PostgreSQL is the only durable application datastore. External providers are isolated behind adapters so domain logic is not coupled to Clerk, Cloudinary, RevenueCat, Expo Push, or Sentry.
+The backend is a modular monolith built as two processes from one codebase: a public API/realtime service and a private worker. The API runs unchanged in a Cloudflare Container behind an edge Worker (see [Deployment model](#deployment-model)). PostgreSQL is the only durable application datastore. External providers are isolated behind adapters so domain logic is not coupled to Clerk, Cloudinary, RevenueCat, Expo Push, or Sentry.
 
 ## Architecture decision register
 
-| Decision           | Choice                                                                            | Why                                                                                    |
-| ------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Mobile runtime     | [Expo SDK 57](https://expo.dev/changelog/sdk-57), React Native 0.86, React 19.2.3 | Current stable Expo line and supported by the current iOS Expo Go application          |
-| Navigation         | Expo Router                                                                       | Expo-first routing, deep links, and typed route support                                |
-| UI foundation      | React Native primitives, `StyleSheet`, typed tokens, internal components          | Distinctive product experience without a generic Material-style visual system          |
-| Birthday input     | Expo UI SwiftUI/Compose `DateTimePicker`                                          | Native, accessible date selection included in Expo Go for SDK 57                       |
-| Height input       | Expo UI universal `Picker`                                                        | Native wheel control on iOS with a cross-platform SDK 57 API                           |
-| Device location    | Expo Location, foreground permission only                                         | Expo Go-compatible capture with an explicit privacy explanation and recoverable denial |
-| API                | Express 5 REST under `/v1`                                                        | Explicit, versionable, testable mobile contracts                                       |
-| Realtime           | Socket.IO                                                                         | Reconnect-friendly transport; durable state remains in PostgreSQL                      |
-| Chat history       | FlashList 2.0.2 and stable client-intent keys                                     | Virtualized rows and scroll anchoring; acknowledgment does not remount a bubble        |
-| Chat keyboard      | SDK-pinned keyboard-controller 1.21.9                                             | Chat-specific keyboard lifting and a growing, sticky multiline composer                |
-| Device persistence | Expo SQLite, account-scoped cache and outgoing queue                              | Fast cached opening and restart-safe retries; not a second server database             |
-| Database           | Neon PostgreSQL with PostGIS in Singapore                                         | Relational integrity, transactions, and geospatial filtering near the backend region   |
-| Data access        | Drizzle ORM and committed Drizzle Kit migrations                                  | Type-safe relational access and auditable schema history                               |
-| Geospatial access  | `geography(Point, 4326)` plus reviewed parameterized SQL where required           | Correct distance semantics without forcing all queries outside the ORM                 |
-| Domain modeling    | Normalized relational tables; no JSONB domain documents                           | Explicit constraints, joins, uniqueness, and queryable relationships                   |
-| Authentication     | Clerk custom phone/email OTP plus internal UUID users                             | Provider handles verification; application retains domain identity ownership           |
-| Media              | Signed Cloudinary uploads                                                         | The device uploads directly without receiving a provider secret                        |
-| Async work         | PostgreSQL transactional outbox; in-process chat hints and a private push worker  | Atomic message/notification intent and durable retries outside the HTTP request        |
-| Subscriptions      | RevenueCat Test Store, then platform billing sandboxes                            | Production-shaped entitlement handling without collecting card details directly        |
-| Deployment         | Railway API/worker and Neon database in Singapore                                 | Simple first deployment with Docker, WebSockets, private services, and nearby data     |
-| Scale posture      | One API replica and no Redis in V0                                                | Avoids infrastructure without a demonstrated scaling need                              |
+| Decision           | Choice                                                                            | Why                                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Mobile runtime     | [Expo SDK 57](https://expo.dev/changelog/sdk-57), React Native 0.86, React 19.2.3 | Current stable Expo line and supported by the current iOS Expo Go application                          |
+| Navigation         | Expo Router                                                                       | Expo-first routing, deep links, and typed route support                                                |
+| UI foundation      | React Native primitives, `StyleSheet`, typed tokens, internal components          | Distinctive product experience without a generic Material-style visual system                          |
+| Birthday input     | Expo UI SwiftUI/Compose `DateTimePicker`                                          | Native, accessible date selection included in Expo Go for SDK 57                                       |
+| Height input       | Expo UI universal `Picker`                                                        | Native wheel control on iOS with a cross-platform SDK 57 API                                           |
+| Device location    | Expo Location, foreground permission only                                         | Expo Go-compatible capture with an explicit privacy explanation and recoverable denial                 |
+| API                | Express 5 REST under `/v1`                                                        | Explicit, versionable, testable mobile contracts                                                       |
+| Realtime           | Socket.IO                                                                         | Reconnect-friendly transport; durable state remains in PostgreSQL                                      |
+| Chat history       | FlashList 2.0.2 and stable client-intent keys                                     | Virtualized rows and scroll anchoring; acknowledgment does not remount a bubble                        |
+| Chat keyboard      | SDK-pinned keyboard-controller 1.21.9                                             | Chat-specific keyboard lifting and a growing, sticky multiline composer                                |
+| Device persistence | Expo SQLite, account-scoped cache and outgoing queue                              | Fast cached opening and restart-safe retries; not a second server database                             |
+| Database           | Neon PostgreSQL with PostGIS in Singapore                                         | Relational integrity, transactions, and geospatial filtering near the backend region                   |
+| Data access        | Drizzle ORM and committed Drizzle Kit migrations                                  | Type-safe relational access and auditable schema history                                               |
+| Geospatial access  | `geography(Point, 4326)` plus reviewed parameterized SQL where required           | Correct distance semantics without forcing all queries outside the ORM                                 |
+| Domain modeling    | Normalized relational tables; no JSONB domain documents                           | Explicit constraints, joins, uniqueness, and queryable relationships                                   |
+| Authentication     | Clerk custom phone/email OTP plus internal UUID users                             | Provider handles verification; application retains domain identity ownership                           |
+| Media              | Signed Cloudinary uploads                                                         | The device uploads directly without receiving a provider secret                                        |
+| Async work         | PostgreSQL transactional outbox; in-process chat hints and a private push worker  | Atomic message/notification intent and durable retries outside the HTTP request                        |
+| Subscriptions      | RevenueCat Test Store, then platform billing sandboxes                            | Production-shaped entitlement handling without collecting card details directly                        |
+| Deployment         | Cloudflare Container behind an edge Worker; Neon database in Singapore            | Runs the unchanged Express + Socket.IO process with edge TLS/DDoS protection, placed near the database |
+| Scale posture      | One API replica and no Redis in V0                                                | Avoids infrastructure without a demonstrated scaling need                                              |
 
 ## Technology stack
 
@@ -202,7 +205,7 @@ Exact installed package versions are pinned in the workspace lockfile. Expo-nati
 | Integrations       | Clerk, Cloudinary, Socket.IO and Expo Push delivery implemented; live native push acceptance, RevenueCat and Sentry pending                                                                                       |
 | Mobile tests       | Jest, `jest-expo`, React Native Testing Library; Maestro planned                                                                                                                                                  |
 | API tests          | Vitest, Supertest and explicit rollback-only database scripts; Testcontainers planned                                                                                                                             |
-| Delivery           | Neon configured; Docker, Railway, EAS Build/Update and GitHub Actions planned                                                                                                                                     |
+| Delivery           | Neon configured; Docker image and Cloudflare Workers/Containers deployment via Wrangler; EAS Build/Update and GitHub Actions planned                                                                              |
 
 Intentionally deferred: Redis, the Socket.IO Redis adapter, Kubernetes, microservices, Elasticsearch, a large third-party UI kit, and speculative global-state infrastructure.
 
@@ -410,7 +413,7 @@ pnpm --filter @pro-date/api worker:notifications
 
 `pnpm --filter @pro-date/database db:test:notifications` is an **opt-in, rollback-only** harness. It deliberately does not load the API `.env` or use `DATABASE_URL`; it requires a separate `NOTIFICATION_TEST_DATABASE_URL`, `CONFIRM_NOTIFICATION_TEST_DATABASE=true`, and an explicitly approved isolated, migrated test database. It is prepared, not executed. It covers atomic message/job rollback, deduplication, sequential lease recovery/fencing, receipts, mute/pause and retention. It does not prove multi-connection concurrency; that remains a separate acceptance gate.
 
-Fake-provider, SQL-boundary and mobile lifecycle tests plus Android/iOS Hermes exports verify local implementation—not FCM/APNs delivery. Native development-build acceptance must cover background/terminated alerts, same-chat suppression, per-chat silence, pause, denied/revoked permissions, account switching, cold/warm taps, block/unmatch and token rotation. EAS/Firebase/APNs credentials, Railway deployment and worker monitoring remain pending.
+Fake-provider, SQL-boundary and mobile lifecycle tests plus Android/iOS Hermes exports verify local implementation—not FCM/APNs delivery. Native development-build acceptance must cover background/terminated alerts, same-chat suppression, per-chat silence, pause, denied/revoked permissions, account switching, cold/warm taps, block/unmatch and token rotation. EAS/Firebase/APNs credentials, push-worker deployment and worker monitoring remain pending.
 
 ## Safety, security, and privacy
 
@@ -423,7 +426,7 @@ Fake-provider, SQL-boundary and mobile lifecycle tests plus Android/iOS Hermes e
 - Clerk tokens are verified by the backend; authorization is evaluated against internal account and resource state on every protected operation.
 - Rate limits are differentiated by authentication, discovery, engagement, messaging, media, and webhook risk.
 - Provider webhook signatures are verified against the raw request body before parsing.
-- Secrets remain in local environment files, EAS secret environments, Railway sealed variables, and provider dashboards—never in `EXPO_PUBLIC_*` variables or Git.
+- Secrets remain in local environment files, EAS secret environments, Cloudflare Worker secrets, and provider dashboards—never in `EXPO_PUBLIC_*` variables or Git.
 - Account deletion, retention, media deletion, and backup behavior will be testable workflows rather than documentation-only promises.
 - The workspace uses one pinned pnpm version and one authoritative lockfile. Dependency lifecycle scripts are blocked by default and only narrowly approved after their exact source and version are reviewed.
 - Every personal field has a stated purpose and retention rule; export and deletion cover provider assets, device tokens, caches, and the documented backup-expiry window rather than only the primary user row.
@@ -718,26 +721,31 @@ Current implementation evidence:
 
 ## Deployment model
 
+The API is deployed to Cloudflare at `https://merge-api.jacked.dev`. The Express + Socket.IO process runs unchanged in a [Cloudflare Container](https://developers.cloudflare.com/containers/); an edge Worker in front of it is the only way in.
+
 ```text
-Git push
-├── Railway Singapore
-│   ├── Public API + Socket.IO service
-│   └── Private push worker (implemented, not deployed)
-├── Neon Singapore
-│   └── PostgreSQL + PostGIS
-└── EAS
-    ├── Development build
-    ├── Preview/internal build
-    ├── Production build
-    └── Runtime-compatible JavaScript updates
+iPhone (Expo) ── HTTPS / WSS ──▶ merge-api.jacked.dev   (Workers Custom Domain: TLS, DDoS protection)
+                                   └─ Edge Worker        apps/edge/src/index.ts
+                                       └─ Durable Object "primary"   (location hint: Southeast Asia)
+                                           └─ Container: apps/api/Dockerfile ──▶ Neon (Singapore), Clerk, Cloudinary
 ```
 
-- The API binds to Railway's injected port and exposes separate liveness and readiness endpoints.
-- Runtime services use Neon's pooled connection; migrations use a direct connection.
-- Migrations run once as a pre-deploy step and prevent release on failure.
-- V0 uses one API replica. Redis is introduced only when horizontal Socket.IO scaling requires a cross-instance adapter.
-- Railway's deployment health check is complemented by external uptime monitoring and worker-heartbeat alerting.
-- Preview receives and verifies an update before the same compatible update is promoted to production.
+- **Edge Worker:** answers `/health/edge` without waking the API. It overwrites `x-merge-client-ip` with the address Cloudflare observed, so realtime admission budgets apply per client rather than to the gateway; the API trusts that header only through `TRUSTED_CLIENT_IP_HEADER`. The `workers.dev` and preview URLs are disabled.
+- **Container supervisor (Durable Object):** keeps exactly one API instance, matching the one-replica design. It shares one readiness check across concurrent cold-start requests, restarts the API after a crash, and replaces the container (SIGTERM, drain, start) when the image, size, a variable or a secret changes. It starts the API in production mode with secrets passed only at start.
+- **Modes:** `CONTAINER_MODE=on-demand` (default) sleeps after `CONTAINER_IDLE_MINUTES` without requests; the next request starts it in a few seconds. `always-on` adds a 60-second health-check alarm that keeps it warm and self-heals. `CONTAINER_INSTANCE` selects `lite` through `standard-4`. All three are set in `apps/edge/wrangler.jsonc`.
+- **Image:** `apps/api/Dockerfile` bundles the API with esbuild into `dist/` (source maps on) and runs it as the non-root `node` user on Node 24. The build fails if bundled dependencies break when actually called (`apps/api/src/bundle-smoke.ts`), which is how a missing `__dirname` in Cloudinary would be caught. The root `.dockerignore` is an allowlist, so `.env` files never enter the build context.
+- **Secrets:** `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `DATABASE_URL` (with `sslmode=verify-full`), and the three `CLOUDINARY_*` values are Worker secrets, declared in `secrets.required` so a deploy without them fails.
+- **Observability:** Worker and container logs, including the API's structured pino logs and `api_container_*` lifecycle events, are in the Cloudflare dashboard under Workers & Pages → `merge-api`. Query strings are redacted.
+- **Not yet deployed:** the push worker (push is disabled), CI deploys, and migrations as a pre-deploy step. Migrations are applied manually with `pnpm db:migrate`.
+
+```sh
+pnpm --filter @pro-date/edge exec wrangler deploy --dry-run   # build and validate
+pnpm --filter @pro-date/edge deploy                            # build, push image, deploy
+pnpm --filter @pro-date/edge exec wrangler tail merge-api      # live edge logs
+curl https://merge-api.jacked.dev/health/ready                 # API and database readiness
+```
+
+To rotate a secret, run `pnpm --filter @pro-date/edge exec wrangler secret put <NAME>`. The supervisor then replaces the container on its next request.
 
 ## Current status
 
@@ -801,7 +809,7 @@ Last local automated verification: **9 October 2026**
 | Basic profile foundation compatibility    | Automated verification passed                              |
 | V0 vertical slice                         | In progress                                                |
 
-The next step is approved database verification/migration and native development-build setup, followed by Railway API/worker deployment and physical-device push acceptance. Automated notification tests are not evidence of alerts arriving on a device. Device acceptance covers discovery → item like → Requests → Merge → Merged chat, Your turn / Their turn, untouched matches for both accounts, keyboard/scrolling, reconnect and notification opt-ins. Live push acceptance, typing/read semantics, release profiling, safety operations and account-lifecycle work remain unfinished. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
+The next step is approved database verification/migration and native development-build setup, followed by push-worker deployment on Cloudflare and physical-device push acceptance. Automated notification tests are not evidence of alerts arriving on a device. Device acceptance covers discovery → item like → Requests → Merge → Merged chat, Your turn / Their turn, untouched matches for both accounts, keyboard/scrolling, reconnect and notification opt-ins. Live push acceptance, typing/read semantics, release profiling, safety operations and account-lifecycle work remain unfinished. Verified screenshots will be added only with a fictional test account and owned or licensed media so private identifiers never appear in repository assets.
 
 ## Legal and intellectual-property note
 

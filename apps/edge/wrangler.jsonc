@@ -1,0 +1,66 @@
+{
+  // Cloudflare edge for the Merge API: a Worker gateway in front of the Express + Socket.IO
+  // API, which runs unchanged in a Cloudflare Container controlled by one Durable Object.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "merge-api",
+  "account_id": "afc0353bdd89b39c334efd3db0311ec3",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-10",
+  "upload_source_maps": true,
+
+  // One public, protected hostname. The workers.dev and preview URLs stay off so nothing
+  // bypasses the zone's edge security on jacked.dev.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "merge-api.jacked.dev", "custom_domain": true }],
+
+  "observability": {
+    "enabled": true,
+    // Cursors and socket handshakes carry identifiers in query strings; keep them out of logs.
+    "redact_query_string": true,
+  },
+
+  "containers": [
+    {
+      "class_name": "ApiContainer",
+      // The `default` policy is deprecated; the Durable Object starts and sizes the container.
+      "scheduling_policy": "durable_object",
+      "images": {
+        "api": { "dockerfile": "../api/Dockerfile", "build_context": "../.." },
+      },
+      "observability": { "enabled": true },
+    },
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "API_CONTAINER", "class_name": "ApiContainer" }],
+  },
+  "exports": {
+    "ApiContainer": { "type": "durable-object", "storage": "sqlite" },
+  },
+
+  "vars": {
+    // on-demand: sleeps after CONTAINER_IDLE_MINUTES without requests and starts on the next
+    // one. always-on: a health-check alarm keeps it warm and restarts it if it stops.
+    "CONTAINER_MODE": "on-demand",
+    // lite | standard-1 | standard-2 | standard-3 | standard-4
+    "CONTAINER_INSTANCE": "standard-1",
+    "CONTAINER_IDLE_MINUTES": "15",
+    "API_LOG_LEVEL": "info",
+    // Mirrors the feature flags the app already runs with against this database.
+    "CHAT_REPLIES_ENABLED": "true",
+    "CHAT_REACTIONS_ENABLED": "true",
+    "NOTIFICATIONS_ENABLED": "false",
+    "PUSH_ENABLED": "false",
+  },
+  // Values are uploaded with `wrangler secret bulk`, never committed. Deploys fail without them.
+  "secrets": {
+    "required": [
+      "CLERK_PUBLISHABLE_KEY",
+      "CLERK_SECRET_KEY",
+      "DATABASE_URL",
+      "CLOUDINARY_CLOUD_NAME",
+      "CLOUDINARY_API_KEY",
+      "CLOUDINARY_API_SECRET",
+    ],
+  },
+}

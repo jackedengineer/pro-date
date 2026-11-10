@@ -1,0 +1,19 @@
+{
+  "name": "@pro-date/edge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "typecheck": "wrangler types --check && tsc --noEmit",
+    "types": "wrangler types"
+  },
+  "devDependencies": {
+    "@pro-date/contracts": "workspace:*",
+    "vitest": "5.0.2",
+    "wrangler": "4.157.0"
+  }
+}

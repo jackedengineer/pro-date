@@ -14,6 +14,21 @@ interface Options {
   logger: Logger;
   admissionLimits?: Partial<AdmissionLimits>;
   authTimeoutMs?: number;
+  /** Header set by a trusted gateway with the real client IP; null uses the TCP peer. */
+  trustedClientIpHeader?: string | null;
+}
+
+// Behind a proxy every socket shares the proxy's TCP address, which would turn per-peer
+// admission budgets into one global budget. Only a gateway that overwrites the header may
+// supply it; a bounded, IP-shaped value is required or the TCP peer is used.
+export function admissionPeer(
+  remoteAddress: string | undefined,
+  headers: Record<string, string | string[] | undefined>,
+  trustedHeader: string | null | undefined,
+): string {
+  const forwarded = trustedHeader ? headers[trustedHeader] : undefined;
+  if (typeof forwarded === 'string' && /^[0-9a-fA-F:.]{2,45}$/.test(forwarded)) return forwarded;
+  return remoteAddress ?? 'unknown';
 }
 export function createMessagingRealtime(http: HttpServer, options: Options) {
   const admission = new RealtimeAdmission(options.admissionLimits);
@@ -49,7 +64,13 @@ export function createMessagingRealtime(http: HttpServer, options: Options) {
     },
   });
   io.use((socket, next) => {
-    const peerFailure = admission.admitPeer(socket.conn.remoteAddress ?? 'unknown');
+    const peerFailure = admission.admitPeer(
+      admissionPeer(
+        socket.conn.remoteAddress,
+        socket.handshake.headers,
+        options.trustedClientIpHeader,
+      ),
+    );
     if (stopped || peerFailure !== null) {
       next(admissionError(peerFailure ?? { code: 'SERVER_BUSY', retryAfterMs: 5000 }));
       return;

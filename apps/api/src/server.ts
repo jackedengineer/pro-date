@@ -135,6 +135,7 @@ const messagingRealtime = createMessagingRealtime(server, {
   interactionsEnabled: environment.chatReactionsEnabled,
   repository: messagingRepository,
   logger,
+  trustedClientIpHeader: environment.trustedClientIpHeader,
   authenticate: async (token) => {
     // A socket handshake carries a token rather than an Express Request.
     // Source: https://clerk.com/docs/reference/backend/verify-token

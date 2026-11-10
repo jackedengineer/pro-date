@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
+    "build": "node build.mjs",
     "lint": "eslint . --max-warnings 0",
     "start": "tsx --env-file-if-exists=.env src/server.ts",
     "worker:notifications": "tsx --env-file-if-exists=.env src/notifications/notification-worker-main.ts",
@@ -31,8 +32,9 @@
     "@types/express": "5.0.6",
     "@types/supertest": "7.2.1",
     "@vitest/coverage-v8": "5.0.2",
-    "supertest": "7.3.1",
+    "esbuild": "0.28.2",
     "socket.io-client": "4.8.4",
+    "supertest": "7.3.1",
     "tsx": "4.23.15",
     "vitest": "5.0.2"
   }
