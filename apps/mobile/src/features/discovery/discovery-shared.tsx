@@ -25,7 +25,7 @@ export function QuietButton({
         disabled && sharedStyles.disabled,
       ]}
     >
-      <AppText style={sharedStyles.quietText} variant="button">
+      <AppText style={sharedStyles.quietText} variant="button" numberOfLines={2}>
         {label}
       </AppText>
     </Pressable>
@@ -59,6 +59,7 @@ export const sharedStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   muted: { color: colors.muted },
   quietButton: {
+    flexShrink: 1,
     borderCurve: 'continuous',
     borderRadius: radii.sm,
     minHeight: 48,
@@ -67,7 +68,7 @@ export const sharedStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  quietText: { color: colors.plum },
+  quietText: { color: colors.plum, textAlign: 'center' },
   pressed: { backgroundColor: colors.plumSoft },
   disabled: { opacity: 0.45 },
   error: {

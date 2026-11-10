@@ -106,7 +106,7 @@ export function ConnectionList({
                   <AppText style={styles.commentText}>“{item.comment}”</AppText>
                 </View>
               )}
-              <View style={styles.actions}>
+              <View style={styles.links}>
                 <QuietButton
                   label={`View ${profile.displayName}'s profile`}
                   onPress={() => setSelected(profile)}
@@ -190,6 +190,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
+  // The name can be 40 characters: the label wraps and the safety control keeps its place.
+  links: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   action: { flexGrow: 1, flexBasis: 120 },
   commentText: { fontFamily: typography.family.serif, fontSize: 18, lineHeight: 26 },
   // Their words, set apart from our interface by a rule rather than another box.
