@@ -9,24 +9,24 @@ items land. Last reviewed 10 November 2026.
 | ------------------------------ | ----------- | --------------------------------------------------------------------- |
 | Store identifier               | Done        | `dev.jacked.merge` on Android and iOS                                 |
 | EAS project and build profiles | Done        | `apps/mobile/eas.json`: development, preview, production              |
-| Android development build      | In progress | Dev client APK, installed from an EAS link                            |
+| Android development build      | Done        | Dev client APK from EAS, built 10 November 2026                       |
 | Android signing key            | Done        | Generated and held by EAS. Enrol in Play App Signing on first upload  |
 | iOS development build          | Not started | Needs an Apple Developer Program membership and a registered device   |
 | Dev-only `/preview` route      | To do       | Redirects in production, but should not be in the store bundle at all |
 
 ## Required by both stores
 
-| Item                   | Status                 | Notes                                                                                                                                                                  |
-| ---------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account deletion       | Built, not deployed    | Profile tab, then Delete account. `DELETE /v1/users/me` removes data, images and the sign-in. Web link: `/delete-account` on the site                                  |
-| Privacy policy         | Written, not published | `apps/site/public/privacy.html`, linked from the welcome screen and the Profile tab. Needs the owner's review and a deploy to `merge.jacked.dev`                       |
-| Terms of use           | Written, not published | `apps/site/public/terms.html`. Assumes Indian law; confirm before publishing                                                                                           |
-| Production sign-in     | Missing                | Clerk is on a development instance (`pk_test`). Production needs its own instance on a domain you own. SMS codes do not reach India yet, so email is the working route |
-| Report and block       | Done                   | Present on profiles, requests and chats                                                                                                                                |
-| Child safety standards | Written, not published | `apps/site/public/safety.html`, with the in-app report route and a named contact                                                                                       |
-| Age gate               | Partly                 | The app collects a birthday and requires 18+. The store listing must be rated 18+                                                                                      |
-| Crash reporting        | Missing                | Nothing reports crashes from release builds                                                                                                                            |
-| Push notifications     | Off                    | Code exists and is disabled. Android needs a Firebase project and `google-services.json`                                                                               |
+| Item                   | Status  | Notes                                                                                                                                                                                             |
+| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Account deletion       | Live    | Profile tab, then Delete account. `DELETE /v1/users/me` removes data, images and the sign-in. Web link: https://merge.jacked.dev/delete-account. Not yet exercised end to end with a real account |
+| Privacy policy         | Live    | https://merge.jacked.dev/privacy, linked from the welcome screen and the Profile tab                                                                                                              |
+| Terms of use           | Live    | https://merge.jacked.dev/terms. Governed by Indian law                                                                                                                                            |
+| Production sign-in     | Missing | Clerk is on a development instance (`pk_test`). Production needs its own instance on a domain you own. SMS codes do not reach India yet, so email is the working route                            |
+| Report and block       | Done    | Present on profiles, requests and chats                                                                                                                                                           |
+| Child safety standards | Live    | https://merge.jacked.dev/safety, with the in-app report route and a named contact                                                                                                                 |
+| Age gate               | Partly  | The app collects a birthday and requires 18+. The store listing must be rated 18+                                                                                                                 |
+| Crash reporting        | Missing | Nothing reports crashes from release builds                                                                                                                                                       |
+| Push notifications     | Off     | Code exists and is disabled. Android needs a Firebase project and `google-services.json`                                                                                                          |
 
 ## Google Play
 
